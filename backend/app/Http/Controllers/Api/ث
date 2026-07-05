@@ -1,0 +1,584 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class ExpenseController extends Controller
+{
+    private function companyId()
+    {
+        return request()->header('X-Company-ID');
+    }
+
+    private function branchId()
+    {
+        return request()->header('X-Branch-ID');
+    }
+
+    private function userId()
+    {
+        return request()->header('X-User-ID');
+    }
+
+    public function index()
+    {
+        $companyId = $this->companyId();
+
+        $data = DB::table('expenses as e')
+            ->leftJoin('expense_types as t', 't.id', '=', 'e.expense_type_id')
+            ->leftJoin('shipments as sh', 'sh.id', '=', 'e.shipment_id')
+            ->leftJoin('cars as c', 'c.id', '=', 'e.car_id')
+            ->leftJoin('drivers as d', 'd.id', '=', 'e.driver_id')
+            ->leftJoin('workers as w', 'w.id', '=', 'e.worker_id')
+            ->leftJoin('purchase_invoices as p', 'p.id', '=', 'e.purchase_invoice_id')
+            ->leftJoin('sales_invoices as s', 's.id', '=', 'e.sales_invoice_id')
+            ->leftJoin('vouchers as v', 'v.id', '=', 'e.voucher_id')
+            ->where('e.company_id', $companyId)
+            ->select(
+                'e.*',
+                't.type_name',
+                't.type_code',
+                't.description as type_description',
+                't.affects_cost',
+                'sh.shipment_number',
+                'c.car_number',
+                'd.driver_name',
+                'w.worker_name',
+                'p.invoice_number as purchase_invoice_number',
+                's.invoice_number as sales_invoice_number',
+                'v.voucher_number'
+            )
+            ->orderByDesc('e.id')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => $data
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $companyId = $this->companyId();
+        $branchId = $request->branch_id ?? $this->branchId();
+
+        if (!$companyId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'لم يتم تحديد الشركة الحالية'
+            ], 400);
+        }
+
+        $request->validate([
+            'expense_type_id' => 'required|integer',
+            'expense_date' => 'required|date',
+            'scope_type' => 'required|string',
+            'amount' => 'required|numeric|min:0.001',
+            'payment_status' => 'nullable|string',
+            'payment_method' => 'nullable|string',
+        ]);
+
+        $scope = $request->scope_type ?? 'GENERAL';
+
+        $ids = $this->resolveScopeIds($request, $scope);
+
+        DB::beginTransaction();
+
+        try {
+            $voucherId = null;
+
+            if (($request->payment_status ?? 'PAID') === 'PAID') {
+                $voucherId = $this->createPaymentVoucher(
+                    $companyId,
+                    $branchId,
+                    $request
+                );
+            }
+
+            $id = DB::table('expenses')->insertGetId([
+                'company_id' => $companyId,
+                'branch_id' => $branchId,
+
+                'expense_type_id' => $request->expense_type_id,
+                'expense_date' => $request->expense_date,
+                'scope_type' => $scope,
+
+                'reference_type' => $request->reference_type ?? $scope,
+                'reference_id' => $request->reference_id ?? $ids['reference_id'],
+
+                'shipment_id' => $ids['shipment_id'],
+                'car_id' => $ids['car_id'],
+                'purchase_invoice_id' => $ids['purchase_invoice_id'],
+                'sales_invoice_id' => $ids['sales_invoice_id'],
+                'driver_id' => $ids['driver_id'],
+                'worker_id' => $ids['worker_id'],
+
+                'amount' => $request->amount,
+                'payment_status' => $request->payment_status ?? 'PAID',
+                'payment_method' => $request->payment_method,
+                'voucher_id' => $voucherId,
+                'expense_effect' => $request->expense_effect ?? 'COST',
+
+                'notes' => $request->notes,
+
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'تم حفظ المصروف',
+                'id' => $id,
+                'voucher_id' => $voucherId
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function show($id)
+    {
+        $companyId = $this->companyId();
+
+        $expense = DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->first();
+
+        if (!$expense) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المصروف غير موجود'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $expense
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $companyId = $this->companyId();
+        $branchId = $request->branch_id ?? $this->branchId();
+
+        if (!$companyId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'لم يتم تحديد الشركة الحالية'
+            ], 400);
+        }
+
+        $expense = DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->first();
+
+        if (!$expense) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المصروف غير موجود'
+            ], 404);
+        }
+
+        $request->validate([
+            'expense_type_id' => 'required|integer',
+            'expense_date' => 'required|date',
+            'scope_type' => 'required|string',
+            'amount' => 'required|numeric|min:0.001',
+        ]);
+
+        $scope = $request->scope_type ?? 'GENERAL';
+        $ids = $this->resolveScopeIds($request, $scope);
+
+        DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->update([
+                'branch_id' => $branchId,
+
+                'expense_type_id' => $request->expense_type_id,
+                'expense_date' => $request->expense_date,
+                'scope_type' => $scope,
+
+                'reference_type' => $request->reference_type ?? $scope,
+                'reference_id' => $request->reference_id ?? $ids['reference_id'],
+
+                'shipment_id' => $ids['shipment_id'],
+                'car_id' => $ids['car_id'],
+                'purchase_invoice_id' => $ids['purchase_invoice_id'],
+                'sales_invoice_id' => $ids['sales_invoice_id'],
+                'driver_id' => $ids['driver_id'],
+                'worker_id' => $ids['worker_id'],
+
+                'amount' => $request->amount,
+                'payment_status' => $request->payment_status ?? $expense->payment_status,
+                'payment_method' => $request->payment_method ?? $expense->payment_method,
+                'expense_effect' => $request->expense_effect ?? $expense->expense_effect,
+
+                'notes' => $request->notes,
+
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم تعديل المصروف'
+        ]);
+    }
+
+    public function destroy($id)
+    {
+        $companyId = $this->companyId();
+
+        DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم حذف المصروف'
+        ]);
+    }
+
+    private function resolveScopeIds(Request $request, string $scope): array
+    {
+        $data = [
+            'shipment_id' => null,
+            'car_id' => null,
+            'purchase_invoice_id' => null,
+            'sales_invoice_id' => null,
+            'driver_id' => null,
+            'worker_id' => null,
+            'reference_id' => null,
+        ];
+
+        if ($scope === 'SHIPMENT') {
+            $data['shipment_id'] = $request->shipment_id ?: $request->reference_id;
+            $data['reference_id'] = $data['shipment_id'];
+        }
+
+        if ($scope === 'CAR') {
+            $data['car_id'] = $request->car_id ?: $request->reference_id;
+            $data['reference_id'] = $data['car_id'];
+        }
+
+        if ($scope === 'PURCHASE_INVOICE') {
+            $data['purchase_invoice_id'] = $request->purchase_invoice_id ?: $request->reference_id;
+            $data['reference_id'] = $data['purchase_invoice_id'];
+        }
+
+        if ($scope === 'SALES_INVOICE') {
+            $data['sales_invoice_id'] = $request->sales_invoice_id ?: $request->reference_id;
+            $data['reference_id'] = $data['sales_invoice_id'];
+        }
+
+        if ($scope === 'DRIVER') {
+            $data['driver_id'] = $request->driver_id ?: $request->reference_id;
+            $data['reference_id'] = $data['driver_id'];
+        }
+
+        if ($scope === 'WORKER') {
+            $data['worker_id'] = $request->worker_id ?: $request->reference_id;
+            $data['reference_id'] = $data['worker_id'];
+        }
+
+        return $data;
+    }
+
+    private function createPaymentVoucher($companyId, $branchId, Request $request)
+    {
+        $lastId = DB::table('vouchers')
+            ->where('company_id', $companyId)
+            ->max('id') ?? 0;
+
+        $voucherNumber =
+            'PAY-' . date('Y') . '-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+
+        return DB::table('vouchers')->insertGetId([
+            'company_id' => $companyId,
+            'branch_id' => $branchId,
+            'voucher_type_id' => 2,
+            'voucher_number' => $voucherNumber,
+            'voucher_date' => $request->expense_date,
+            'reference_type' => 'EXPENSE',
+            'reference_id' => 0,
+            'amount' => $request->amount,
+            'payment_method' => $request->payment_method,
+            'notes' => 'سند صرف تلقائي لمصروف',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+}
+
+
+
+******************************
+
+**********************
+
+***************************************
+
+**********
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Traits\LogsActivity;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class ExpenseController extends Controller
+{
+    use LogsActivity;
+
+    private function companyId()
+    {
+        return request()->header('X-Company-ID');
+    }
+
+    private function branchId()
+    {
+        return request()->header('X-Branch-ID');
+    }
+
+    public function index()
+    {
+        $companyId = $this->companyId();
+
+        $data = DB::table('expenses as e')
+            ->leftJoin('expense_types as t', 't.id', '=', 'e.expense_type_id')
+            ->leftJoin('cars as c', 'c.id', '=', 'e.car_id')
+            ->leftJoin('drivers as d', 'd.id', '=', 'e.driver_id')
+            ->leftJoin('workers as w', 'w.id', '=', 'e.worker_id')
+            ->leftJoin('purchase_invoices as p', 'p.id', '=', 'e.purchase_invoice_id')
+            ->leftJoin('sales_invoices as s', 's.id', '=', 'e.sales_invoice_id')
+            ->where('e.company_id', $companyId)
+            ->select(
+                'e.*',
+                't.type_name',
+                't.type_code',
+                'c.car_number',
+                'd.driver_name',
+                'w.worker_name',
+                'p.invoice_number as purchase_invoice_number',
+                's.invoice_number as sales_invoice_number'
+            )
+            ->orderByDesc('e.id')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => $data
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $companyId = $this->companyId();
+        $branchId = $request->branch_id ?? $this->branchId();
+
+        if (!$companyId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'لم يتم تحديد الشركة الحالية'
+            ], 400);
+        }
+
+        $request->validate([
+            'expense_type_id' => 'required|integer',
+            'expense_date' => 'required|date',
+            'scope_type' => 'required|string',
+            'amount' => 'required|numeric|min:0.001',
+        ]);
+
+        $id = DB::table('expenses')->insertGetId([
+            'company_id' => $companyId,
+            'branch_id' => $branchId,
+            'expense_type_id' => $request->expense_type_id,
+            'expense_date' => $request->expense_date,
+            'scope_type' => $request->scope_type ?? 'GENERAL',
+            'car_id' => $request->car_id ?: null,
+            'purchase_invoice_id' => $request->purchase_invoice_id ?: null,
+            'sales_invoice_id' => $request->sales_invoice_id ?: null,
+            'driver_id' => $request->driver_id ?: null,
+            'worker_id' => $request->worker_id ?: null,
+            'amount' => $request->amount,
+            'notes' => $request->notes,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->logCreate(
+            'Expenses',
+            $id,
+            'تم إنشاء مصروف بمبلغ: ' . $request->amount
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم حفظ المصروف',
+            'id' => $id
+        ]);
+    }
+
+    public function show($id)
+    {
+        $companyId = $this->companyId();
+
+        $expense = DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->first();
+
+        if (!$expense) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المصروف غير موجود'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $expense
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $companyId = $this->companyId();
+        $branchId = $request->branch_id ?? $this->branchId();
+
+        if (!$companyId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'لم يتم تحديد الشركة الحالية'
+            ], 400);
+        }
+
+        $request->validate([
+            'expense_type_id' => 'required|integer',
+            'expense_date' => 'required|date',
+            'scope_type' => 'required|string',
+            'amount' => 'required|numeric|min:0.001',
+        ]);
+
+        $expense = DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->first();
+
+        if (!$expense) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المصروف غير موجود'
+            ], 404);
+        }
+
+        DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->update([
+                'branch_id' => $branchId,
+                'expense_type_id' => $request->expense_type_id,
+                'expense_date' => $request->expense_date,
+                'scope_type' => $request->scope_type ?? 'GENERAL',
+                'car_id' => $request->car_id ?: null,
+                'purchase_invoice_id' => $request->purchase_invoice_id ?: null,
+                'sales_invoice_id' => $request->sales_invoice_id ?: null,
+                'driver_id' => $request->driver_id ?: null,
+                'worker_id' => $request->worker_id ?: null,
+                'amount' => $request->amount,
+                'notes' => $request->notes,
+                'updated_at' => now(),
+            ]);
+
+        $this->logUpdate(
+            'Expenses',
+            $id,
+            'تم تعديل مصروف من مبلغ: ' . $expense->amount . ' إلى: ' . $request->amount
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم تعديل المصروف'
+        ]);
+    }
+
+    public function destroy($id)
+    {
+        $companyId = $this->companyId();
+
+        $expense = DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->first();
+
+        if (!$expense) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المصروف غير موجود'
+            ], 404);
+        }
+
+        DB::table('expenses')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->delete();
+
+        $this->logDelete(
+            'Expenses',
+            $id,
+            'تم حذف مصروف بمبلغ: ' . $expense->amount
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم حذف المصروف'
+        ]);
+    }
+}
+*************************
+*************************
+
+*
+*
+*******************************
+انواع المصروف
+/********************
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
+
+class ExpenseTypeController extends Controller
+{
+    public function index()
+    {
+        $data = DB::table('expense_types')
+            ->where('is_active', 1)
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => $data
+        ]);
+    }
+}

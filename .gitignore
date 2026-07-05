@@ -1,0 +1,16 @@
+backend/vendor
+backend/node_modules
+backend/.env
+backend/storage/logs/*.log
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/.env.local
+
+*.log
+.DS_Store
+Thumbs.db
