@@ -1,94 +1,11 @@
 <?php
-
 namespace App\Http\Controllers\Api;
-
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-
+use App\Http\Controllers\Controller;use App\Services\Accounting\AccountingContext;use App\Services\Accounting\AccountingEngine;use App\Services\InventoryLotService;use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;
 class InventoryController extends Controller
 {
-    private function companyId()
-    {
-        return request()->header('X-Company-ID');
-    }
-
-    private function branchId()
-    {
-        return request()->header('X-Branch-ID');
-    }
-
-    public function index()
-    {
-        $companyId = $this->companyId();
-
-        $data = DB::table('stock_movements as s')
-            ->leftJoin('items as i', 'i.id', '=', 's.item_id')
-            ->leftJoin('cars as c', 'c.id', '=', 's.car_id')
-            ->where('s.company_id', $companyId)
-            ->select(
-                's.item_id',
-                's.car_id',
-                'i.item_name',
-                'c.car_number',
-                DB::raw("SUM(CASE WHEN s.movement_type = 'IN' THEN s.qty ELSE 0 END) as total_in"),
-                DB::raw("SUM(CASE WHEN s.movement_type = 'OUT' THEN s.qty ELSE 0 END) as total_out"),
-                DB::raw("SUM(CASE WHEN s.movement_type = 'IN' THEN s.qty ELSE -s.qty END) as balance_qty"),
-                DB::raw("AVG(CASE WHEN s.movement_type = 'IN' THEN s.unit_cost ELSE NULL END) as avg_cost"),
-                DB::raw("SUM(CASE WHEN s.movement_type = 'IN' THEN s.qty ELSE -s.qty END) * AVG(CASE WHEN s.movement_type = 'IN' THEN s.unit_cost ELSE NULL END) as stock_value")
-            )
-            ->groupBy('s.item_id', 's.car_id', 'i.item_name', 'c.car_number')
-            ->orderBy('i.item_name')
-            ->get();
-
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
-    }
-
-    public function adjustment(Request $request)
-    {
-        $companyId = $this->companyId();
-        $branchId = $request->branch_id ?? $this->branchId();
-
-        if (!$companyId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لم يتم تحديد الشركة الحالية'
-            ], 400);
-        }
-
-        $request->validate([
-            'item_id' => 'required|integer',
-            'movement_type' => 'required|in:IN,OUT',
-            'qty' => 'required|numeric|min:0.001',
-            'unit_cost' => 'nullable|numeric|min:0',
-            'car_id' => 'nullable|integer',
-            'movement_date' => 'nullable|date',
-            'notes' => 'nullable|string',
-        ]);
-
-        DB::table('stock_movements')->insert([
-            'company_id' => $companyId,
-            'branch_id' => $branchId,
-            'item_id' => $request->item_id,
-            'car_id' => $request->car_id ?: null,
-            'movement_type' => $request->movement_type,
-            'source_type' => 'ADJUSTMENT',
-            'source_id' => null,
-            'movement_date' => $request->movement_date ?? now(),
-            'qty' => $request->qty,
-            'unit_cost' => $request->unit_cost ?? 0,
-            'total_cost' => ($request->qty ?? 0) * ($request->unit_cost ?? 0),
-            'notes' => $request->notes,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تمت تسوية المخزون بنجاح'
-        ]);
-    }
+ public function index(Request $r,AccountingContext $c,InventoryLotService $lots){return response()->json(['status'=>true,'unit'=>'KG','data'=>$lots->summary($c->companyId($r),$c->branchFilter($r))]);}
+ public function lots(Request $r,AccountingContext $c,InventoryLotService $lots){return response()->json(['status'=>true,'unit'=>'KG','data'=>$lots->lots($c->companyId($r),$c->branchFilter($r),$r->filled('item_id')?(int)$r->item_id:null)]);}
+ public function movements(Request $r,AccountingContext $c){$q=DB::table('inventory_lot_movements as m')->join('inventory_lots as l','l.id','=','m.inventory_lot_id')->join('items as i','i.id','=','m.item_id')->leftJoin('branches as b','b.id','=','m.branch_id')->where('m.company_id',$c->companyId($r));$bid=$c->branchFilter($r);if($bid!==null)$q->where('m.branch_id',$bid);if($r->filled('item_id'))$q->where('m.item_id',(int)$r->item_id);if($r->filled('from_date'))$q->whereDate('m.movement_at','>=',$r->from_date);if($r->filled('to_date'))$q->whereDate('m.movement_at','<=',$r->to_date);return response()->json(['status'=>true,'unit'=>'KG','data'=>$q->select('m.*','l.lot_number','i.item_code','i.item_name','b.branch_name')->orderByDesc('m.movement_at')->limit(1000)->get()]);}
+ public function valuation(Request $r,AccountingContext $c){$q=DB::table('inventory_lots')->where('company_id',$c->companyId($r))->where('qty_remaining_kg','>',0);$bid=$c->branchFilter($r);if($bid!==null)$q->where('branch_id',$bid);$x=$q->selectRaw('COALESCE(SUM(qty_remaining_kg),0) balance_kg, COALESCE(SUM(CASE WHEN qty_received_kg>0 THEN total_cost*(qty_remaining_kg/qty_received_kg) ELSE 0 END),0) stock_value, COUNT(*) open_lots')->first();$kg=round((float)($x->balance_kg??0),3);return response()->json(['status'=>true,'data'=>['balance_kg'=>$kg,'balance_ton'=>round($kg/1000,3),'stock_value'=>round((float)($x->stock_value??0),3),'open_lots'=>(int)($x->open_lots??0)]]);}
+ public function adjustment(Request $r,AccountingContext $c,AccountingEngine $a,InventoryLotService $lots){$v=$r->validate(['branch_id'=>'nullable|integer','item_id'=>'required|integer','movement_type'=>'required|in:IN,OUT','qty_kg'=>'required|numeric|gt:0','unit_cost_per_ton'=>'nullable|numeric|min:0','movement_date'=>'nullable|date','notes'=>'required|string|min:3']);try{$cid=$c->companyId($r);$bid=$c->branchForOperation($r);$item=DB::table('items')->where('company_id',$cid)->where('id',$v['item_id'])->where('is_active',1)->first();if(!$item)throw new \RuntimeException('الصنف غير صالح.');return DB::transaction(function()use($r,$c,$a,$lots,$cid,$bid,$v){$kg=round((float)$v['qty_kg'],3);$date=$v['movement_date']??now();if($v['movement_type']==='IN'){$perTon=round((float)($v['unit_cost_per_ton']??0),3);if($perTon<=0)throw new \RuntimeException('أدخل تكلفة الطن للتسوية الموجبة.');$total=round(($kg/1000)*$perTon,3);$lot=$lots->createInboundLot(['company_id'=>$cid,'branch_id'=>$bid,'item_id'=>$v['item_id'],'qty_kg'=>$kg,'base_cost'=>$total,'source_type'=>'ADJUSTMENT','received_at'=>$date,'notes'=>$v['notes'],'created_by'=>$c->userId($r)]);$unitKg=round($perTon/1000,6);}else{$con=$lots->consumeFifo($cid,$bid,(int)$v['item_id'],$kg,'ADJUSTMENT',0,null,$c->userId($r));$total=$con['total_cost'];$unitKg=$con['unit_cost_per_kg'];$perTon=round($unitKg*1000,3);$lot=null;}$id=DB::table('stock_movements')->insertGetId(['company_id'=>$cid,'branch_id'=>$bid,'item_id'=>$v['item_id'],'inventory_lot_id'=>$lot,'movement_type'=>$v['movement_type'],'source_type'=>'ADJUSTMENT','source_id'=>null,'movement_date'=>$date,'qty'=>round($kg/1000,3),'qty_kg'=>$kg,'unit_cost'=>$perTon,'unit_cost_per_kg'=>$unitKg,'total_cost'=>$total,'notes'=>$v['notes'],'created_by'=>$c->userId($r),'created_at'=>now(),'updated_at'=>now()]);DB::table('stock_movements')->where('id',$id)->update(['source_id'=>$id]);$res=$a->inventory(['company_id'=>$cid,'movement_id'=>$id,'created_by'=>$c->userId($r)]);if(!$res->success)throw new \RuntimeException($res->message);return response()->json(['status'=>true,'message'=>'تمت تسوية المخزون وترحيلها محاسبيًا.','movement_id'=>$id,'journal_entry_id'=>$res->journalEntryId]);});}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}}
 }

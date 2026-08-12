@@ -3,42 +3,38 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\TenantScope;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $companyId = request()->header('X-Company-ID');
+        $companyId = TenantScope::companyId($request);
+        $branchId = TenantScope::branchId($request);
 
-        if (!$companyId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لم يتم تحديد الشركة الحالية'
-            ], 400);
-        }
+        $salesQuery = DB::table('sales_invoices')->where('company_id', $companyId);
+        TenantScope::apply($salesQuery, $branchId);
+        $sales = (float) $salesQuery->sum('total_amount');
 
-        $sales = DB::table('sales_invoices')
+        $purchasesQuery = DB::table('purchase_invoices')->where('company_id', $companyId);
+        TenantScope::apply($purchasesQuery, $branchId);
+        $purchases = (float) $purchasesQuery->sum('total_amount');
+
+        $expensesQuery = DB::table('expenses')->where('company_id', $companyId);
+        TenantScope::apply($expensesQuery, $branchId);
+        $expenses = (float) $expensesQuery->sum('amount');
+
+        $carsQuery = DB::table('cars')
             ->where('company_id', $companyId)
-            ->sum('total_amount');
+            ->where('car_status', 'OPEN');
+        TenantScope::apply($carsQuery, $branchId);
+        $openCars = (int) $carsQuery->count();
 
-        $purchases = DB::table('purchase_invoices')
-            ->where('company_id', $companyId)
-            ->sum('total_amount');
-
-        $expenses = DB::table('expenses')
-            ->where('company_id', $companyId)
-            ->sum('amount');
-
-        $profit = $sales - $purchases - $expenses;
-
-        $openCars = DB::table('cars')
-            ->where('company_id', $companyId)
-            ->where('car_status', 'OPEN')
-            ->count();
-
-        $stockQty = DB::table('stock_movements')
-            ->where('company_id', $companyId)
+        $stockQuery = DB::table('stock_movements')->where('company_id', $companyId);
+        TenantScope::apply($stockQuery, $branchId);
+        $stockQty = $stockQuery
             ->selectRaw("
                 SUM(
                     CASE
@@ -50,47 +46,39 @@ class DashboardController extends Controller
             ")
             ->value('balance');
 
-        $latestSales = DB::table('sales_invoices as s')
+        $latestSalesQuery = DB::table('sales_invoices as s')
             ->leftJoin('customers as c', 'c.id', '=', 's.customer_id')
-            ->where('s.company_id', $companyId)
-            ->select(
-                's.id',
-                's.invoice_number',
-                's.invoice_date',
-                's.total_amount',
-                'c.customer_name'
-            )
+            ->where('s.company_id', $companyId);
+        TenantScope::apply($latestSalesQuery, $branchId, 's.branch_id');
+        $latestSales = $latestSalesQuery
+            ->select('s.id', 's.invoice_number', 's.invoice_date', 's.total_amount', 'c.customer_name')
             ->orderByDesc('s.id')
             ->limit(5)
             ->get();
 
-        $latestPurchases = DB::table('purchase_invoices as p')
+        $latestPurchasesQuery = DB::table('purchase_invoices as p')
             ->leftJoin('suppliers as s', 's.id', '=', 'p.supplier_id')
-            ->where('p.company_id', $companyId)
-            ->select(
-                'p.id',
-                'p.invoice_number',
-                'p.invoice_date',
-                'p.total_amount',
-                's.supplier_name'
-            )
+            ->where('p.company_id', $companyId);
+        TenantScope::apply($latestPurchasesQuery, $branchId, 'p.branch_id');
+        $latestPurchases = $latestPurchasesQuery
+            ->select('p.id', 'p.invoice_number', 'p.invoice_date', 'p.total_amount', 's.supplier_name')
             ->orderByDesc('p.id')
             ->limit(5)
             ->get();
 
-        $latestVouchers = DB::table('vouchers')
-            ->where('company_id', $companyId)
+        $latestVouchersQuery = DB::table('vouchers')->where('company_id', $companyId);
+        TenantScope::apply($latestVouchersQuery, $branchId);
+        $latestVouchers = $latestVouchersQuery
             ->orderByDesc('id')
             ->limit(5)
             ->get();
 
-        $topCars = DB::table('sales_invoices as s')
+        $topCarsQuery = DB::table('sales_invoices as s')
             ->leftJoin('cars as c', 'c.id', '=', 's.car_id')
-            ->where('s.company_id', $companyId)
-            ->select(
-                'c.car_number',
-                DB::raw('SUM(s.total_amount) as total_sales')
-            )
+            ->where('s.company_id', $companyId);
+        TenantScope::apply($topCarsQuery, $branchId, 's.branch_id');
+        $topCars = $topCarsQuery
+            ->select('c.car_number', DB::raw('SUM(s.total_amount) as total_sales'))
             ->groupBy('c.car_number')
             ->orderByDesc('total_sales')
             ->limit(5)
@@ -98,12 +86,17 @@ class DashboardController extends Controller
 
         return response()->json([
             'status' => true,
+            'scope' => [
+                'company_id' => $companyId,
+                'branch_id' => $branchId,
+                'scope_type' => $branchId === null ? 'COMPANY' : 'BRANCH',
+            ],
             'cards' => [
-                'sales' => (float) $sales,
-                'purchases' => (float) $purchases,
-                'expenses' => (float) $expenses,
-                'profit' => (float) $profit,
-                'open_cars' => (int) $openCars,
+                'sales' => $sales,
+                'purchases' => $purchases,
+                'expenses' => $expenses,
+                'profit' => $sales - $purchases - $expenses,
+                'open_cars' => $openCars,
                 'stock_qty' => (float) ($stockQty ?? 0),
             ],
             'latest_sales' => $latestSales,

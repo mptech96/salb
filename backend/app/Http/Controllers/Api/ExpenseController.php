@@ -27,6 +27,7 @@ class ExpenseController extends Controller
     public function index()
     {
         $companyId = $this->companyId();
+        $branchScopeId = (int) $this->branchId();
 
         $data = DB::table('expenses as e')
             ->leftJoin('expense_types as t', 't.id', '=', 'e.expense_type_id')
@@ -38,6 +39,7 @@ class ExpenseController extends Controller
             ->leftJoin('sales_invoices as s', 's.id', '=', 'e.sales_invoice_id')
             ->leftJoin('vouchers as v', 'v.id', '=', 'e.voucher_id')
             ->where('e.company_id', $companyId)
+            ->when($branchScopeId > 0, fn ($q) => $q->where('e.branch_id', $branchScopeId))
             ->select(
                 'e.*',
                 't.type_name',
@@ -168,6 +170,7 @@ class ExpenseController extends Controller
 
         $expense = DB::table('expenses')
             ->where('company_id', $companyId)
+            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
             ->where('id', $id)
             ->first();
 
@@ -198,6 +201,7 @@ class ExpenseController extends Controller
 
         $expense = DB::table('expenses')
             ->where('company_id', $companyId)
+            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
             ->where('id', $id)
             ->first();
 
@@ -229,6 +233,7 @@ class ExpenseController extends Controller
 
         DB::table('expenses')
             ->where('company_id', $companyId)
+            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
             ->where('id', $id)
             ->update([
                 'branch_id' => $branchId,
@@ -265,6 +270,7 @@ class ExpenseController extends Controller
 
         $expense = DB::table('expenses')
             ->where('company_id', $companyId)
+            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
             ->where('id', $id)
             ->first();
 
@@ -284,6 +290,7 @@ class ExpenseController extends Controller
 
         DB::table('expenses')
             ->where('company_id', $companyId)
+            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
             ->where('id', $id)
             ->delete();
 

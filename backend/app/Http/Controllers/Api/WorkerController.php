@@ -28,11 +28,13 @@ class WorkerController extends Controller
     public function index()
     {
         $companyId = $this->companyId();
+        $branchScopeId = (int) $this->branchId();
 
         return response()->json([
             'status' => true,
             'data' => DB::table('workers')
                 ->where('company_id', $companyId)
+                ->when($branchScopeId > 0, fn ($q) => $q->where('branch_id', $branchScopeId))
                 ->orderByDesc('id')
                 ->get()
         ]);
@@ -81,8 +83,11 @@ class WorkerController extends Controller
     {
         $companyId = $this->companyId();
 
+        $branchScopeId = (int) $this->branchId();
+
         $worker = DB::table('workers')
             ->where('company_id', $companyId)
+            ->when($branchScopeId > 0, fn ($q) => $q->where('branch_id', $branchScopeId))
             ->where('id', $id)
             ->first();
 
@@ -90,13 +95,14 @@ class WorkerController extends Controller
             return response()->json(['status' => false, 'message' => 'العامل غير موجود'], 404);
         }
 
-        $loans = DB::table('worker_loans')->where('company_id', $companyId)->where('worker_id', $id)->orderByDesc('id')->get();
-        $commissions = DB::table('worker_commissions')->where('company_id', $companyId)->where('worker_id', $id)->orderByDesc('id')->get();
-        $attendance = DB::table('worker_attendance')->where('company_id', $companyId)->where('worker_id', $id)->orderByDesc('attendance_date')->limit(50)->get();
+        $loans = DB::table('worker_loans')->where('company_id', $companyId)->when($branchScopeId > 0, fn ($q) => $q->where('branch_id', $branchScopeId))->where('worker_id', $id)->orderByDesc('id')->get();
+        $commissions = DB::table('worker_commissions')->where('company_id', $companyId)->when($branchScopeId > 0, fn ($q) => $q->where('branch_id', $branchScopeId))->where('worker_id', $id)->orderByDesc('id')->get();
+        $attendance = DB::table('worker_attendance')->where('company_id', $companyId)->when($branchScopeId > 0, fn ($q) => $q->where('branch_id', $branchScopeId))->where('worker_id', $id)->orderByDesc('attendance_date')->limit(50)->get();
 
         $salaryLines = DB::table('worker_salary_lines as l')
             ->leftJoin('worker_salary_runs as r', 'r.id', '=', 'l.salary_run_id')
             ->where('l.company_id', $companyId)
+            ->when($branchScopeId > 0, fn ($q) => $q->where('r.branch_id', $branchScopeId))
             ->where('l.worker_id', $id)
             ->select('l.*', 'r.run_number', 'r.salary_month', 'r.status as run_status')
             ->orderByDesc('l.id')
@@ -136,6 +142,7 @@ class WorkerController extends Controller
         try {
             DB::table('workers')
                 ->where('company_id', $companyId)
+                ->when((int) $this->branchId() > 0, fn ($q) => $q->where('branch_id', (int) $this->branchId()))
                 ->where('id', $id)
                 ->update($this->workerPayload($request, $companyId, false));
 
@@ -152,6 +159,7 @@ class WorkerController extends Controller
     {
         DB::table('workers')
             ->where('company_id', $this->companyId())
+            ->when((int) $this->branchId() > 0, fn ($q) => $q->where('branch_id', (int) $this->branchId()))
             ->where('id', $id)
             ->delete();
 

@@ -10,6 +10,13 @@ class AuditLogController extends Controller
 {
     public function index(Request $request)
     {
+        $companyId = $request->attributes->get('tenant_company_id');
+        $branchId = $request->attributes->get('tenant_branch_id');
+        $actualRole = strtoupper((string) $request->attributes->get('actual_role_code', ''));
+        $effectiveRole = strtoupper((string) $request->attributes->get('effective_role_code', ''));
+        $isSupportMode = (bool) $request->attributes->get('is_support_mode', false);
+        $isPlatformAdmin = $actualRole === 'SUPER_ADMIN' && !$isSupportMode;
+
         $query = DB::table('audit_logs as a')
             ->leftJoin('companies as c', 'c.id', '=', 'a.company_id')
             ->leftJoin('branches as b', 'b.id', '=', 'a.branch_id')
@@ -22,37 +29,51 @@ class AuditLogController extends Controller
                 'u.username'
             );
 
-        if ($request->company_id) {
-            $query->where('a.company_id', $request->company_id);
+        if ($isPlatformAdmin) {
+            if ($request->filled('company_id')) {
+                $query->where('a.company_id', $request->integer('company_id'));
+            }
+        } else {
+            if (!$companyId) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'تعذر تحديد الشركة الحالية.',
+                ], 403);
+            }
+
+            $query->where('a.company_id', $companyId);
+
+            if ($effectiveRole === 'BRANCH_MANAGER' && $branchId) {
+                $query->where('a.branch_id', $branchId);
+            }
         }
 
-        if ($request->module_name) {
+        if ($request->filled('module_name')) {
             $query->where('a.module_name', $request->module_name);
         }
 
-        if ($request->action_type) {
+        if ($request->filled('action_type')) {
             $query->where('a.action_type', $request->action_type);
         }
 
-        if ($request->search) {
-            $search = $request->search;
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
 
-            $query->where(function ($q) use ($search) {
-                $q->where('a.description', 'like', "%{$search}%")
-                  ->orWhere('c.company_name', 'like', "%{$search}%")
-                  ->orWhere('u.name', 'like', "%{$search}%")
-                  ->orWhere('u.username', 'like', "%{$search}%");
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery
+                    ->where('a.description', 'like', "%{$search}%")
+                    ->orWhere('c.company_name', 'like', "%{$search}%")
+                    ->orWhere('u.name', 'like', "%{$search}%")
+                    ->orWhere('u.username', 'like', "%{$search}%");
             });
         }
 
-        $data = $query
-            ->orderByDesc('a.id')
-            ->limit(300)
-            ->get();
-
         return response()->json([
             'status' => true,
-            'data' => $data
+            'data' => $query
+                ->orderByDesc('a.id')
+                ->limit(300)
+                ->get(),
         ]);
     }
 }

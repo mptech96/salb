@@ -3,108 +3,126 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\TenantScope;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
-    private function companyId()
+    public function profit(Request $request)
     {
-        return request()->header('X-Company-ID');
-    }
+        $companyId = TenantScope::companyId($request);
+        $branchId = TenantScope::branchId($request);
 
-    public function profit()
-    {
-        $companyId = $this->companyId();
-
-        $data = DB::table('sales_invoice_lines as sl')
+        $query = DB::table('sales_invoice_lines as sl')
             ->join('sales_invoices as s', 's.id', '=', 'sl.sales_invoice_id')
             ->leftJoin('items as i', 'i.id', '=', 'sl.item_id')
             ->leftJoin('cars as c', 'c.id', '=', 'sl.car_id')
             ->where('sl.company_id', $companyId)
-            ->where('s.company_id', $companyId)
+            ->where('s.company_id', $companyId);
+
+        TenantScope::apply($query, $branchId, 's.branch_id');
+
+        $data = $query
             ->select(
                 'sl.item_id',
                 'sl.car_id',
                 'i.item_name',
                 'c.car_number',
                 DB::raw('SUM(sl.qty) as sold_qty'),
-                DB::raw('SUM(sl.line_total) as sales_total'),
-                DB::raw('
-                    (
-                        SELECT AVG(sm.unit_cost)
-                        FROM stock_movements sm
-                        WHERE sm.company_id = sl.company_id
-                        AND sm.item_id = sl.item_id
-                        AND sm.movement_type = "IN"
-                        AND (
-                            (sl.car_id IS NULL AND sm.car_id IS NULL)
-                            OR sm.car_id = sl.car_id
-                        )
-                    ) as avg_cost
-                ')
+                DB::raw('SUM(sl.line_total) as sales_total')
             )
-            ->groupBy('sl.item_id', 'sl.car_id', 'i.item_name', 'c.car_number', 'sl.company_id')
+            ->groupBy('sl.item_id', 'sl.car_id', 'i.item_name', 'c.car_number')
             ->get()
-            ->map(function ($row) {
-                $avgCost = (float) ($row->avg_cost ?? 0);
+            ->map(function ($row) use ($companyId, $branchId) {
+                $costQuery = DB::table('stock_movements')
+                    ->where('company_id', $companyId)
+                    ->where('item_id', $row->item_id)
+                    ->where('movement_type', 'IN');
+
+                TenantScope::apply($costQuery, $branchId);
+
+                if ($row->car_id === null) {
+                    $costQuery->whereNull('car_id');
+                } else {
+                    $costQuery->where('car_id', $row->car_id);
+                }
+
+                $avgCost = (float) ($costQuery->avg('unit_cost') ?? 0);
                 $soldQty = (float) ($row->sold_qty ?? 0);
                 $salesTotal = (float) ($row->sales_total ?? 0);
 
+                $row->avg_cost = $avgCost;
                 $row->cost_total = $soldQty * $avgCost;
                 $row->profit = $salesTotal - $row->cost_total;
 
                 return $row;
             });
 
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
+        return response()->json(['status' => true, 'data' => $data]);
     }
 
-    public function carProfit()
+    public function carProfit(Request $request)
     {
-        $companyId = $this->companyId();
+        $companyId = TenantScope::companyId($request);
+        $branchId = TenantScope::branchId($request);
 
-        $data = DB::table('cars as c')
-            ->where('c.company_id', $companyId)
+        $carsQuery = DB::table('cars as c')
+            ->where('c.company_id', $companyId);
+
+        TenantScope::apply($carsQuery, $branchId, 'c.branch_id');
+
+        $data = $carsQuery
             ->select('c.id', 'c.car_number', 'c.plate_number')
             ->orderByDesc('c.id')
             ->get()
-            ->map(function ($car) use ($companyId) {
-
-                $purchaseTotal = DB::table('purchase_invoices')
+            ->map(function ($car) use ($companyId, $branchId) {
+                $purchaseQuery = DB::table('purchase_invoices')
                     ->where('company_id', $companyId)
-                    ->where('car_id', $car->id)
-                    ->sum('total_amount');
+                    ->where('car_id', $car->id);
+                TenantScope::apply($purchaseQuery, $branchId);
+                $purchaseTotal = (float) $purchaseQuery->sum('total_amount');
 
-                $salesTotal = DB::table('sales_invoices')
+                $salesQuery = DB::table('sales_invoices')
                     ->where('company_id', $companyId)
-                    ->where('car_id', $car->id)
-                    ->sum('total_amount');
+                    ->where('car_id', $car->id);
+                TenantScope::apply($salesQuery, $branchId);
+                $salesTotal = (float) $salesQuery->sum('total_amount');
 
-                $expensesTotal = DB::table('expenses')
+                $expenseQuery = DB::table('expenses')
                     ->where('company_id', $companyId)
-                    ->where(function ($q) use ($car, $companyId) {
+                    ->where(function ($q) use ($car, $companyId, $branchId) {
                         $q->where('car_id', $car->id)
-                            ->orWhereIn('purchase_invoice_id', function ($sub) use ($car, $companyId) {
+                            ->orWhereIn('purchase_invoice_id', function ($sub) use ($car, $companyId, $branchId) {
                                 $sub->select('id')
                                     ->from('purchase_invoices')
                                     ->where('company_id', $companyId)
                                     ->where('car_id', $car->id);
+
+                                if ($branchId !== null) {
+                                    $sub->where('branch_id', $branchId);
+                                }
                             })
-                            ->orWhereIn('sales_invoice_id', function ($sub) use ($car, $companyId) {
+                            ->orWhereIn('sales_invoice_id', function ($sub) use ($car, $companyId, $branchId) {
                                 $sub->select('id')
                                     ->from('sales_invoices')
                                     ->where('company_id', $companyId)
                                     ->where('car_id', $car->id);
-                            });
-                    })
-                    ->sum('amount');
 
-                $stockQty = DB::table('stock_movements')
+                                if ($branchId !== null) {
+                                    $sub->where('branch_id', $branchId);
+                                }
+                            });
+                    });
+                TenantScope::apply($expenseQuery, $branchId);
+                $expensesTotal = (float) $expenseQuery->sum('amount');
+
+                $stockQuery = DB::table('stock_movements')
                     ->where('company_id', $companyId)
-                    ->where('car_id', $car->id)
+                    ->where('car_id', $car->id);
+                TenantScope::apply($stockQuery, $branchId);
+
+                $stockQty = $stockQuery
                     ->selectRaw("
                         SUM(
                             CASE
@@ -116,187 +134,194 @@ class ReportController extends Controller
                     ")
                     ->value('balance');
 
-                $profit = $salesTotal - $purchaseTotal - $expensesTotal;
-
                 return [
                     'car_id' => $car->id,
                     'car_number' => $car->car_number ?: $car->plate_number,
-                    'purchase_total' => (float) $purchaseTotal,
-                    'sales_total' => (float) $salesTotal,
-                    'expenses_total' => (float) $expensesTotal,
+                    'purchase_total' => $purchaseTotal,
+                    'sales_total' => $salesTotal,
+                    'expenses_total' => $expensesTotal,
                     'stock_qty' => (float) ($stockQty ?? 0),
-                    'profit' => (float) $profit,
+                    'profit' => $salesTotal - $purchaseTotal - $expensesTotal,
                 ];
             });
 
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
+        return response()->json(['status' => true, 'data' => $data]);
     }
 
-    public function supplierBalances()
+    public function supplierBalances(Request $request)
     {
-        $companyId = $this->companyId();
+        $companyId = TenantScope::companyId($request);
+        $branchId = TenantScope::branchId($request);
 
-        $data = DB::table('suppliers as s')
-            ->where('s.company_id', $companyId)
+        $suppliersQuery = DB::table('suppliers as s')
+            ->where('s.company_id', $companyId);
+        TenantScope::apply($suppliersQuery, $branchId, 's.branch_id');
+
+        $data = $suppliersQuery
             ->select('s.id', 's.supplier_name', 's.phone', 's.opening_balance')
             ->orderByDesc('s.id')
             ->get()
-            ->map(function ($supplier) use ($companyId) {
-
-                $purchases = DB::table('purchase_invoices')
+            ->map(function ($supplier) use ($companyId, $branchId) {
+                $purchaseQuery = DB::table('purchase_invoices')
                     ->where('company_id', $companyId)
-                    ->where('supplier_id', $supplier->id)
-                    ->sum('total_amount');
+                    ->where('supplier_id', $supplier->id);
+                TenantScope::apply($purchaseQuery, $branchId);
+                $purchases = (float) $purchaseQuery->sum('total_amount');
 
-                $payments = DB::table('vouchers as v')
+                $paymentsQuery = DB::table('vouchers as v')
                     ->leftJoin('voucher_types as t', 't.id', '=', 'v.voucher_type_id')
                     ->where('v.company_id', $companyId)
                     ->where('v.reference_type', 'SUPPLIER')
                     ->where('v.reference_id', $supplier->id)
-                    ->where('t.type_code', 'PAYMENT')
-                    ->sum('v.amount');
+                    ->where('t.type_code', 'PAYMENT');
+                TenantScope::apply($paymentsQuery, $branchId, 'v.branch_id');
+                $payments = (float) $paymentsQuery->sum('v.amount');
 
-                $receipts = DB::table('vouchers as v')
+                $receiptsQuery = DB::table('vouchers as v')
                     ->leftJoin('voucher_types as t', 't.id', '=', 'v.voucher_type_id')
                     ->where('v.company_id', $companyId)
                     ->where('v.reference_type', 'SUPPLIER')
                     ->where('v.reference_id', $supplier->id)
-                    ->where('t.type_code', 'RECEIPT')
-                    ->sum('v.amount');
+                    ->where('t.type_code', 'RECEIPT');
+                TenantScope::apply($receiptsQuery, $branchId, 'v.branch_id');
+                $receipts = (float) $receiptsQuery->sum('v.amount');
 
-                $balance = ((float) $supplier->opening_balance + (float) $purchases + (float) $receipts) - (float) $payments;
+                $opening = (float) ($supplier->opening_balance ?? 0);
 
                 return [
                     'supplier_id' => $supplier->id,
                     'supplier_name' => $supplier->supplier_name,
                     'phone' => $supplier->phone,
-                    'opening_balance' => (float) $supplier->opening_balance,
-                    'purchases' => (float) $purchases,
-                    'payments' => (float) $payments,
-                    'receipts' => (float) $receipts,
-                    'balance' => $balance,
+                    'opening_balance' => $opening,
+                    'purchases' => $purchases,
+                    'payments' => $payments,
+                    'receipts' => $receipts,
+                    'balance' => ($opening + $purchases + $receipts) - $payments,
                 ];
             });
 
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
+        return response()->json(['status' => true, 'data' => $data]);
     }
 
-    public function customerBalances()
+    public function customerBalances(Request $request)
     {
-        $companyId = $this->companyId();
+        $companyId = TenantScope::companyId($request);
+        $branchId = TenantScope::branchId($request);
 
-        $data = DB::table('customers as c')
-            ->where('c.company_id', $companyId)
+        $customersQuery = DB::table('customers as c')
+            ->where('c.company_id', $companyId);
+        TenantScope::apply($customersQuery, $branchId, 'c.branch_id');
+
+        $data = $customersQuery
             ->select('c.id', 'c.customer_name', 'c.phone', 'c.opening_balance')
             ->orderByDesc('c.id')
             ->get()
-            ->map(function ($customer) use ($companyId) {
-
-                $sales = DB::table('sales_invoices')
+            ->map(function ($customer) use ($companyId, $branchId) {
+                $salesQuery = DB::table('sales_invoices')
                     ->where('company_id', $companyId)
-                    ->where('customer_id', $customer->id)
-                    ->sum('total_amount');
+                    ->where('customer_id', $customer->id);
+                TenantScope::apply($salesQuery, $branchId);
+                $sales = (float) $salesQuery->sum('total_amount');
 
-                $receipts = DB::table('vouchers as v')
+                $receiptsQuery = DB::table('vouchers as v')
                     ->leftJoin('voucher_types as t', 't.id', '=', 'v.voucher_type_id')
                     ->where('v.company_id', $companyId)
                     ->where('v.reference_type', 'CUSTOMER')
                     ->where('v.reference_id', $customer->id)
-                    ->where('t.type_code', 'RECEIPT')
-                    ->sum('v.amount');
+                    ->where('t.type_code', 'RECEIPT');
+                TenantScope::apply($receiptsQuery, $branchId, 'v.branch_id');
+                $receipts = (float) $receiptsQuery->sum('v.amount');
 
-                $payments = DB::table('vouchers as v')
+                $paymentsQuery = DB::table('vouchers as v')
                     ->leftJoin('voucher_types as t', 't.id', '=', 'v.voucher_type_id')
                     ->where('v.company_id', $companyId)
                     ->where('v.reference_type', 'CUSTOMER')
                     ->where('v.reference_id', $customer->id)
-                    ->where('t.type_code', 'PAYMENT')
-                    ->sum('v.amount');
+                    ->where('t.type_code', 'PAYMENT');
+                TenantScope::apply($paymentsQuery, $branchId, 'v.branch_id');
+                $payments = (float) $paymentsQuery->sum('v.amount');
 
-                $balance = ((float) $customer->opening_balance + (float) $sales + (float) $payments) - (float) $receipts;
+                $opening = (float) ($customer->opening_balance ?? 0);
 
                 return [
                     'customer_id' => $customer->id,
                     'customer_name' => $customer->customer_name,
                     'phone' => $customer->phone,
-                    'opening_balance' => (float) $customer->opening_balance,
-                    'sales' => (float) $sales,
-                    'receipts' => (float) $receipts,
-                    'payments' => (float) $payments,
-                    'balance' => $balance,
+                    'opening_balance' => $opening,
+                    'sales' => $sales,
+                    'receipts' => $receipts,
+                    'payments' => $payments,
+                    'balance' => ($opening + $sales + $payments) - $receipts,
                 ];
             });
 
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
+        return response()->json(['status' => true, 'data' => $data]);
     }
 
-    public function driverBalances()
+    public function driverBalances(Request $request)
     {
-        $companyId = $this->companyId();
+        $companyId = TenantScope::companyId($request);
+        $branchId = TenantScope::branchId($request);
 
-        $data = DB::table('drivers as d')
-            ->where('d.company_id', $companyId)
+        $driversQuery = DB::table('drivers as d')
+            ->where('d.company_id', $companyId);
+        TenantScope::apply($driversQuery, $branchId, 'd.branch_id');
+
+        $data = $driversQuery
             ->select('d.id', 'd.driver_name', 'd.phone')
             ->orderByDesc('d.id')
             ->get()
-            ->map(function ($driver) use ($companyId) {
-
-                $expenses = DB::table('expenses')
+            ->map(function ($driver) use ($companyId, $branchId) {
+                $expensesQuery = DB::table('expenses')
                     ->where('company_id', $companyId)
-                    ->where('driver_id', $driver->id)
-                    ->sum('amount');
+                    ->where('driver_id', $driver->id);
+                TenantScope::apply($expensesQuery, $branchId);
+                $expenses = (float) $expensesQuery->sum('amount');
 
-                $payments = DB::table('vouchers as v')
+                $paymentsQuery = DB::table('vouchers as v')
                     ->leftJoin('voucher_types as t', 't.id', '=', 'v.voucher_type_id')
                     ->where('v.company_id', $companyId)
                     ->where('v.reference_type', 'DRIVER')
                     ->where('v.reference_id', $driver->id)
-                    ->where('t.type_code', 'PAYMENT')
-                    ->sum('v.amount');
+                    ->where('t.type_code', 'PAYMENT');
+                TenantScope::apply($paymentsQuery, $branchId, 'v.branch_id');
+                $payments = (float) $paymentsQuery->sum('v.amount');
 
-                $receipts = DB::table('vouchers as v')
+                $receiptsQuery = DB::table('vouchers as v')
                     ->leftJoin('voucher_types as t', 't.id', '=', 'v.voucher_type_id')
                     ->where('v.company_id', $companyId)
                     ->where('v.reference_type', 'DRIVER')
                     ->where('v.reference_id', $driver->id)
-                    ->where('t.type_code', 'RECEIPT')
-                    ->sum('v.amount');
-
-                $balance = ((float) $expenses + (float) $receipts) - (float) $payments;
+                    ->where('t.type_code', 'RECEIPT');
+                TenantScope::apply($receiptsQuery, $branchId, 'v.branch_id');
+                $receipts = (float) $receiptsQuery->sum('v.amount');
 
                 return [
                     'driver_id' => $driver->id,
                     'driver_name' => $driver->driver_name,
                     'phone' => $driver->phone,
-                    'expenses' => (float) $expenses,
-                    'payments' => (float) $payments,
-                    'receipts' => (float) $receipts,
-                    'balance' => $balance,
+                    'expenses' => $expenses,
+                    'payments' => $payments,
+                    'receipts' => $receipts,
+                    'balance' => ($expenses + $receipts) - $payments,
                 ];
             });
 
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
+        return response()->json(['status' => true, 'data' => $data]);
     }
 
-    public function expenseSummary()
+    public function expenseSummary(Request $request)
     {
-        $companyId = $this->companyId();
+        $companyId = TenantScope::companyId($request);
+        $branchId = TenantScope::branchId($request);
 
-        $data = DB::table('expenses as e')
+        $query = DB::table('expenses as e')
             ->leftJoin('expense_types as t', 't.id', '=', 'e.expense_type_id')
-            ->where('e.company_id', $companyId)
+            ->where('e.company_id', $companyId);
+
+        TenantScope::apply($query, $branchId, 'e.branch_id');
+
+        $data = $query
             ->select(
                 'e.expense_type_id',
                 't.type_name',
@@ -308,9 +333,6 @@ class ReportController extends Controller
             ->orderByDesc('total_amount')
             ->get();
 
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
+        return response()->json(['status' => true, 'data' => $data]);
     }
 }

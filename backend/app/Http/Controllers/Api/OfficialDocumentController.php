@@ -30,11 +30,13 @@ class OfficialDocumentController extends Controller
     public function index()
     {
         $companyId = $this->companyId();
+        $branchScopeId = (int) $this->branchId();
 
         $data = DB::table('official_documents as d')
             ->leftJoin('branches as b', 'b.id', '=', 'd.branch_id')
             ->leftJoin('users as u', 'u.id', '=', 'd.created_by')
             ->where('d.company_id', $companyId)
+            ->when($branchScopeId > 0, fn ($q) => $q->where('d.branch_id', $branchScopeId))
             ->select(
                 'd.*',
                 'b.branch_name',
@@ -94,6 +96,7 @@ class OfficialDocumentController extends Controller
 
         $doc = DB::table('official_documents')
             ->where('company_id', $companyId)
+            ->when((int) $this->branchId() > 0, fn ($q) => $q->where('branch_id', (int) $this->branchId()))
             ->where('id', $id)
             ->first();
 
@@ -140,6 +143,7 @@ class OfficialDocumentController extends Controller
 
         $updated = DB::table('official_documents')
             ->where('company_id', $companyId)
+            ->when((int) $this->branchId() > 0, fn ($q) => $q->where('branch_id', (int) $this->branchId()))
             ->where('id', $id)
             ->update([
                 'doc_title' => $request->doc_title,
@@ -170,6 +174,7 @@ class OfficialDocumentController extends Controller
 
         $doc = DB::table('official_documents')
             ->where('company_id', $companyId)
+            ->when((int) $this->branchId() > 0, fn ($q) => $q->where('branch_id', (int) $this->branchId()))
             ->where('id', $id)
             ->first();
 
@@ -222,9 +227,13 @@ class OfficialDocumentController extends Controller
     {
         $companyId = $this->companyId();
 
-        $attachment = DB::table('official_document_attachments')
-            ->where('company_id', $companyId)
-            ->where('id', $attachmentId)
+        $attachment = DB::table('official_document_attachments as a')
+            ->join('official_documents as d', 'd.id', '=', 'a.document_id')
+            ->where('a.company_id', $companyId)
+            ->where('d.company_id', $companyId)
+            ->when((int) $this->branchId() > 0, fn ($q) => $q->where('d.branch_id', (int) $this->branchId()))
+            ->where('a.id', $attachmentId)
+            ->select('a.*')
             ->first();
 
         if (!$attachment) {
@@ -255,6 +264,16 @@ class OfficialDocumentController extends Controller
     {
         $companyId = $this->companyId();
 
+        $doc = DB::table('official_documents')
+            ->where('company_id', $companyId)
+            ->when((int) $this->branchId() > 0, fn ($q) => $q->where('branch_id', (int) $this->branchId()))
+            ->where('id', $id)
+            ->first();
+
+        if (!$doc) {
+            return response()->json(['status' => false, 'message' => 'الورقة غير موجودة ضمن نطاقك'], 404);
+        }
+
         $attachments = DB::table('official_document_attachments')
             ->where('company_id', $companyId)
             ->where('document_id', $id)
@@ -273,6 +292,7 @@ class OfficialDocumentController extends Controller
 
         DB::table('official_documents')
             ->where('company_id', $companyId)
+            ->when((int) $this->branchId() > 0, fn ($q) => $q->where('branch_id', (int) $this->branchId()))
             ->where('id', $id)
             ->delete();
 

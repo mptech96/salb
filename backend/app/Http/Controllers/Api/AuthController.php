@@ -3,157 +3,316 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\Auth\SessionContextService;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     use LogsActivity;
 
-    public function login(Request $request)
-    {
-        $request->validate([
-            'username' => 'required',
-            'password' => 'required',
+    public function login(
+        Request $request,
+        SessionContextService $sessions
+    ) {
+        $validated = $request->validate([
+            'username' => ['required', 'string', 'max:100'],
+            'password' => ['required', 'string', 'max:255'],
+            'remember' => ['nullable', 'boolean'],
+        ], [
+            'username.required' => 'اسم المستخدم مطلوب.',
+            'password.required' => 'كلمة المرور مطلوبة.',
         ]);
 
-        $user = DB::table('users as u')
-            ->leftJoin('companies as c', 'c.id', '=', 'u.company_id')
-            ->leftJoin('branches as b', 'b.id', '=', 'u.branch_id')
-            ->select(
-                'u.*',
-                'c.company_name',
-                'c.is_active as company_active',
-                'b.branch_name'
-            )
-            ->where('u.username', $request->username)
-            ->where('u.password', md5($request->password))
-            ->where('u.is_active', 1)
+        $user = User::query()
+            ->where('username', trim((string) $validated['username']))
             ->first();
 
-        if (!$user) {
+        if (!$user || !$this->passwordIsValid($user, (string) $validated['password'])) {
             return response()->json([
                 'status' => false,
-                'message' => 'بيانات الدخول غير صحيحة'
+                'code' => 'LOGIN_FAILED',
+                'message' => 'اسم المستخدم أو كلمة المرور غير صحيحة.',
             ], 401);
         }
 
-        $role = DB::table('user_roles as ur')
-            ->join('roles as r', 'r.id', '=', 'ur.role_id')
-            ->where('ur.user_id', $user->id)
-            ->where('ur.is_active', 1)
-            ->select('r.id', 'r.role_name', 'r.role_code')
-            ->first();
+        if ((int) $user->is_active !== 1) {
+            return response()->json([
+                'status' => false,
+                'code' => 'USER_INACTIVE',
+                'message' => 'تم تعطيل هذا المستخدم. راجع مدير النظام.',
+            ], 403);
+        }
+
+        $role = $sessions->roleForUser((int) $user->id);
 
         if (!$role) {
             return response()->json([
                 'status' => false,
-                'message' => 'لا يوجد دور مرتبط بهذا المستخدم'
+                'code' => 'ROLE_MISSING',
+                'message' => 'لا يوجد دور فعال مرتبط بهذا المستخدم.',
             ], 403);
         }
 
-        $permissions = DB::table('user_roles as ur')
-            ->join('role_permissions as rp', 'rp.role_id', '=', 'ur.role_id')
-            ->join('permissions as p', 'p.id', '=', 'rp.permission_id')
-            ->where('ur.user_id', $user->id)
-            ->where('ur.is_active', 1)
-            ->where('rp.is_active', 1)
-            ->pluck('p.permission_code')
-            ->unique()
-            ->values();
+        $roleCode = strtoupper(trim((string) $role->role_code));
+        $subscription = null;
 
-        if ($role->role_code === 'SUPER_ADMIN') {
-            $this->logLogin($user->id, 'تسجيل دخول مدير النظام: ' . $user->username);
+        if ($roleCode !== 'SUPER_ADMIN') {
+            if (!$user->company_id) {
+                return response()->json([
+                    'status' => false,
+                    'code' => 'COMPANY_MISSING',
+                    'message' => 'المستخدم غير مرتبط بشركة.',
+                ], 403);
+            }
 
-            return response()->json([
-                'status' => true,
-                'message' => 'تم تسجيل الدخول بنجاح',
-                'user' => [
-                    'id' => $user->id,
-                    'company_id' => null,
-                    'branch_id' => null,
-                    'name' => $user->name,
-                    'username' => $user->username,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'company_name' => 'إدارة النظام',
-                    'branch_name' => 'مركز التحكم',
-                    'role' => $role,
-                    'permissions' => $permissions,
-                ],
-                'subscription' => null
-            ]);
+            $company = DB::table('companies')
+                ->where('id', $user->company_id)
+                ->first();
+
+            if (!$company || (int) $company->is_active !== 1) {
+                return response()->json([
+                    'status' => false,
+                    'code' => 'COMPANY_INACTIVE',
+                    'message' => 'الشركة غير مفعلة.',
+                ], 403);
+            }
+
+            if ($user->branch_id && !DB::table('branches')
+                ->where('id', $user->branch_id)
+                ->where('company_id', $user->company_id)
+                ->where('is_active', 1)
+                ->exists()) {
+                return response()->json([
+                    'status' => false,
+                    'code' => 'BRANCH_INACTIVE',
+                    'message' => 'فرع المستخدم غير فعال أو لا يتبع الشركة.',
+                ], 403);
+            }
+
+            $subscription = $sessions->latestSubscription((int) $user->company_id);
+
+            if (!$subscription) {
+                return response()->json([
+                    'status' => false,
+                    'code' => 'SUBSCRIPTION_MISSING',
+                    'message' => 'لا يوجد اشتراك فعال لهذه الشركة.',
+                ], 403);
+            }
+
+            if (
+                strtoupper((string) $subscription->status) !== 'ACTIVE'
+                || ($subscription->end_date && now()->toDateString() > $subscription->end_date)
+            ) {
+                DB::table('subscriptions')
+                    ->where('id', $subscription->id)
+                    ->update([
+                        'status' => 'EXPIRED',
+                        'updated_at' => now(),
+                    ]);
+
+                return response()->json([
+                    'status' => false,
+                    'code' => 'SUBSCRIPTION_EXPIRED',
+                    'message' => 'انتهى اشتراك الشركة، يرجى التجديد.',
+                ], 403);
+            }
         }
 
-        if (!$user->company_id || !$user->company_active) {
-            return response()->json([
-                'status' => false,
-                'message' => 'الشركة غير مفعلة'
-            ], 403);
-        }
+        $isRemembered = (bool) ($validated['remember'] ?? false);
+        $expiresAt = $isRemembered
+            ? now()->addDays(30)
+            : now()->addHours(12);
 
-        $subscription = DB::table('subscriptions as s')
-            ->leftJoin('plans as p', 'p.id', '=', 's.plan_id')
-            ->where('s.company_id', $user->company_id)
-            ->orderByDesc('s.id')
-            ->select(
-                's.*',
-                'p.plan_name',
-                'p.plan_code',
-                'p.max_branches',
-                'p.max_users'
-            )
-            ->first();
+        $tokenName = $roleCode === 'SUPER_ADMIN'
+            ? 'platform-session'
+            : 'company-session';
 
-        if (!$subscription) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لا يوجد اشتراك فعال لهذه الشركة'
-            ], 403);
-        }
+        $abilities = $roleCode === 'SUPER_ADMIN'
+            ? ['session', 'platform-admin']
+            : ['session'];
 
-        if ($subscription->status !== 'ACTIVE' || date('Y-m-d') > $subscription->end_date) {
-            DB::table('subscriptions')
-                ->where('id', $subscription->id)
-                ->update([
-                    'status' => 'EXPIRED',
-                    'updated_at' => now(),
-                ]);
+        $plainTextToken = $user
+            ->createToken($tokenName, $abilities, $expiresAt)
+            ->plainTextToken;
 
-            return response()->json([
-                'status' => false,
-                'message' => 'انتهى الاشتراك، يرجى التجديد'
-            ], 403);
-        }
+        $payload = $sessions->userPayload($user);
 
-        $this->logLogin($user->id, 'تسجيل دخول المستخدم: ' . $user->username);
+        $this->logLogin(
+            (int) $user->id,
+            $roleCode === 'SUPER_ADMIN'
+                ? 'تسجيل دخول مدير منصة صلب: ' . $user->username
+                : 'تسجيل دخول المستخدم: ' . $user->username
+        );
 
         return response()->json([
             'status' => true,
-            'message' => 'تم تسجيل الدخول بنجاح',
-            'user' => [
-                'id' => $user->id,
-                'company_id' => $user->company_id,
-                'branch_id' => $user->branch_id,
-                'name' => $user->name,
-                'username' => $user->username,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'company_name' => $user->company_name,
-                'branch_name' => $user->branch_name,
-                'role' => $role,
-                'permissions' => $permissions,
-            ],
-            'subscription' => [
-                'plan_name' => $subscription->plan_name,
-                'plan_code' => $subscription->plan_code,
-                'start_date' => $subscription->start_date,
-                'end_date' => $subscription->end_date,
-                'max_branches' => $subscription->max_branches,
-                'max_users' => $subscription->max_users,
-                'status' => $subscription->status,
-            ]
+            'message' => 'تم تسجيل الدخول بنجاح.',
+            'token' => $plainTextToken,
+            'token_type' => 'Bearer',
+            'expires_at' => $expiresAt->toISOString(),
+            'user' => $payload,
+            'subscription' => $sessions->subscriptionPayload($subscription),
         ]);
+    }
+
+    public function me(
+        Request $request,
+        SessionContextService $sessions
+    ) {
+        /** @var User $user */
+        $user = $request->user();
+        $isSupportMode = (bool) $request->attributes->get('is_support_mode', false);
+        $companyId = $request->attributes->get('tenant_company_id');
+        $branchId = $request->attributes->get('tenant_branch_id');
+
+        $payload = $isSupportMode
+            ? $sessions->supportPayload(
+                $user,
+                (int) $companyId,
+                $branchId ? (int) $branchId : null
+            )
+            : $sessions->userPayload($user);
+
+        $subscription = $companyId
+            ? $sessions->latestSubscription((int) $companyId)
+            : null;
+
+        return response()->json([
+            'status' => true,
+            'user' => $payload,
+            'subscription' => $sessions->subscriptionPayload($subscription),
+        ]);
+    }
+
+    public function logout(Request $request)
+    {
+        $token = $request->user()?->currentAccessToken();
+
+        if ($token && method_exists($token, 'delete')) {
+            $token->delete();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم تسجيل الخروج بنجاح.',
+        ]);
+    }
+
+    public function exitSupport(Request $request)
+    {
+        if (!(bool) $request->attributes->get('is_support_mode', false)) {
+            return response()->json([
+                'status' => false,
+                'code' => 'NOT_SUPPORT_SESSION',
+                'message' => 'الجلسة الحالية ليست جلسة دعم فني.',
+            ], 422);
+        }
+
+        $token = $request->user()?->currentAccessToken();
+
+        if ($token && method_exists($token, 'delete')) {
+            $token->delete();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم إنهاء جلسة الدعم الفني.',
+        ]);
+    }
+
+    public function updatePassword(Request $request)
+    {
+        if ((bool) $request->attributes->get('is_support_mode', false)) {
+            return response()->json([
+                'status' => false,
+                'code' => 'SUPPORT_PASSWORD_CHANGE_BLOCKED',
+                'message' => 'اخرج من وضع الدعم الفني قبل تغيير كلمة مرور مدير المنصة.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'current_password' => ['required', 'string', 'max:255'],
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'max:100',
+                'confirmed',
+                'different:current_password',
+            ],
+        ], [
+            'current_password.required' => 'أدخل كلمة المرور الحالية.',
+            'password.required' => 'أدخل كلمة المرور الجديدة.',
+            'password.min' => 'كلمة المرور الجديدة يجب ألا تقل عن 8 خانات.',
+            'password.max' => 'كلمة المرور الجديدة طويلة جدًا.',
+            'password.confirmed' => 'تأكيد كلمة المرور الجديدة غير مطابق.',
+            'password.different' => 'كلمة المرور الجديدة يجب أن تختلف عن الحالية.',
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        if (!$user || !$this->passwordIsValid($user, (string) $validated['current_password'])) {
+            return response()->json([
+                'status' => false,
+                'code' => 'CURRENT_PASSWORD_INVALID',
+                'message' => 'كلمة المرور الحالية غير صحيحة.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($user, $validated) {
+            DB::table('users')
+                ->where('id', $user->id)
+                ->update([
+                    'password' => Hash::make((string) $validated['password']),
+                    'updated_at' => now(),
+                ]);
+
+            $currentTokenId = $user->currentAccessToken()?->id;
+
+            DB::table('personal_access_tokens')
+                ->where('tokenable_type', User::class)
+                ->where('tokenable_id', $user->id)
+                ->when(
+                    $currentTokenId,
+                    fn ($query) => $query->where('id', '<>', $currentTokenId)
+                )
+                ->delete();
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم تغيير كلمة المرور بنجاح وإلغاء الجلسات الأخرى.',
+        ]);
+    }
+
+    private function passwordIsValid(User $user, string $plainPassword): bool
+    {
+        $storedPassword = (string) $user->password;
+        $isLegacyMd5 = preg_match('/^[a-f0-9]{32}$/i', $storedPassword) === 1;
+
+        if ($isLegacyMd5) {
+            $valid = hash_equals(
+                strtolower($storedPassword),
+                md5($plainPassword)
+            );
+
+            if ($valid) {
+                DB::table('users')
+                    ->where('id', $user->id)
+                    ->update([
+                        'password' => Hash::make($plainPassword),
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            return $valid;
+        }
+
+        return Hash::check($plainPassword, $storedPassword);
     }
 }

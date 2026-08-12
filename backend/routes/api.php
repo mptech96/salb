@@ -1,117 +1,365 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\BranchController;
-use App\Http\Controllers\Api\ItemController;
-use App\Http\Controllers\Api\CarController;
-use App\Http\Controllers\Api\SupplierController;
-use App\Http\Controllers\Api\CustomerController;
-use App\Http\Controllers\Api\PurchaseInvoiceController;
-use App\Http\Controllers\Api\SalesInvoiceController;
-use App\Http\Controllers\Api\InventoryController;
-use App\Http\Controllers\Api\ReportController;
-use App\Http\Controllers\Api\VoucherController;
-use App\Http\Controllers\Api\DriverController;
-use App\Http\Controllers\Api\ExpenseController;
-use App\Http\Controllers\Api\ExpenseTypeController;
-use App\Http\Controllers\Api\WorkerController;
-use App\Http\Controllers\Api\AccountStatementController;
-use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\PlanController;
-use App\Http\Controllers\Api\CompanyController;
-use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\RoleController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\AuditLogController;
-use App\Http\Controllers\Api\CompanySettingController;
-use App\Http\Controllers\Api\OfficialDocumentController;
-use App\Http\Controllers\Api\ShipmentController;
-use App\Http\Controllers\Api\ShipmentCostController;
-use App\Http\Controllers\Api\AccountController;
 
+use App\Http\Controllers\Api\{
+    AccountController,
+    AccountStatementController,
+    AccountingReportController,
+    AuditLogController,
+    AuthController,
+    BranchController,
+    CarController,
+    CompanyController,
+    CompanySettingController,
+    CustomerController,
+    DashboardController,
+    DriverController,
+    ExpenseController,
+    FixedAssetCategoryController,
+    FixedAssetController,
+    FinancialYearController,
+    InventoryController,
+    ItemController,
+    JournalEntryController,
+    OfficialDocumentController,
+    PayrollController,
+    PlanController,
+    PublicRegistrationController,
+    PurchaseInvoiceController,
+    ReportController,
+    RoleController,
+    SalesInvoiceController,
+    ShipmentController,
+    ShipmentCostController,
+    SubscriptionController,
+    SubscriptionPaymentController,
+    SupplierController,
+    SystemAdminDashboardController,
+    TrialBalanceController,
+    UserController,
+    VoucherController,
+    WeighbridgeController,
+    WorkerController
+};
 
+use App\Services\Payroll\{
+    PayrollApprover,
+    PayrollPayment,
+    PayrollService
+};
 
-
+/*
+|--------------------------------------------------------------------------
+| Public API
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/test', function () {
     return response()->json([
         'status' => true,
-        'message' => 'API Working 🔥'
+        'message' => 'API Working 🔥',
     ]);
 });
 
-Route::apiResource('branches', BranchController::class);
-Route::apiResource('items', ItemController::class);
-Route::apiResource('cars', CarController::class);
-Route::apiResource('suppliers', SupplierController::class);
-Route::apiResource('customers', CustomerController::class);
-Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
-Route::apiResource('sales-invoices', SalesInvoiceController::class);
-Route::controller(InventoryController::class)->group(function () {
-
-    Route::get('inventory', 'index');
-    Route::post('inventory/adjustment', 'adjustment');
-
-});
-Route::get('/reports/profit', [ReportController::class, 'profit']);
-Route::get('/reports/car-profit', [ReportController::class, 'carProfit']);
-Route::get('/reports/supplier-balances', [ReportController::class, 'supplierBalances']);
-Route::get('/reports/customer-balances', [ReportController::class, 'customerBalances']);
-Route::get('/reports/driver-balances', [ReportController::class, 'driverBalances']);
-Route::get('/reports/expense-summary', [ReportController::class, 'expenseSummary']);
-Route::apiResource('vouchers', VoucherController::class);
-Route::apiResource('drivers', DriverController::class);
-Route::apiResource('expenses', ExpenseController::class);
-Route::get('/expense-types', [ExpenseTypeController::class, 'index']);
-Route::post('/expense-types', [ExpenseTypeController::class, 'store']);
-Route::get('statements/supplier/{id}', [AccountStatementController::class, 'supplier']);
-Route::get('statements/customer/{id}', [AccountStatementController::class, 'customer']);
-Route::get('statements/driver/{id}', [AccountStatementController::class, 'driver']);
-Route::get('/dashboard', [DashboardController::class, 'index']);
-Route::apiResource('companies', CompanyController::class);
-Route::get('/companies/{id}/support-access', [CompanyController::class, 'supportAccess']);
-Route::get('/plans', [PlanController::class, 'index']);
-Route::apiResource('users', UserController::class);
-Route::get('/roles', [RoleController::class, 'index']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::get('/audit-logs', [AuditLogController::class, 'index']);
-Route::get('/company-settings', [CompanySettingController::class, 'show']);
-Route::post('/company-settings', [CompanySettingController::class, 'update']);
-Route::post('/company-settings/upload', [CompanySettingController::class, 'upload']);
-Route::get('/official-documents', [OfficialDocumentController::class, 'index']);
-Route::post('/official-documents', [OfficialDocumentController::class, 'store']);
-Route::get('/official-documents/{id}', [OfficialDocumentController::class, 'show']);
-Route::put('/official-documents/{id}', [OfficialDocumentController::class, 'update']);
-Route::delete('/official-documents/{id}', [OfficialDocumentController::class, 'destroy']);
-Route::post('/official-documents/{id}/attachments', [OfficialDocumentController::class, 'uploadAttachment']);
-Route::delete('/official-documents/attachments/{attachmentId}', [OfficialDocumentController::class, 'deleteAttachment']);
-Route::get('statements/worker/{id}', [AccountStatementController::class, 'worker']);
-Route::post('/shipments/sell', [ShipmentController::class, 'sell']);
-Route::post('/shipments/{id}/approve', [ShipmentController::class, 'approve']);
-Route::apiResource('shipments', ShipmentController::class);
-Route::post('/workers/{id}/loans', [WorkerController::class, 'addLoan']);
-Route::post('/workers/{id}/commissions', [WorkerController::class, 'addCommission']);
-Route::post('/workers/{id}/attendance', [WorkerController::class, 'addAttendance']);
-Route::post('/workers/commissions/{commissionId}/approve', [WorkerController::class, 'approveCommission']);
-Route::post('/workers/commissions/{commissionId}/pay', [WorkerController::class, 'payCommission']);
+Route::post('/register-company', [PublicRegistrationController::class, 'register']);
+Route::get('/plans', [PlanController::class, 'index']);
 
-Route::apiResource('workers', WorkerController::class);
-Route::get('/shipments/{shipmentId}/costs', [ShipmentCostController::class, 'index']);
-Route::post('/shipment-costs', [ShipmentCostController::class, 'store']);
-Route::put('/shipment-costs/{id}', [ShipmentCostController::class, 'update']);
-Route::delete('/shipment-costs/{id}', [ShipmentCostController::class, 'destroy']);
+/*
+|--------------------------------------------------------------------------
+| Authenticated API
+|--------------------------------------------------------------------------
+*/
 
-Route::get('/accounts/tree', [AccountController::class, 'tree']);
-Route::get('/accounts/posting', [AccountController::class, 'posting']);
-Route::post('/accounts', [AccountController::class, 'store']);
+Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
+    Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/profile/password', [AuthController::class, 'updatePassword']);
+    Route::post('/support/exit', [AuthController::class, 'exitSupport']);
 
+    /*
+    |-----------------------------------------------------------------------
+    | Shared Administration
+    |-----------------------------------------------------------------------
+    | يعمل لمدير المنصة أو مدير الشركة حسب السياق الذي حسمه الخادم.
+    */
 
+    Route::middleware('route.permission')->group(function () {
+        Route::apiResource('branches', BranchController::class);
+        Route::apiResource('users', UserController::class);
+        Route::get('/roles', [RoleController::class, 'index']);
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+    });
 
+    /*
+    |-----------------------------------------------------------------------
+    | Platform Administration
+    |-----------------------------------------------------------------------
+    */
 
+    Route::middleware('platform.admin')->group(function () {
+        Route::get('/companies', [CompanyController::class, 'index']);
+        Route::post('/companies', [CompanyController::class, 'store']);
+        Route::post(
+            '/companies/{id}/support-access',
+            [CompanyController::class, 'supportAccess']
+        );
 
+        Route::get(
+            '/system-admin/dashboard',
+            [SystemAdminDashboardController::class, 'index']
+        );
 
+        Route::get(
+            '/system-admin/subscriptions',
+            [SubscriptionController::class, 'index']
+        );
+        Route::get(
+            '/system-admin/subscriptions/{id}',
+            [SubscriptionController::class, 'show']
+        );
+        Route::post(
+            '/system-admin/subscriptions/{id}/renew',
+            [SubscriptionController::class, 'renew']
+        );
+        Route::put(
+            '/system-admin/subscriptions/{id}/plan',
+            [SubscriptionController::class, 'changePlan']
+        );
+        Route::put(
+            '/system-admin/subscriptions/{id}/status',
+            [SubscriptionController::class, 'updateStatus']
+        );
+        Route::post(
+            '/system-admin/subscriptions/{id}/extend',
+            [SubscriptionController::class, 'extend']
+        );
 
+        Route::get('/system-admin/plans', [PlanController::class, 'adminIndex']);
+        Route::post('/system-admin/plans', [PlanController::class, 'store']);
+        Route::get('/system-admin/plans/{id}', [PlanController::class, 'show']);
+        Route::put('/system-admin/plans/{id}', [PlanController::class, 'update']);
+        Route::put('/system-admin/plans/{id}/toggle', [PlanController::class, 'toggle']);
+        Route::delete('/system-admin/plans/{id}', [PlanController::class, 'destroy']);
 
+        Route::get(
+            '/system-admin/payment-dashboard',
+            [SubscriptionPaymentController::class, 'dashboard']
+        );
+        Route::get(
+            '/system-admin/invoices',
+            [SubscriptionPaymentController::class, 'invoices']
+        );
+        Route::post(
+            '/system-admin/invoices',
+            [SubscriptionPaymentController::class, 'storeInvoice']
+        );
+        Route::put(
+            '/system-admin/invoices/{id}/cancel',
+            [SubscriptionPaymentController::class, 'cancelInvoice']
+        );
+        Route::get(
+            '/system-admin/payments',
+            [SubscriptionPaymentController::class, 'payments']
+        );
+        Route::post(
+            '/system-admin/payments',
+            [SubscriptionPaymentController::class, 'storePayment']
+        );
 
+        /* اختبارات محلية فقط ومحمية بمدير المنصة. */
+        if (app()->environment('local')) {
+            Route::get('/dev/payroll/generate', function (PayrollService $service) {
+                request()->headers->set('X-Company-ID', 4);
+                request()->headers->set('X-Branch-ID', 6);
+                request()->headers->set('X-User-ID', 2);
 
+                return response()->json([
+                    'status' => true,
+                    'data' => $service->generate([
+                        'company_id' => 4,
+                        'branch_id' => 6,
+                        'salary_month' => date('Y-m-01'),
+                    ]),
+                ]);
+            });
 
+            Route::get('/dev/payroll/approve/{id}', function (
+                int $id,
+                PayrollApprover $approver
+            ) {
+                request()->headers->set('X-Company-ID', 4);
+                request()->headers->set('X-Branch-ID', 6);
+                request()->headers->set('X-User-ID', 2);
+
+                return response()->json([
+                    'status' => true,
+                    'data' => $approver->approve($id),
+                ]);
+            });
+
+            Route::get('/dev/payroll/pay/{id}', function (
+                int $id,
+                PayrollPayment $payment
+            ) {
+                request()->headers->set('X-Company-ID', 4);
+                request()->headers->set('X-Branch-ID', 6);
+                request()->headers->set('X-User-ID', 2);
+
+                return response()->json([
+                    'status' => true,
+                    'data' => $payment->pay($id, 'CASH'),
+                ]);
+            });
+        }
+    });
+
+    /*
+    |-----------------------------------------------------------------------
+    | Company Portal
+    |-----------------------------------------------------------------------
+    */
+
+    Route::middleware(['company.context', 'tenant.scope', 'route.permission'])->group(function () {
+        Route::apiResource('items', ItemController::class);
+        Route::apiResource('cars', CarController::class);
+        Route::apiResource('suppliers', SupplierController::class);
+        Route::apiResource('customers', CustomerController::class);
+        Route::apiResource('drivers', DriverController::class);
+        Route::apiResource('workers', WorkerController::class);
+        Route::apiResource('vouchers', VoucherController::class);
+        Route::apiResource('expenses', ExpenseController::class);
+
+        Route::get('/company-settings', [CompanySettingController::class, 'show']);
+        Route::post('/company-settings', [CompanySettingController::class, 'update']);
+        Route::post('/company-settings/upload', [CompanySettingController::class, 'upload']);
+
+        Route::get('/accounts/tree', [AccountController::class, 'tree']);
+        Route::get('/accounts/posting', [AccountController::class, 'posting']);
+        Route::post('/accounts', [AccountController::class, 'store']);
+        Route::get('/journal-entries', [JournalEntryController::class, 'index']);
+        Route::post('/journal-entries', [JournalEntryController::class, 'store']);
+        Route::get('/journal-entries/{id}', [JournalEntryController::class, 'show']);
+        Route::post('/journal-entries/{id}/reverse', [JournalEntryController::class, 'reverse']);
+        Route::get('/trial-balance', [TrialBalanceController::class, 'index']);
+
+        Route::get('/financial-years', [FinancialYearController::class, 'index']);
+        Route::post('/financial-years', [FinancialYearController::class, 'store']);
+        Route::get('/financial-years/{id}/close-preview', [FinancialYearController::class, 'preview']);
+        Route::post('/financial-years/{id}/close', [FinancialYearController::class, 'close']);
+        Route::post('/financial-years/{id}/reopen', [FinancialYearController::class, 'reopen']);
+
+        Route::get('/accounting/overview', [AccountingReportController::class, 'overview']);
+        Route::get('/accounting/trial-balance', [AccountingReportController::class, 'trialBalance']);
+        Route::get('/accounting/income-statement', [AccountingReportController::class, 'incomeStatement']);
+        Route::get('/accounting/balance-sheet', [AccountingReportController::class, 'balanceSheet']);
+        Route::get('/accounting/ledger', [AccountingReportController::class, 'ledger']);
+
+        Route::controller(InventoryController::class)->group(function () {
+            Route::get('/inventory', 'index');
+            Route::get('/inventory/lots', 'lots');
+            Route::get('/inventory/movements', 'movements');
+            Route::get('/inventory/valuation', 'valuation');
+            Route::post('/inventory/adjustment', 'adjustment');
+        });
+
+        Route::get('/weighbridge/cards', [WeighbridgeController::class, 'index']);
+        Route::get('/weighbridge/available-shipments', [WeighbridgeController::class, 'availableShipments']);
+        Route::post('/weighbridge/cards', [WeighbridgeController::class, 'open']);
+        Route::get('/weighbridge/cards/{id}', [WeighbridgeController::class, 'show']);
+        Route::post('/weighbridge/cards/{id}/weights', [WeighbridgeController::class, 'recordWeight']);
+        Route::post('/weighbridge/cards/{id}/deduction', [WeighbridgeController::class, 'deduction']);
+        Route::post('/weighbridge/cards/{id}/close', [WeighbridgeController::class, 'close']);
+        Route::post('/weighbridge/weights/{weightId}/cancel', [WeighbridgeController::class, 'cancelWeight']);
+
+        Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
+        Route::apiResource('sales-invoices', SalesInvoiceController::class);
+
+        Route::post('/shipments/{id}/approve', [ShipmentController::class, 'approve']);
+        Route::apiResource('shipments', ShipmentController::class);
+        Route::get('/shipment-costs/types', [ShipmentCostController::class, 'types']);
+        Route::get('/shipments/{shipmentId}/costs', [ShipmentCostController::class, 'index']);
+        Route::post('/shipment-costs', [ShipmentCostController::class, 'store']);
+        Route::put('/shipment-costs/{id}', [ShipmentCostController::class, 'update']);
+        Route::delete('/shipment-costs/{id}', [ShipmentCostController::class, 'destroy']);
+
+        Route::post('/workers/{id}/loans', [WorkerController::class, 'addLoan']);
+        Route::post('/workers/{id}/commissions', [WorkerController::class, 'addCommission']);
+        Route::post('/workers/{id}/attendance', [WorkerController::class, 'addAttendance']);
+        Route::post(
+            '/workers/commissions/{commissionId}/approve',
+            [WorkerController::class, 'approveCommission']
+        );
+        Route::post(
+            '/workers/commissions/{commissionId}/pay',
+            [WorkerController::class, 'payCommission']
+        );
+
+        Route::prefix('payroll')->group(function () {
+            Route::get('/', [PayrollController::class, 'index']);
+            Route::post('/generate', [PayrollController::class, 'generate']);
+            Route::post('/{id}/approve', [PayrollController::class, 'approve']);
+            Route::post('/{id}/pay', [PayrollController::class, 'pay']);
+            Route::get(
+                '/{runId}/salary-slip/{workerId}',
+                [PayrollController::class, 'salarySlip']
+            );
+            Route::get('/{id}', [PayrollController::class, 'show']);
+        });
+
+        Route::get('/fixed-asset-categories', [FixedAssetCategoryController::class, 'index']);
+        Route::post('/fixed-asset-categories', [FixedAssetCategoryController::class, 'store']);
+        Route::put('/fixed-asset-categories/{id}', [FixedAssetCategoryController::class, 'update']);
+
+        Route::get('/fixed-assets', [FixedAssetController::class, 'index']);
+        Route::post('/fixed-assets', [FixedAssetController::class, 'store']);
+        Route::post('/fixed-assets/{id}/transfer', [FixedAssetController::class, 'transfer']);
+        Route::post('/fixed-assets/{id}/maintenance', [FixedAssetController::class, 'createMaintenance']);
+        Route::post(
+            '/fixed-asset-maintenance/{id}/approve',
+            [FixedAssetController::class, 'approveMaintenance']
+        );
+        Route::post(
+            '/fixed-asset-maintenance/{id}/complete',
+            [FixedAssetController::class, 'completeMaintenance']
+        );
+        Route::post('/fixed-assets/depreciation/run', [FixedAssetController::class, 'runDepreciation']);
+        Route::post('/fixed-assets/{id}/dispose', [FixedAssetController::class, 'dispose']);
+        Route::post('/fixed-assets/{id}/sell', [FixedAssetController::class, 'sell']);
+        Route::get('/fixed-assets/reports/summary', [FixedAssetController::class, 'reportSummary']);
+        Route::get('/fixed-assets/reports/assets', [FixedAssetController::class, 'reportAssets']);
+        Route::get('/fixed-assets/reports/depreciations', [FixedAssetController::class, 'reportDepreciations']);
+        Route::get('/fixed-assets/reports/maintenances', [FixedAssetController::class, 'reportMaintenances']);
+        Route::get('/fixed-assets/reports/movements', [FixedAssetController::class, 'reportMovements']);
+        Route::get('/fixed-assets/{id}', [FixedAssetController::class, 'show']);
+
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::get('/reports/profit', [ReportController::class, 'profit']);
+        Route::get('/reports/car-profit', [ReportController::class, 'carProfit']);
+        Route::get('/reports/supplier-balances', [ReportController::class, 'supplierBalances']);
+        Route::get('/reports/customer-balances', [ReportController::class, 'customerBalances']);
+        Route::get('/reports/driver-balances', [ReportController::class, 'driverBalances']);
+        Route::get('/reports/expense-summary', [ReportController::class, 'expenseSummary']);
+
+        Route::get('/statements/account/{id}', [AccountStatementController::class, 'account']);
+        Route::get('/statements/supplier/{id}', [AccountStatementController::class, 'supplier']);
+        Route::get('/statements/customer/{id}', [AccountStatementController::class, 'customer']);
+        Route::get('/statements/driver/{id}', [AccountStatementController::class, 'driver']);
+        Route::get('/statements/worker/{id}', [AccountStatementController::class, 'worker']);
+
+        Route::get('/official-documents', [OfficialDocumentController::class, 'index']);
+        Route::post('/official-documents', [OfficialDocumentController::class, 'store']);
+        Route::get('/official-documents/{id}', [OfficialDocumentController::class, 'show']);
+        Route::put('/official-documents/{id}', [OfficialDocumentController::class, 'update']);
+        Route::delete('/official-documents/{id}', [OfficialDocumentController::class, 'destroy']);
+        Route::post(
+            '/official-documents/{id}/attachments',
+            [OfficialDocumentController::class, 'uploadAttachment']
+        );
+        Route::delete(
+            '/official-documents/attachments/{attachmentId}',
+            [OfficialDocumentController::class, 'deleteAttachment']
+        );
+    });
+});

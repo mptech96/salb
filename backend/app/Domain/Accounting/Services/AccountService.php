@@ -7,55 +7,10 @@ use Illuminate\Support\Facades\DB;
 
 class AccountService
 {
-    public function __construct(
-        private AccountRepository $accounts
-    ) {}
-
-    /**
-     * إنشاء حساب جديد
-     */
+    public function __construct(private AccountRepository $accounts) {}
     public function create(array $data): int
     {
-        return DB::transaction(function () use ($data) {
-
-            $companyId = (int) $data['company_id'];
-
-            // منع تكرار الكود داخل نفس الشركة
-            if ($this->accounts->findByCode($companyId, $data['account_code'])) {
-                throw new \Exception('رقم الحساب مستخدم مسبقًا.');
-            }
-
-            // التحقق من الحساب الأب إن وجد
-            if (!empty($data['parent_id'])) {
-
-                $parent = $this->accounts->find($companyId, (int)$data['parent_id']);
-
-                if (!$parent) {
-                    throw new \Exception('الحساب الأب غير موجود.');
-                }
-
-                if (!$parent->is_group) {
-                    throw new \Exception('لا يمكن إضافة حساب أسفل حساب تحليلي.');
-                }
-            }
-
-            return $this->accounts->create($data);
-        });
+        return DB::transaction(function() use($data){$cid=(int)$data['company_id'];$code=trim((string)$data['account_code']);if($this->accounts->findByCode($cid,$code))throw new \RuntimeException('رقم الحساب مستخدم مسبقًا.');$level=1;if(!empty($data['parent_id'])){$p=$this->accounts->find($cid,(int)$data['parent_id']);if(!$p)throw new \RuntimeException('الحساب الأب غير موجود.');if(!(bool)$p->is_group)throw new \RuntimeException('لا يمكن إضافة حساب أسفل حساب تحليلي.');$level=(int)$p->account_level+1;}$data['account_code']=$code;$data['account_level']=$level;$data['allow_posting']=(int)($data['is_group']??0)===1?0:1;return $this->accounts->create($data);});
     }
-
-    /**
-     * جلب شجرة الحسابات
-     */
-    public function tree(int $companyId)
-    {
-        return $this->accounts->tree($companyId);
-    }
-
-    /**
-     * جلب الحسابات التحليلية فقط
-     */
-    public function postingAccounts(int $companyId)
-    {
-        return $this->accounts->movementAccounts($companyId);
-    }
+    public function tree(int $companyId){return $this->accounts->tree($companyId);} public function postingAccounts(int $companyId){return $this->accounts->movementAccounts($companyId);}
 }

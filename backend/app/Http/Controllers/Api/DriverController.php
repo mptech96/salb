@@ -17,8 +17,11 @@ class DriverController extends Controller
     {
         $companyId = $this->companyId();
 
+        $branchId = (int) request()->header('X-Branch-ID');
+
         $data = DB::table('drivers')
             ->where('company_id', $companyId)
+            ->when($branchId > 0, fn ($q) => $q->where('branch_id', $branchId))
             ->orderByDesc('id')
             ->get();
 
@@ -45,6 +48,7 @@ class DriverController extends Controller
 
         $id = DB::table('drivers')->insertGetId([
             'company_id' => $companyId,
+            'branch_id' => $request->branch_id ?: request()->header('X-Branch-ID'),
             'driver_name' => $request->driver_name,
             'phone' => $request->phone,
             'notes' => $request->notes,
@@ -64,8 +68,11 @@ class DriverController extends Controller
     {
         $companyId = $this->companyId();
 
+        $branchId = (int) request()->header('X-Branch-ID');
+
         $row = DB::table('drivers')
             ->where('company_id', $companyId)
+            ->when($branchId > 0, fn ($q) => $q->where('branch_id', $branchId))
             ->where('id', $id)
             ->first();
 
@@ -90,8 +97,11 @@ class DriverController extends Controller
             'driver_name' => 'required|string|max:255',
         ]);
 
+        $branchId = (int) request()->header('X-Branch-ID');
+
         $updated = DB::table('drivers')
             ->where('company_id', $companyId)
+            ->when($branchId > 0, fn ($q) => $q->where('branch_id', $branchId))
             ->where('id', $id)
             ->update([
                 'driver_name' => $request->driver_name,
@@ -118,8 +128,11 @@ class DriverController extends Controller
     {
         $companyId = $this->companyId();
 
+        $branchId = (int) request()->header('X-Branch-ID');
+
         DB::table('drivers')
             ->where('company_id', $companyId)
+            ->when($branchId > 0, fn ($q) => $q->where('branch_id', $branchId))
             ->where('id', $id)
             ->delete();
 

@@ -1,91 +1,12 @@
 <?php
-
 namespace App\Services;
-
-use App\Models\Shipment;
-use Illuminate\Support\Facades\DB;
-
+use App\Models\Shipment;use Illuminate\Support\Facades\DB;
 class ShipmentCostDistributionService
 {
-    public function distribute(Shipment $shipment): array
-    {
-        return DB::transaction(function () use ($shipment) {
-
-            if ($shipment->status !== 'APPROVED') {
-                throw new \Exception('لا يمكن توزيع تكلفة حمولة غير معتمدة');
-            }
-
-            $items = $shipment->items()->get();
-
-            if ($items->count() === 0) {
-                throw new \Exception('لا توجد أصناف في الحمولة');
-            }
-
-            $totalNetWeight = (float) $items->sum('net_weight');
-
-            if ($totalNetWeight <= 0) {
-                throw new \Exception('إجمالي وزن الحمولة غير صحيح');
-            }
-
-            $totalExtraCosts = (float) DB::table('shipment_costs')
-                ->where('company_id', $shipment->company_id)
-                ->where('shipment_id', $shipment->id)
-                ->sum('amount');
-
-            $costPerTon = round($totalExtraCosts / $totalNetWeight, 3);
-
-            foreach ($items as $item) {
-                $netWeight = (float) $item->net_weight;
-
-                $extraCost = round($netWeight * $costPerTon, 3);
-
-                $purchaseCost = round($netWeight * (float) $item->unit_price, 3);
-
-                $finalCost = round($purchaseCost + $extraCost, 3);
-
-                $finalUnitCost = $netWeight > 0
-                    ? round($finalCost / $netWeight, 3)
-                    : 0;
-
-                $item->update([
-                    'extra_cost' => $extraCost,
-                    'final_cost' => $finalCost,
-                    'distributed_cost' => $extraCost,
-                    'average_cost' => $finalUnitCost,
-                    'updated_at' => now(),
-                ]);
-
-                DB::table('stock_movements')
-                    ->where('company_id', $shipment->company_id)
-                    ->where('shipment_item_id', $item->id)
-                    ->where('movement_type', 'IN')
-                    ->where('source_type', 'SHIPMENT')
-                    ->update([
-                        'unit_cost' => $finalUnitCost,
-                        'total_cost' => $finalCost,
-                        'updated_at' => now(),
-                    ]);
-            }
-
-            DB::table('shipment_costs')
-                ->where('company_id', $shipment->company_id)
-                ->where('shipment_id', $shipment->id)
-                ->update([
-                    'distributed' => 1,
-                    'updated_at' => now(),
-                ]);
-
-            $shipment->update([
-                'distributed_cost' => $totalExtraCosts,
-                'updated_at' => now(),
-            ]);
-
-            return [
-                'shipment_id' => $shipment->id,
-                'total_weight' => $totalNetWeight,
-                'total_extra_costs' => $totalExtraCosts,
-                'cost_per_ton' => $costPerTon,
-            ];
-        });
-    }
+ public function __construct(private InventoryLotService $lots){}
+ public function distribute(Shipment $shipment):array{return DB::transaction(function()use($shipment){$shipment=Shipment::where('id',$shipment->id)->lockForUpdate()->firstOrFail();if($shipment->status!=='APPROVED')throw new \RuntimeException('توزيع التكلفة متاح بعد اعتماد الشحنة.');$items=DB::table('shipment_items')->where('company_id',$shipment->company_id)->where('shipment_id',$shipment->id)->orderBy('sorting_order')->lockForUpdate()->get();if($items->isEmpty())throw new \RuntimeException('لا توجد أصناف في الشحنة.');$pending=DB::table('shipment_costs')->where('company_id',$shipment->company_id)->where('shipment_id',$shipment->id)->where('distributed',0)->lockForUpdate()->get();$newCost=round((float)$pending->sum('amount'),3);if($newCost<=0)return ['shipment_id'=>$shipment->id,'new_distributed_cost'=>0,'total_distributed_cost'=>round((float)$shipment->distributed_cost,3)];
+   foreach($items as $it){if(!$it->inventory_lot_id)throw new \RuntimeException('أحد أصناف الشحنة لا يملك دفعة مخزون.');$lot=DB::table('inventory_lots')->where('id',$it->inventory_lot_id)->first();if(!$lot||round((float)$lot->qty_remaining_kg,3)<round((float)$lot->qty_received_kg,3))throw new \RuntimeException('لا يمكن إضافة تكاليف جديدة بعد بدء البيع من دفعات الشحنة.');}
+   $method=strtoupper((string)($shipment->cost_allocation_method??'RELATIVE_VALUE'));$basis=[];$basisTotal=0.0;foreach($items as $it){$v=match($method){'WEIGHT'=>(float)$it->qty_kg,'MANUAL_PERCENT'=>(float)($it->cost_share_percent??0),'MANUAL_COST'=>(float)($it->manual_allocated_cost??0),default=>(float)$it->base_cost};$basis[$it->id]=max(0,$v);$basisTotal+=max(0,$v);}if($basisTotal<=0){$basisTotal=0;foreach($items as $it){$basis[$it->id]=max(0,(float)$it->qty_kg);$basisTotal+=$basis[$it->id];}}if($basisTotal<=0)throw new \RuntimeException('لا يوجد أساس صالح لتوزيع التكلفة.');
+   $remain=$newCost;$last=$items->last()->id;$out=[];foreach($items as $it){$share=$it->id===$last?$remain:round($newCost*($basis[$it->id]/$basisTotal),3);$remain=round($remain-$share,3);$newAlloc=round((float)$it->allocated_cost+$share,3);$final=round((float)$it->base_cost+$newAlloc,3);$kg=(float)$it->qty_kg;$unitKg=$kg>0?round($final/$kg,6):0;$unitTon=round($unitKg*1000,3);$this->lots->addCapitalizedCost((int)$shipment->company_id,(int)$it->inventory_lot_id,$share);DB::table('shipment_items')->where('id',$it->id)->update(['allocated_cost'=>$newAlloc,'distributed_cost'=>$newAlloc,'final_cost'=>$final,'final_unit_cost_per_kg'=>$unitKg,'average_cost'=>$unitTon,'updated_at'=>now()]);DB::table('stock_movements')->where('company_id',$shipment->company_id)->where('inventory_lot_id',$it->inventory_lot_id)->where('movement_type','IN')->update(['unit_cost'=>$unitTon,'unit_cost_per_kg'=>$unitKg,'total_cost'=>$final,'updated_at'=>now()]);$out[]=['shipment_item_id'=>$it->id,'allocated_now'=>$share,'final_cost'=>$final,'unit_cost_per_kg'=>$unitKg];}
+   if($pending->isNotEmpty())DB::table('shipment_costs')->whereIn('id',$pending->pluck('id'))->update(['distributed'=>1,'updated_at'=>now()]);$total=round((float)DB::table('shipment_costs')->where('company_id',$shipment->company_id)->where('shipment_id',$shipment->id)->where('distributed',1)->sum('amount'),3);DB::table('shipments')->where('id',$shipment->id)->update(['distributed_cost'=>$total,'costing_status'=>'COSTED','updated_at'=>now()]);return ['shipment_id'=>$shipment->id,'allocation_method'=>$method,'new_distributed_cost'=>$newCost,'total_distributed_cost'=>$total,'items'=>$out];});}
 }

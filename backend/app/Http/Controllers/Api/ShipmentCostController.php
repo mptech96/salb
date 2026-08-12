@@ -1,61 +1,10 @@
 <?php
-
 namespace App\Http\Controllers\Api;
-
-use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreShipmentCostRequest;
-use App\Http\Requests\UpdateShipmentCostRequest;
-use App\Models\ShipmentCost;
-use App\Services\ShipmentCostService;
-
+use App\Http\Controllers\Controller;use App\Http\Requests\StoreShipmentCostRequest;use App\Http\Requests\UpdateShipmentCostRequest;use App\Services\Accounting\AccountingContext;use App\Services\ShipmentCostService;use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;
 class ShipmentCostController extends Controller
 {
-    public function index($shipmentId, ShipmentCostService $service)
-    {
-        try {
-            return response()->json([
-                'status' => true,
-                'data' => $service->summary((int) $shipmentId)
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'تعذر جلب تكاليف الحمولة: ' . $e->getMessage()
-            ], 400);
-        }
-    }
-
-    public function store(StoreShipmentCostRequest $request, ShipmentCostService $service)
-    {
-        try {
-            $result = $service->store($request->validated());
-
-            return response()->json([
-                'status' => true,
-                'message' => 'تم إضافة تكلفة الحمولة وإنشاء السند والقيد وتوزيع التكلفة بنجاح.',
-                'data' => $result
-            ], 201);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'فشل حفظ تكلفة الحمولة: ' . $e->getMessage()
-            ], 400);
-        }
-    }
-
-    public function update(UpdateShipmentCostRequest $request, $id)
-    {
-        return response()->json([
-            'status' => false,
-            'message' => 'تعديل تكلفة الحمولة بعد الترحيل غير مفعل حاليًا. سنضيف لاحقًا عكس القيد وإعادة التوزيع.'
-        ], 400);
-    }
-
-    public function destroy($id)
-    {
-        return response()->json([
-            'status' => false,
-            'message' => 'حذف تكلفة الحمولة بعد الترحيل غير مسموح حاليًا. سنضيف لاحقًا إلغاء منظم بعكس القيد.'
-        ], 400);
-    }
+ public function types(Request $r,AccountingContext $c){$cid=$c->companyId($r);return response()->json(['status'=>true,'data'=>DB::table('expense_types')->where('is_active',1)->where(function($q)use($cid){$q->where('company_id',$cid)->orWhereNull('company_id');})->whereIn('usage_type',['SHIPMENT','BOTH'])->orderBy('type_name')->get()]);}
+ public function index(Request $r,int $shipmentId,ShipmentCostService $s,AccountingContext $c){try{return response()->json(['status'=>true,'data'=>$s->summary($c->companyId($r),$c->branchFilter($r),$shipmentId)]);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>'تعذر جلب تكاليف الشحنة: '.$e->getMessage()],404);}}
+ public function store(StoreShipmentCostRequest $r,ShipmentCostService $s,AccountingContext $c){$v=$r->validated();$sh=DB::table('shipments')->where('company_id',$c->companyId($r))->where('id',(int)$v['shipment_id'])->first();if(!$sh)return response()->json(['status'=>false,'message'=>'الشحنة غير موجودة.'],404);$bf=$c->branchFilter($r);if($bf!==null&&(int)$sh->branch_id!==$bf)return response()->json(['status'=>false,'message'=>'الشحنة خارج نطاق الفرع.'],403);try{return response()->json(['status'=>true,'message'=>'تمت إضافة التكلفة ورسملتها وتوزيعها على دفعات الشحنة.','data'=>$s->store([...$v,'company_id'=>$c->companyId($r),'branch_id'=>(int)$sh->branch_id,'created_by'=>(int)$c->userId($r)])],201);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}}
+ public function update(UpdateShipmentCostRequest $r,int $id){return response()->json(['status'=>false,'message'=>'التكلفة المرحلة لا تعدل مباشرة.'],422);}public function destroy(int $id){return response()->json(['status'=>false,'message'=>'لا يمكن حذف تكلفة مرحلة مباشرة.'],422);}
 }
