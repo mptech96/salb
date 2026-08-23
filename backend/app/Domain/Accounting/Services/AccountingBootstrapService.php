@@ -37,6 +37,7 @@ class AccountingBootstrapService
 
             $accounts = $this->ensureStandardAccounts($companyId);
             $this->ensureAccountingSettings($companyId, $accounts);
+            $this->ensureBranchFinancialSetup($companyId, $mainBranchId, 'الفرع الرئيسي', $branchCostCenterId, $accounts['1110']);
 
             return [
                 'financial_year_id' => $financialYearId,
@@ -52,11 +53,10 @@ class AccountingBootstrapService
         int $branchId,
         string $branchName
     ): int {
-        return $this->ensureBranchCostCenter(
-            $companyId,
-            $branchId,
-            $branchName
-        );
+        $costCenterId = $this->ensureBranchCostCenter($companyId, $branchId, $branchName);
+        $cashGl = DB::table('accounts')->where('company_id',$companyId)->where('account_code','1110')->value('id');
+        if ($cashGl) $this->ensureBranchFinancialSetup($companyId,$branchId,$branchName,$costCenterId,(int)$cashGl);
+        return $costCenterId;
     }
 
     private function ensureFinancialYear(
@@ -153,6 +153,7 @@ class AccountingBootstrapService
             ['1210','العملاء','ASSET','DEBIT',0,'1200',3,1],
             ['1220','ذمم مدينة أخرى','ASSET','DEBIT',0,'1200',3,1],
             ['1230','دفعات مقدمة للموردين','ASSET','DEBIT',0,'1200',3,1],
+            ['1240','جاري الفروع - مدين','ASSET','DEBIT',0,'1200',3,1],
 
             ['1300','المخزون','ASSET','DEBIT',1,'1000',2,0],
             ['1310','مخزون مواد وبضائع','ASSET','DEBIT',0,'1300',3,1],
@@ -192,6 +193,7 @@ class AccountingBootstrapService
             ['2500','دفعات العملاء المقدمة','LIABILITY','CREDIT',0,'2000',2,1],
             ['2600','القروض والتمويل','LIABILITY','CREDIT',0,'2000',2,1],
             ['2700','التزامات أخرى','LIABILITY','CREDIT',0,'2000',2,1],
+            ['2800','جاري الفروع - دائن','LIABILITY','CREDIT',0,'2000',2,1],
 
             ['3000','حقوق الملكية','EQUITY','CREDIT',1,null,1,0],
             ['3100','رأس المال','EQUITY','CREDIT',0,'3000',2,0],
@@ -199,6 +201,7 @@ class AccountingBootstrapService
             ['3300','الأرباح المحتجزة','EQUITY','CREDIT',0,'3000',2,0],
             ['3400','نتيجة السنة الحالية','EQUITY','CREDIT',0,'3000',2,0],
             ['3500','المسحوبات والتوزيعات','EQUITY','DEBIT',0,'3000',2,0],
+            ['3600','حساب الأرصدة الافتتاحية','EQUITY','CREDIT',0,'3000',2,0],
 
             ['4000','الإيرادات','REVENUE','CREDIT',1,null,1,0],
             ['4100','إيرادات المبيعات','REVENUE','CREDIT',0,'4000',2,1],
@@ -207,6 +210,7 @@ class AccountingBootstrapService
             ['4400','إيرادات تشغيلية أخرى','REVENUE','CREDIT',0,'4000',2,1],
             ['4500','أرباح بيع الأصول','REVENUE','CREDIT',0,'4000',2,1],
             ['4600','خصومات مكتسبة','REVENUE','CREDIT',0,'4000',2,1],
+            ['4700','أرباح فروقات العملة','REVENUE','CREDIT',0,'4000',2,1],
 
             ['5000','تكلفة الإيرادات','EXPENSE','DEBIT',1,null,1,0],
             ['5100','تكلفة البضاعة المباعة','EXPENSE','DEBIT',0,'5000',2,1],
@@ -234,6 +238,7 @@ class AccountingBootstrapService
             ['7500','مصروف إهلاك الأثاث والأجهزة','EXPENSE','DEBIT',0,'7000',2,1],
             ['7600','خسائر بيع واستبعاد الأصول','EXPENSE','DEBIT',0,'7000',2,1],
             ['7700','مصروفات أخرى','EXPENSE','DEBIT',0,'7000',2,1],
+            ['7800','خسائر فروقات العملة','EXPENSE','DEBIT',0,'7000',2,1],
         ];
 
         $idsByCode = [];
@@ -309,6 +314,11 @@ class AccountingBootstrapService
             'ACCRUED_EXPENSE_ACCOUNT' => '2400',
             'DRIVER_ADVANCE_ACCOUNT' => '1520',
             'INVENTORY_ADJUSTMENT_ACCOUNT' => '5500',
+            'INTERBRANCH_DUE_FROM_ACCOUNT' => '1240',
+            'INTERBRANCH_DUE_TO_ACCOUNT' => '2800',
+            'OPENING_BALANCE_ACCOUNT' => '3600',
+            'FX_GAIN_ACCOUNT' => '4700',
+            'FX_LOSS_ACCOUNT' => '7800',
         ];
 
         foreach ($map as $key => $code) {
@@ -325,4 +335,22 @@ class AccountingBootstrapService
             );
         }
     }
+    private function ensureBranchFinancialSetup(int $companyId,int $branchId,string $branchName,int $costCenterId,int $cashGl): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('financial_accounts')) return;
+        $base = strtoupper((string) (DB::table('company_settings')->where('company_id',$companyId)->value('base_currency_code')
+            ?: DB::table('company_settings')->where('company_id',$companyId)->value('currency_code') ?: 'USD'));
+        if (\Illuminate\Support\Facades\Schema::hasTable('currencies')) {
+            DB::table('currencies')->updateOrInsert(['currency_code'=>$base],['currency_name'=>$base,'decimal_places'=>3,'is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+            DB::table('company_currencies')->updateOrInsert(['company_id'=>$companyId,'currency_code'=>$base],['is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+        }
+        $code='CASH-BR-'.$branchId;
+        $existing=DB::table('financial_accounts')->where('company_id',$companyId)->where('account_code',$code)->first();
+        if($existing)$id=(int)$existing->id;
+        else $id=DB::table('financial_accounts')->insertGetId(['company_id'=>$companyId,'branch_id'=>$branchId,'account_code'=>$code,'account_name'=>'صندوق '.$branchName,
+            'account_type'=>'CASH','gl_account_id'=>$cashGl,'currency_code'=>$base,'is_default_receipt'=>1,'is_default_payment'=>1,'is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+        DB::table('branch_financial_settings')->updateOrInsert(['company_id'=>$companyId,'branch_id'=>$branchId],
+            ['default_cash_financial_account_id'=>$id,'default_cost_center_id'=>$costCenterId,'created_at'=>now(),'updated_at'=>now()]);
+    }
+
 }

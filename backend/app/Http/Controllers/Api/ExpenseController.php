@@ -1,347 +1,39 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Accounting\AccountingContext;
 use App\Services\Accounting\AccountingEngine;
+use App\Services\FinancialAccountService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
 {
-    private function companyId()
+    public function meta(Request $r,AccountingContext $ctx,FinancialAccountService $money)
     {
-        return request()->header('X-Company-ID');
+        $cid=$ctx->companyId($r);$scoped=$ctx->branchFilter($r);$scope=fn($q)=>$scoped!==null?$q->where(function($x)use($scoped){$x->whereNull('branch_id')->orWhere('branch_id',$scoped);}):$q;
+        return response()->json(['status'=>true,'data'=>['branches'=>DB::table('branches')->where('company_id',$cid)->where('is_active',1)->when($scoped!==null,fn($q)=>$q->where('id',$scoped))->orderBy('branch_name')->get(['id','branch_name']),'types'=>DB::table('expense_types as t')->leftJoin('accounts as a','a.id','=','t.account_id')->where(function($q)use($cid){$q->where('t.company_id',$cid)->orWhereNull('t.company_id');})->where('t.is_active',1)->select('t.*','a.account_code','a.account_name')->orderBy('t.type_name')->get(),'shipments'=>$scope(DB::table('shipments')->where('company_id',$cid))->orderByDesc('id')->limit(500)->get(['id','branch_id','shipment_number']),'cars'=>$scope(DB::table('cars')->where('company_id',$cid)->where('is_active',1))->orderBy('plate_number')->get(['id','branch_id','car_number','plate_number']),'purchases'=>$scope(DB::table('purchase_invoices')->where('company_id',$cid))->orderByDesc('id')->limit(500)->get(['id','branch_id','invoice_number']),'sales'=>$scope(DB::table('sales_invoices')->where('company_id',$cid))->orderByDesc('id')->limit(500)->get(['id','branch_id','invoice_number']),'drivers'=>$scope(DB::table('drivers')->where('company_id',$cid)->where('is_active',1))->orderBy('driver_name')->get(['id','branch_id','driver_name']),'workers'=>$scope(DB::table('workers')->where('company_id',$cid)->where('is_active',1))->orderBy('worker_name')->get(['id','branch_id','worker_name']),'financial_accounts'=>$money->list($cid,$scoped),'currencies'=>DB::table('company_currencies as cc')->join('currencies as cu','cu.currency_code','=','cc.currency_code')->where('cc.company_id',$cid)->where('cc.is_active',1)->select('cc.currency_code','cc.is_base','cu.currency_name')->orderByDesc('cc.is_base')->get(),'base_currency'=>$money->baseCurrency($cid),'scoped_branch_id'=>$scoped]]);
     }
 
-    private function branchId()
+    public function index(Request $r,AccountingContext $ctx)
     {
-        return request()->header('X-Branch-ID');
+        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);
+        $q=DB::table('expenses as e')->leftJoin('expense_types as t','t.id','=','e.expense_type_id')->leftJoin('shipments as sh','sh.id','=','e.shipment_id')->leftJoin('cars as c','c.id','=','e.car_id')->leftJoin('drivers as d','d.id','=','e.driver_id')->leftJoin('workers as w','w.id','=','e.worker_id')->leftJoin('purchase_invoices as p','p.id','=','e.purchase_invoice_id')->leftJoin('sales_invoices as s','s.id','=','e.sales_invoice_id')->leftJoin('vouchers as v','v.id','=','e.voucher_id')->leftJoin('financial_accounts as fa','fa.id','=','e.financial_account_id')->where('e.company_id',$cid);if($bid!==null)$q->where('e.branch_id',$bid);
+        return response()->json(['status'=>true,'data'=>$q->select('e.*','t.type_name','t.type_code','t.description as type_description','t.affects_cost','sh.shipment_number','c.car_number','d.driver_name','w.worker_name','p.invoice_number as purchase_invoice_number','s.invoice_number as sales_invoice_number','v.voucher_number','fa.account_name as financial_account_name')->orderByDesc('e.id')->get()]);
     }
 
-    private function userId()
+    public function store(Request $r,AccountingEngine $accounting,AccountingContext $ctx,FinancialAccountService $money)
     {
-        return request()->header('X-User-ID');
+        $cid=$ctx->companyId($r);$v=$this->valid($r);try{$bid=$ctx->branchForOperation($r);$ids=$this->resolveAndValidateScope($cid,$bid,$v);$type=DB::table('expense_types')->where('id',$v['expense_type_id'])->where(function($q)use($cid){$q->where('company_id',$cid)->orWhereNull('company_id');})->where('is_active',1)->first();if(!$type)throw new \RuntimeException('نوع المصروف غير صالح.');$paid=strtoupper((string)($v['payment_status']??'PAID'))==='PAID';$fa=$paid?$money->resolve($cid,$bid,$v['payment_method']??'CASH',isset($v['financial_account_id'])?(int)$v['financial_account_id']:null,'PAYMENT'):null;$currency=strtoupper((string)($v['currency_code']??($fa->currency_code??$money->baseCurrency($cid))));if($fa)$money->assertCurrency($fa,$currency);$rate=isset($v['exchange_rate'])?(float)$v['exchange_rate']:$money->rate($cid,$currency,$v['expense_date']);}catch(\Throwable$e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        return DB::transaction(function()use($r,$accounting,$ctx,$cid,$bid,$v,$ids,$type,$fa,$currency,$rate){$id=DB::table('expenses')->insertGetId(['company_id'=>$cid,'branch_id'=>$bid,'expense_type_id'=>$v['expense_type_id'],'expense_date'=>$v['expense_date'],'scope_type'=>$v['scope_type'],'reference_type'=>$v['reference_type']??$v['scope_type'],'reference_id'=>$v['reference_id']??$ids['reference_id'],'shipment_id'=>$ids['shipment_id'],'car_id'=>$ids['car_id'],'purchase_invoice_id'=>$ids['purchase_invoice_id'],'sales_invoice_id'=>$ids['sales_invoice_id'],'driver_id'=>$ids['driver_id'],'worker_id'=>$ids['worker_id'],'amount'=>round((float)$v['amount'],3),'payment_status'=>$v['payment_status']??'PAID','payment_method'=>$v['payment_method']??'CASH','financial_account_id'=>$fa?->id,'currency_code'=>$currency,'exchange_rate'=>$rate,'foreign_amount'=>$v['foreign_amount']??null,'voucher_id'=>null,'journal_entry_id'=>null,'expense_effect'=>$v['expense_effect']??'COST','notes'=>$v['notes']??null,'created_at'=>now(),'updated_at'=>now()]);
+            $res=$accounting->expense(['company_id'=>$cid,'branch_id'=>$bid,'expense_id'=>$id,'amount'=>$v['amount'],'expense_date'=>$v['expense_date'],'payment_status'=>$v['payment_status']??'PAID','payment_method'=>$v['payment_method']??'CASH','financial_account_id'=>$fa?->id,'currency_code'=>$currency,'exchange_rate'=>$rate,'foreign_amount'=>$v['foreign_amount']??null,'expense_account_id'=>$type->account_id,'created_by'=>$ctx->userId($r)]);if(!$res->success)throw new \RuntimeException($res->message);return response()->json(['status'=>true,'message'=>'تم حفظ المصروف وترحيله محاسبيًا','id'=>$id,'voucher_id'=>$res->voucherId,'journal_entry_id'=>$res->journalEntryId],201);});
     }
 
-    public function index()
-    {
-        $companyId = $this->companyId();
-        $branchScopeId = (int) $this->branchId();
+    public function show(Request $r,int $id,AccountingContext $ctx){$q=DB::table('expenses as e')->leftJoin('financial_accounts as fa','fa.id','=','e.financial_account_id')->where('e.company_id',$ctx->companyId($r))->where('e.id',$id);$bid=$ctx->branchFilter($r);if($bid!==null)$q->where('e.branch_id',$bid);$x=$q->select('e.*','fa.account_name as financial_account_name')->first();return$x?response()->json(['status'=>true,'data'=>$x]):response()->json(['status'=>false,'message'=>'المصروف غير موجود'],404);}
+    public function update(Request $r,int $id,AccountingContext $ctx){$q=DB::table('expenses')->where('company_id',$ctx->companyId($r))->where('id',$id);$bid=$ctx->branchFilter($r);if($bid!==null)$q->where('branch_id',$bid);$x=$q->first();if(!$x)return response()->json(['status'=>false,'message'=>'المصروف غير موجود'],404);if($x->journal_entry_id||$x->voucher_id)return response()->json(['status'=>false,'message'=>'المصروف مرحل محاسبيًا ولا يعدل مباشرة؛ استخدم دورة العكس/الإلغاء.'],422);return response()->json(['status'=>false,'message'=>'المصروف غير المرحل يعاد إنشاؤه لضمان سلامة الأبعاد المالية.'],422);}
+    public function destroy(Request $r,int $id,AccountingContext $ctx){$q=DB::table('expenses')->where('company_id',$ctx->companyId($r))->where('id',$id);$bid=$ctx->branchFilter($r);if($bid!==null)$q->where('branch_id',$bid);$x=$q->first();if(!$x)return response()->json(['status'=>false,'message'=>'المصروف غير موجود'],404);if($x->journal_entry_id||$x->voucher_id)return response()->json(['status'=>false,'message'=>'لا يمكن حذف مصروف مرحل محاسبيًا. استخدم دورة الإلغاء/العكس.'],422);$q->delete();return response()->json(['status'=>true,'message'=>'تم حذف المصروف']);}
 
-        $data = DB::table('expenses as e')
-            ->leftJoin('expense_types as t', 't.id', '=', 'e.expense_type_id')
-            ->leftJoin('shipments as sh', 'sh.id', '=', 'e.shipment_id')
-            ->leftJoin('cars as c', 'c.id', '=', 'e.car_id')
-            ->leftJoin('drivers as d', 'd.id', '=', 'e.driver_id')
-            ->leftJoin('workers as w', 'w.id', '=', 'e.worker_id')
-            ->leftJoin('purchase_invoices as p', 'p.id', '=', 'e.purchase_invoice_id')
-            ->leftJoin('sales_invoices as s', 's.id', '=', 'e.sales_invoice_id')
-            ->leftJoin('vouchers as v', 'v.id', '=', 'e.voucher_id')
-            ->where('e.company_id', $companyId)
-            ->when($branchScopeId > 0, fn ($q) => $q->where('e.branch_id', $branchScopeId))
-            ->select(
-                'e.*',
-                't.type_name',
-                't.type_code',
-                't.description as type_description',
-                't.affects_cost',
-                'sh.shipment_number',
-                'c.car_number',
-                'd.driver_name',
-                'w.worker_name',
-                'p.invoice_number as purchase_invoice_number',
-                's.invoice_number as sales_invoice_number',
-                'v.voucher_number'
-            )
-            ->orderByDesc('e.id')
-            ->get();
-
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
-    }
-
-    public function store(Request $request, AccountingEngine $accounting)
-    {
-        $companyId = $this->companyId();
-        $branchId = $request->branch_id ?? $this->branchId();
-
-        if (!$companyId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لم يتم تحديد الشركة الحالية'
-            ], 400);
-        }
-
-        $request->validate([
-            'expense_type_id' => 'required|integer',
-            'expense_date' => 'required|date',
-            'scope_type' => 'required|string',
-            'amount' => 'required|numeric|min:0.001',
-            'payment_status' => 'nullable|string|in:PAID,UNPAID',
-            'payment_method' => 'nullable|string|in:CASH,BANK,CARD',
-        ]);
-
-        $scope = $request->scope_type ?? 'GENERAL';
-        $ids = $this->resolveScopeIds($request, $scope);
-
-        DB::beginTransaction();
-
-        try {
-            $expenseId = DB::table('expenses')->insertGetId([
-                'company_id' => $companyId,
-                'branch_id' => $branchId,
-
-                'expense_type_id' => $request->expense_type_id,
-                'expense_date' => $request->expense_date,
-                'scope_type' => $scope,
-
-                'reference_type' => $request->reference_type ?? $scope,
-                'reference_id' => $request->reference_id ?? $ids['reference_id'],
-
-                'shipment_id' => $ids['shipment_id'],
-                'car_id' => $ids['car_id'],
-                'purchase_invoice_id' => $ids['purchase_invoice_id'],
-                'sales_invoice_id' => $ids['sales_invoice_id'],
-                'driver_id' => $ids['driver_id'],
-                'worker_id' => $ids['worker_id'],
-
-                'amount' => $request->amount,
-                'payment_status' => $request->payment_status ?? 'PAID',
-                'payment_method' => $request->payment_method ?? 'CASH',
-                'voucher_id' => null,
-                'journal_entry_id' => null,
-                'expense_effect' => $request->expense_effect ?? 'COST',
-
-                'notes' => $request->notes,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $expenseType = DB::table('expense_types')
-                ->where('id', $request->expense_type_id)
-                ->where(function ($q) use ($companyId) {
-                    $q->where('company_id', $companyId)
-                      ->orWhereNull('company_id');
-                })
-                ->first();
-
-            $result = $accounting->expense([
-                'company_id' => $companyId,
-                'branch_id' => $branchId,
-                'expense_id' => $expenseId,
-                'amount' => $request->amount,
-                'expense_date' => $request->expense_date,
-                'payment_status' => $request->payment_status ?? 'PAID',
-                'payment_method' => $request->payment_method ?? 'CASH',
-                'expense_account_id' => $expenseType?->account_id,
-                'created_by' => $this->userId(),
-            ]);
-
-            if (!$result->success) {
-                throw new \Exception($result->message);
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'status' => true,
-                'message' => 'تم حفظ المصروف وترحيله محاسبيًا',
-                'id' => $expenseId,
-                'voucher_id' => $result->voucherId,
-                'journal_entry_id' => $result->journalEntryId,
-            ]);
-
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function show($id)
-    {
-        $companyId = $this->companyId();
-
-        $expense = DB::table('expenses')
-            ->where('company_id', $companyId)
-            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
-            ->where('id', $id)
-            ->first();
-
-        if (!$expense) {
-            return response()->json([
-                'status' => false,
-                'message' => 'المصروف غير موجود'
-            ], 404);
-        }
-
-        return response()->json([
-            'status' => true,
-            'data' => $expense
-        ]);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $companyId = $this->companyId();
-        $branchId = $request->branch_id ?? $this->branchId();
-
-        if (!$companyId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لم يتم تحديد الشركة الحالية'
-            ], 400);
-        }
-
-        $expense = DB::table('expenses')
-            ->where('company_id', $companyId)
-            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
-            ->where('id', $id)
-            ->first();
-
-        if (!$expense) {
-            return response()->json([
-                'status' => false,
-                'message' => 'المصروف غير موجود'
-            ], 404);
-        }
-
-        if ($expense->journal_entry_id || $expense->voucher_id) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لا يمكن تعديل مصروف مرحّل محاسبيًا الآن. لاحقًا سنضيف عكس القيد وإعادة الترحيل.'
-            ], 400);
-        }
-
-        $request->validate([
-            'expense_type_id' => 'required|integer',
-            'expense_date' => 'required|date',
-            'scope_type' => 'required|string',
-            'amount' => 'required|numeric|min:0.001',
-            'payment_status' => 'nullable|string|in:PAID,UNPAID',
-            'payment_method' => 'nullable|string|in:CASH,BANK,CARD',
-        ]);
-
-        $scope = $request->scope_type ?? 'GENERAL';
-        $ids = $this->resolveScopeIds($request, $scope);
-
-        DB::table('expenses')
-            ->where('company_id', $companyId)
-            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
-            ->where('id', $id)
-            ->update([
-                'branch_id' => $branchId,
-                'expense_type_id' => $request->expense_type_id,
-                'expense_date' => $request->expense_date,
-                'scope_type' => $scope,
-                'reference_type' => $request->reference_type ?? $scope,
-                'reference_id' => $request->reference_id ?? $ids['reference_id'],
-
-                'shipment_id' => $ids['shipment_id'],
-                'car_id' => $ids['car_id'],
-                'purchase_invoice_id' => $ids['purchase_invoice_id'],
-                'sales_invoice_id' => $ids['sales_invoice_id'],
-                'driver_id' => $ids['driver_id'],
-                'worker_id' => $ids['worker_id'],
-
-                'amount' => $request->amount,
-                'payment_status' => $request->payment_status ?? $expense->payment_status,
-                'payment_method' => $request->payment_method ?? $expense->payment_method,
-                'expense_effect' => $request->expense_effect ?? $expense->expense_effect,
-                'notes' => $request->notes,
-                'updated_at' => now(),
-            ]);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تم تعديل المصروف'
-        ]);
-    }
-
-    public function destroy($id)
-    {
-        $companyId = $this->companyId();
-
-        $expense = DB::table('expenses')
-            ->where('company_id', $companyId)
-            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
-            ->where('id', $id)
-            ->first();
-
-        if (!$expense) {
-            return response()->json([
-                'status' => false,
-                'message' => 'المصروف غير موجود'
-            ], 404);
-        }
-
-        if ($expense->journal_entry_id || $expense->voucher_id) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لا يمكن حذف مصروف مرحّل محاسبيًا. لاحقًا سنضيف إلغاء بعكس القيد.'
-            ], 400);
-        }
-
-        DB::table('expenses')
-            ->where('company_id', $companyId)
-            ->when((int) request()->header('X-Branch-ID') > 0, fn ($q) => $q->where('branch_id', (int) request()->header('X-Branch-ID')))
-            ->where('id', $id)
-            ->delete();
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تم حذف المصروف'
-        ]);
-    }
-
-    private function resolveScopeIds(Request $request, string $scope): array
-    {
-        $data = [
-            'shipment_id' => null,
-            'car_id' => null,
-            'purchase_invoice_id' => null,
-            'sales_invoice_id' => null,
-            'driver_id' => null,
-            'worker_id' => null,
-            'reference_id' => null,
-        ];
-
-        if ($scope === 'SHIPMENT') {
-            $data['shipment_id'] = $request->shipment_id ?: $request->reference_id;
-            $data['reference_id'] = $data['shipment_id'];
-        }
-
-        if ($scope === 'CAR') {
-            $data['car_id'] = $request->car_id ?: $request->reference_id;
-            $data['reference_id'] = $data['car_id'];
-        }
-
-        if ($scope === 'PURCHASE_INVOICE') {
-            $data['purchase_invoice_id'] = $request->purchase_invoice_id ?: $request->reference_id;
-            $data['reference_id'] = $data['purchase_invoice_id'];
-        }
-
-        if ($scope === 'SALES_INVOICE') {
-            $data['sales_invoice_id'] = $request->sales_invoice_id ?: $request->reference_id;
-            $data['reference_id'] = $data['sales_invoice_id'];
-        }
-
-        if ($scope === 'DRIVER') {
-            $data['driver_id'] = $request->driver_id ?: $request->reference_id;
-            $data['reference_id'] = $data['driver_id'];
-        }
-
-        if ($scope === 'WORKER') {
-            $data['worker_id'] = $request->worker_id ?: $request->reference_id;
-            $data['reference_id'] = $data['worker_id'];
-        }
-
-        return $data;
-    }
+    private function valid(Request$r): array{return$r->validate(['branch_id'=>'nullable|integer','expense_type_id'=>'required|integer','expense_date'=>'required|date','scope_type'=>'required|string|max:50','reference_type'=>'nullable|string|max:50','reference_id'=>'nullable|integer','shipment_id'=>'nullable|integer','car_id'=>'nullable|integer','purchase_invoice_id'=>'nullable|integer','sales_invoice_id'=>'nullable|integer','driver_id'=>'nullable|integer','worker_id'=>'nullable|integer','amount'=>'required|numeric|min:0.001','payment_status'=>'nullable|in:PAID,UNPAID','payment_method'=>'nullable|in:CASH,BANK,CARD,BANK_TRANSFER,WALLET','financial_account_id'=>'nullable|integer','currency_code'=>'nullable|string|max:10','exchange_rate'=>'nullable|numeric|min:0.0000000001','foreign_amount'=>'nullable|numeric|min:0','expense_effect'=>'nullable|string|max:50','notes'=>'nullable|string|max:5000']);}
+    private function resolveAndValidateScope(int$cid,int$bid,array$v): array{$scope=strtoupper((string)$v['scope_type']);$map=['SHIPMENT'=>['shipments','shipment_id'],'CAR'=>['cars','car_id'],'PURCHASE_INVOICE'=>['purchase_invoices','purchase_invoice_id'],'SALES_INVOICE'=>['sales_invoices','sales_invoice_id'],'DRIVER'=>['drivers','driver_id'],'WORKER'=>['workers','worker_id']];$out=['shipment_id'=>null,'car_id'=>null,'purchase_invoice_id'=>null,'sales_invoice_id'=>null,'driver_id'=>null,'worker_id'=>null,'reference_id'=>null];if(!isset($map[$scope]))return$out;[$table,$field]=$map[$scope];$id=(int)($v[$field]??$v['reference_id']??0);if(!$id)throw new \RuntimeException('حدد مرجع المصروف.');$q=DB::table($table)->where('company_id',$cid)->where('id',$id);if(DB::getSchemaBuilder()->hasColumn($table,'branch_id'))$q->where(function($x)use($bid){$x->whereNull('branch_id')->orWhere('branch_id',$bid);});if(!$q->exists())throw new \RuntimeException('مرجع المصروف غير صالح أو يخص فرعًا آخر.');$out[$field]=$id;$out['reference_id']=$id;return$out;}
 }

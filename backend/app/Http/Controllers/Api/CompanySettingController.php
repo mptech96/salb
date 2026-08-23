@@ -3,145 +3,193 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Accounting\AccountingContext;
+use App\Services\EntityAddressService;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class CompanySettingController extends Controller
 {
     use LogsActivity;
 
-    private function companyId()
+    public function show(Request $request, AccountingContext $context, EntityAddressService $addresses)
     {
-        return request()->header('X-Company-ID');
-    }
+        $companyId = $context->companyId($request);
 
-    public function show()
-    {
-        $companyId = $this->companyId();
-
-        if (!$companyId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لم يتم تحديد الشركة الحالية'
-            ], 400);
-        }
-
-        $settings = DB::table('company_settings')
-            ->where('company_id', $companyId)
-            ->first();
+        $settings = DB::table('company_settings')->where('company_id', $companyId)->first();
 
         if (!$settings) {
             DB::table('company_settings')->insert([
                 'company_id' => $companyId,
+                'currency_name' => 'USD',
+                'currency_code' => 'USD',
+                'base_currency_code' => 'USD',
+                'currency_decimal_places' => 3,
+                'primary_color' => '#0B2A4A',
+                'secondary_color' => '#123D68',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-
-            $settings = DB::table('company_settings')
-                ->where('company_id', $companyId)
-                ->first();
+            $settings = DB::table('company_settings')->where('company_id', $companyId)->first();
         }
 
-        return response()->json([
-            'status' => true,
-            'data' => $settings
-        ]);
+        if (Schema::hasTable('currencies') && Schema::hasTable('company_currencies')) {
+            $base = strtoupper(trim((string)($settings->base_currency_code ?? $settings->currency_code ?? 'USD'))) ?: 'USD';
+            DB::table('currencies')->updateOrInsert(['currency_code'=>$base],[
+                'currency_name'=>$settings->currency_name ?: $base,
+                'decimal_places'=>(int)($settings->currency_decimal_places ?? 3),
+                'is_active'=>1,'created_at'=>now(),'updated_at'=>now(),
+            ]);
+            DB::table('company_currencies')->updateOrInsert(['company_id'=>$companyId,'currency_code'=>$base],[
+                'is_base'=>1,'is_active'=>1,'created_at'=>now(),'updated_at'=>now(),
+            ]);
+        }
+
+        $company = DB::table('companies')->where('id', $companyId)->first();
+        $data = (array) $settings;
+        $data['company_name_fallback'] = $company->company_name ?? null;
+        $data['company'] = $company;
+        $data['address_details'] = $addresses->getDefault($companyId, 'COMPANY', $companyId);
+        $data['logo_url'] = !empty($settings->logo_path) ? asset('storage/' . $settings->logo_path) : null;
+        $data['signature_url'] = !empty($settings->signature_path) ? asset('storage/' . $settings->signature_path) : null;
+        $data['stamp_url'] = !empty($settings->stamp_path) ? asset('storage/' . $settings->stamp_path) : null;
+        return response()->json(['status' => true, 'data' => $data]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request, AccountingContext $context, EntityAddressService $addresses)
     {
-        $companyId = $this->companyId();
-
-        if (!$companyId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لم يتم تحديد الشركة الحالية'
-            ], 400);
-        }
-
-        $request->validate([
-            'print_company_name' => 'nullable|string|max:255',
-            'print_phone' => 'nullable|string|max:50',
-            'print_email' => 'nullable|string|max:150',
-            'print_city' => 'nullable|string|max:100',
-            'print_address' => 'nullable|string',
-            'tax_number' => 'nullable|string|max:100',
-            'commercial_register' => 'nullable|string|max:100',
-            'currency_name' => 'nullable|string|max:50',
-            'currency_code' => 'nullable|string|max:10',
-            'invoice_footer' => 'nullable|string',
-            'report_footer' => 'nullable|string',
-            'primary_color' => 'nullable|string|max:20',
-            'secondary_color' => 'nullable|string|max:20',
+        $companyId = $context->companyId($request);
+        $validated = $request->validate([
+            'print_company_name'=>['nullable','string','max:255'],'print_phone'=>['nullable','string','max:50'],
+            'print_email'=>['nullable','email','max:150'],'print_city'=>['nullable','string','max:100'],
+            'print_address'=>['nullable','string','max:2000'],'tax_number'=>['nullable','string','max:100'],
+            'commercial_register'=>['nullable','string','max:100'],'currency_name'=>['nullable','string','max:50'],
+            'currency_code'=>['nullable','string','max:10'],'invoice_footer'=>['nullable','string','max:3000'],
+            'report_footer'=>['nullable','string','max:3000'],'primary_color'=>['nullable','string','max:20'],
+            'secondary_color'=>['nullable','string','max:20'],'legal_name'=>['nullable','string','max:255'],
+            'registration_number'=>['nullable','string','max:120'],'country_code'=>['nullable','string','size:2'],
+            'default_language'=>['nullable','string','max:10'],'timezone'=>['nullable','string','max:80'],
+            'short_address'=>['nullable','string','max:100'],'building_no'=>['nullable','string','max:50'],
+            'street_name'=>['nullable','string','max:200'],'district'=>['nullable','string','max:150'],
+            'city'=>['nullable','string','max:150'],'state_region'=>['nullable','string','max:150'],
+            'postal_code'=>['nullable','string','max:50'],'additional_no'=>['nullable','string','max:50'],
+            'unit_no'=>['nullable','string','max:50'],'address_line1'=>['nullable','string','max:500'],
+            'address_line2'=>['nullable','string','max:500'],
         ]);
 
-        DB::table('company_settings')->updateOrInsert(
-            ['company_id' => $companyId],
-            [
-                'print_company_name' => $request->print_company_name,
-                'print_phone' => $request->print_phone,
-                'print_email' => $request->print_email,
-                'print_city' => $request->print_city,
-                'print_address' => $request->print_address,
-                'tax_number' => $request->tax_number,
-                'commercial_register' => $request->commercial_register,
-                'currency_name' => $request->currency_name ?? 'ريال',
-                'currency_code' => $request->currency_code ?? 'SAR',
-                'invoice_footer' => $request->invoice_footer,
-                'report_footer' => $request->report_footer,
-                'primary_color' => $request->primary_color ?? '#0B2A4A',
-                'secondary_color' => $request->secondary_color ?? '#123D68',
-                'updated_at' => now(),
-            ]
-        );
+        DB::transaction(function () use ($companyId, $validated, $addresses) {
+            $settingsPayload = collect($validated)->only(['print_company_name','print_phone','print_email','print_city','print_address','tax_number','commercial_register','currency_name','currency_code','invoice_footer','report_footer','primary_color','secondary_color','country_code'])->all();
+            if (!empty($validated['currency_code'])) $settingsPayload['base_currency_code'] = strtoupper($validated['currency_code']);
+            if (empty($settingsPayload['primary_color'])) $settingsPayload['primary_color'] = '#0B2A4A';
+            if (empty($settingsPayload['secondary_color'])) $settingsPayload['secondary_color'] = '#123D68';
+            $settingsPayload['updated_at'] = now();
+            DB::table('company_settings')->updateOrInsert(['company_id'=>$companyId],$settingsPayload);
+            DB::table('companies')->where('id',$companyId)->update([
+                'legal_name'=>$validated['legal_name']??null,
+                'registration_number'=>$validated['registration_number']??($validated['commercial_register']??null),
+                'tax_number'=>$validated['tax_number']??null,
+                'country_code'=>!empty($validated['country_code'])?strtoupper($validated['country_code']):null,
+                'default_language'=>$validated['default_language']??'ar',
+                'timezone'=>$validated['timezone']??'UTC',
+                'city'=>$validated['city']??($validated['print_city']??null),
+                'address'=>$validated['address_line1']??($validated['print_address']??null),
+                'updated_at'=>now(),
+            ]);
+            $addresses->upsertDefault($companyId,'COMPANY',$companyId,$validated);
+        });
 
-        $this->logUpdate('CompanySettings', $companyId, 'تم تحديث إعدادات الشركة');
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تم حفظ إعدادات الشركة بنجاح'
-        ]);
+        $this->logUpdate('CompanySettings', $companyId, 'تم تحديث إعدادات الشركة والطباعة');
+        return response()->json(['status' => true, 'message' => 'تم حفظ إعدادات الشركة بنجاح.']);
     }
 
-    public function upload(Request $request)
+    public function upload(Request $request, AccountingContext $context)
     {
-        $companyId = $this->companyId();
+        $companyId = $context->companyId($request);
 
-        if (!$companyId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لم يتم تحديد الشركة الحالية'
-            ], 400);
+        $type = (string) $request->input('type', '');
+        if (!in_array($type, ['logo', 'signature', 'stamp'], true)) {
+            throw ValidationException::withMessages(['type' => ['نوع الملف غير صحيح.']]);
         }
 
-        $request->validate([
-            'type' => 'required|in:logo,signature,stamp',
-            'file' => 'required|file|mimes:png,jpg,jpeg,webp|max:2048',
-        ]);
-
-        $path = $request->file('file')->store("company-settings/{$companyId}", 'public');
-
-        $column = match ($request->type) {
+        $column = match ($type) {
             'logo' => 'logo_path',
             'signature' => 'signature_path',
             'stamp' => 'stamp_path',
         };
 
+        $oldPath = DB::table('company_settings')->where('company_id', $companyId)->value($column);
+        $path = null;
+
+        $dataUrl = $request->input('file_base64');
+        if (is_string($dataUrl) && $dataUrl !== '') {
+            if (!preg_match('#^data:image/(png|jpeg|jpg|webp);base64,(.+)$#is', $dataUrl, $m)) {
+                throw ValidationException::withMessages(['file' => ['صيغة الصورة غير صحيحة. استخدم PNG أو JPG/JPEG أو WEBP.']]);
+            }
+
+            $binary = base64_decode($m[2], true);
+            if ($binary === false || $binary === '') {
+                throw ValidationException::withMessages(['file' => ['تعذر قراءة بيانات الصورة.']]);
+            }
+
+            if (strlen($binary) > 5 * 1024 * 1024) {
+                throw ValidationException::withMessages(['file' => ['حجم الصورة يجب ألا يتجاوز 5 MB.']]);
+            }
+
+            $imageInfo = @getimagesizefromstring($binary);
+            if (!$imageInfo || empty($imageInfo['mime'])) {
+                throw ValidationException::withMessages(['file' => ['الملف ليس صورة صالحة.']]);
+            }
+
+            $mime = strtolower((string) $imageInfo['mime']);
+            $ext = match ($mime) {
+                'image/png' => 'png',
+                'image/jpeg' => 'jpg',
+                'image/webp' => 'webp',
+                default => null,
+            };
+
+            if (!$ext) {
+                throw ValidationException::withMessages(['file' => ['يسمح فقط بصور PNG و JPG/JPEG و WEBP.']]);
+            }
+
+            $safeName = $type . '-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
+            $path = "company-settings/{$companyId}/{$safeName}";
+            Storage::disk('public')->put($path, $binary);
+        } elseif ($request->hasFile('file')) {
+            $request->validate([
+                'file' => ['required','file','mimes:png,jpg,jpeg,webp','max:5120'],
+            ], [
+                'file.required' => 'اختر ملفاً للرفع.',
+                'file.file' => 'الملف المرفوع غير صالح.',
+                'file.mimes' => 'يسمح فقط بصور PNG و JPG/JPEG و WEBP.',
+                'file.max' => 'حجم الصورة يجب ألا يتجاوز 5 MB.',
+            ]);
+
+            $file = $request->file('file');
+            $safeName = $type . '-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . strtolower($file->getClientOriginalExtension());
+            $path = $file->storeAs("company-settings/{$companyId}", $safeName, 'public');
+        } else {
+            throw ValidationException::withMessages(['file' => ['لم تصل بيانات الصورة إلى الخادم.']]);
+        }
+
         DB::table('company_settings')->updateOrInsert(
             ['company_id' => $companyId],
-            [
-                $column => $path,
-                'updated_at' => now(),
-            ]
+            [$column => $path, 'updated_at' => now()]
         );
 
-        $this->logUpdate('CompanySettings', $companyId, 'تم رفع ملف إعدادات: ' . $request->type);
+        if ($oldPath && $oldPath !== $path) {
+            try { Storage::disk('public')->delete($oldPath); } catch (\Throwable $e) {}
+        }
+
+        $this->logUpdate('CompanySettings', $companyId, 'تم رفع ملف إعدادات: ' . $type);
 
         return response()->json([
             'status' => true,
-            'message' => 'تم رفع الملف بنجاح',
+            'message' => 'تم رفع الملف بنجاح.',
             'path' => $path,
             'url' => asset('storage/' . $path),
         ]);

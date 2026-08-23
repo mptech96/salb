@@ -3,12 +3,13 @@
 namespace App\Domain\Accounting\Services;
 
 use App\Services\Accounting\PostingSupport;
+use App\Services\FixedAssets\FixedAssetYearEndService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class FinancialYearService
 {
-    public function __construct(private JournalService $journals, private AccountingReportService $reports, private PostingSupport $support) {}
+    public function __construct(private JournalService $journals, private AccountingReportService $reports, private PostingSupport $support, private FixedAssetYearEndService $assetYearEnd) {}
 
     public function create(int $companyId,array $d): int
     {
@@ -25,13 +26,14 @@ class FinancialYearService
         $trial=$this->reports->trialBalance($companyId,null,['from_date'=>$y->start_date,'to_date'=>$y->end_date]);
         $income=$this->reports->incomeStatement($companyId,null,['from_date'=>$y->start_date,'to_date'=>$y->end_date]);
         $entries=DB::table('journal_entries')->where('company_id',$companyId)->where('financial_year_id',$yearId)->where('status','POSTED')->count();
-        return ['year'=>$y,'entries_count'=>$entries,'trial_balance_difference'=>$trial['totals']['difference'],'revenue_total'=>$income['revenue_total'],'expense_total'=>$income['cost_of_revenue_total']+$income['operating_expenses_total'],'net_result'=>$income['net_result'],'can_close'=>abs((float)$trial['totals']['difference'])<0.001 && !(int)$y->is_closed];
+        $missingDepreciation=$this->assetYearEnd->missingCount($companyId,$y->start_date,$y->end_date);return ['year'=>$y,'entries_count'=>$entries,'trial_balance_difference'=>$trial['totals']['difference'],'revenue_total'=>$income['revenue_total'],'expense_total'=>$income['cost_of_revenue_total']+$income['operating_expenses_total'],'net_result'=>$income['net_result'],'pending_depreciation_months'=>$missingDepreciation,'depreciation_will_post_on_close'=>$missingDepreciation>0,'can_close'=>abs((float)$trial['totals']['difference'])<0.001 && !(int)$y->is_closed];
     }
 
     public function close(int $companyId,int $yearId,?int $userId=null): array
     {
         return DB::transaction(function() use($companyId,$yearId,$userId){
             $y=DB::table('financial_years')->where('company_id',$companyId)->where('id',$yearId)->lockForUpdate()->first();if(!$y)throw new \RuntimeException('السنة المالية غير موجودة.');if((int)$y->is_closed)throw new \RuntimeException('السنة المالية مقفلة بالفعل.');
+            $depreciation=$this->assetYearEnd->complete($companyId,$y->start_date,$y->end_date,$userId);
             $p=$this->preview($companyId,$yearId);if(!$p['can_close'])throw new \RuntimeException('لا يمكن الإقفال قبل توازن القيود ومعالجة الفروقات.');
             $resultAcc=$this->support->setting($companyId,'CURRENT_YEAR_RESULT_ACCOUNT');$retained=$this->support->setting($companyId,'RETAINED_EARNINGS_ACCOUNT');
             $balances=DB::table('journal_entry_lines as l')->join('journal_entries as e','e.id','=','l.journal_entry_id')->join('accounts as a','a.id','=','l.account_id')
@@ -52,7 +54,7 @@ class FinancialYearService
             $nextId=$next?(int)$next->id:DB::table('financial_years')->insertGetId(['company_id'=>$companyId,'year_name'=>$this->name($nextStart,$nextEnd),'start_date'=>$nextStart,'end_date'=>$nextEnd,'is_closed'=>0,'created_at'=>now(),'updated_at'=>now()]);
             $last=DB::table('financial_year_closures')->where('company_id',$companyId)->max('id')??0;$cn='FYC-'.date('Y',strtotime($y->end_date)).'-'.str_pad($last+1,5,'0',STR_PAD_LEFT);
             $cid=DB::table('financial_year_closures')->insertGetId(['company_id'=>$companyId,'financial_year_id'=>$yearId,'closure_number'=>$cn,'close_date'=>$y->end_date,'revenue_total'=>$p['revenue_total'],'expense_total'=>$p['expense_total'],'net_result'=>$net,'profit_loss_entry_id'=>$plEntry,'retained_earnings_entry_id'=>$retEntry,'next_financial_year_id'=>$nextId,'status'=>'CLOSED','closed_by'=>$userId,'created_at'=>now(),'updated_at'=>now()]);
-            return ['closure_id'=>$cid,'closure_number'=>$cn,'net_result'=>$net,'next_financial_year_id'=>$nextId,'profit_loss_entry_id'=>$plEntry,'retained_earnings_entry_id'=>$retEntry];
+            return ['closure_id'=>$cid,'closure_number'=>$cn,'net_result'=>$net,'next_financial_year_id'=>$nextId,'profit_loss_entry_id'=>$plEntry,'retained_earnings_entry_id'=>$retEntry,'depreciation'=>$depreciation];
         });
     }
 

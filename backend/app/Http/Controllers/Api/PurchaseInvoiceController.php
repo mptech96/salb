@@ -1,18 +1,99 @@
 <?php
+
 namespace App\Http\Controllers\Api;
-use App\Http\Controllers\Controller;use App\Services\Accounting\AccountingContext;use App\Services\Accounting\AccountingEngine;use App\Services\InventoryLotService;use App\Traits\LogsActivity;use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;
+
+use App\Http\Controllers\Controller;
+use App\Services\Accounting\AccountingContext;
+use App\Services\EnterpriseInvoiceService;
+use App\Services\DefaultPartyService;
+use App\Services\FinancialAccountService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
 class PurchaseInvoiceController extends Controller
 {
- use LogsActivity;
- public function index(Request $r,AccountingContext $c){$cid=$c->companyId($r);$bid=$c->branchFilter($r);$q=DB::table('purchase_invoices as p')->leftJoin('suppliers as s','s.id','=','p.supplier_id')->leftJoin('cars as c','c.id','=','p.car_id')->where('p.company_id',$cid);if($bid!==null)$q->where('p.branch_id',$bid);return response()->json(['status'=>true,'data'=>$q->select('p.*','s.supplier_name','c.car_number')->orderByDesc('p.id')->get()]);}
- public function show(Request $r,int $id,AccountingContext $c){$cid=$c->companyId($r);$bid=$c->branchFilter($r);$q=DB::table('purchase_invoices')->where('company_id',$cid)->where('id',$id);if($bid!==null)$q->where('branch_id',$bid);$inv=$q->first();if(!$inv)return response()->json(['status'=>false,'message'=>'فاتورة الشراء غير موجودة'],404);$lines=DB::table('purchase_invoice_lines as l')->leftJoin('items as i','i.id','=','l.item_id')->where('l.company_id',$cid)->where('l.purchase_invoice_id',$id)->select('l.*','i.item_name')->get();return response()->json(['status'=>true,'data'=>['invoice'=>$inv,'lines'=>$lines]]);}
- public function store(Request $r,AccountingEngine $a,AccountingContext $c,InventoryLotService $lots){return $this->save($r,null,$a,$c,$lots);} public function update(Request $r,int $id,AccountingEngine $a,AccountingContext $c,InventoryLotService $lots){return $this->save($r,$id,$a,$c,$lots);}
- private function save(Request $r,?int $id,AccountingEngine $a,AccountingContext $ctx,InventoryLotService $lots){$cid=$ctx->companyId($r);$v=$r->validate(['branch_id'=>'nullable|integer','supplier_id'=>'required|integer','car_id'=>'nullable|integer','invoice_number'=>'nullable|string|max:100','invoice_date'=>'required|date','discount_amount'=>'nullable|numeric|min:0','transport_cost'=>'nullable|numeric|min:0','extra_cost'=>'nullable|numeric|min:0','vat_amount'=>'nullable|numeric|min:0','notes'=>'nullable|string','items'=>'required|array|min:1','items.*.item_id'=>'required|integer','items.*.qty'=>'required|numeric|min:0.001','items.*.unit_price'=>'required|numeric|min:0','items.*.discount_amount'=>'nullable|numeric|min:0','items.*.vat_percent'=>'nullable|numeric|min:0|max:100','items.*.notes'=>'nullable|string']);$sup=DB::table('suppliers')->where('company_id',$cid)->where('id',$v['supplier_id'])->where('is_active',1)->first();if(!$sup)return response()->json(['status'=>false,'message'=>'المورد غير صالح.'],422);try{$bid=$ctx->branchForOperation($r,$sup->branch_id? (int)$sup->branch_id:null);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}if($sup->branch_id && (int)$sup->branch_id!==$bid)return response()->json(['status'=>false,'message'=>'المورد لا يتبع الفرع المحدد.'],422);
-  return DB::transaction(function()use($r,$id,$a,$ctx,$lots,$cid,$bid,$v){if($id){$old=DB::table('purchase_invoices')->where('company_id',$cid)->where('branch_id',$bid)->where('id',$id)->first();if(!$old)return response()->json(['status'=>false,'message'=>'الفاتورة غير موجودة'],404);if($old->journal_entry_id)return response()->json(['status'=>false,'message'=>'الفاتورة مرحلة محاسبيًا ولا يمكن تعديلها مباشرة.'],422);DB::table('inventory_lot_movements')->whereIn('inventory_lot_id',DB::table('inventory_lots')->where('company_id',$cid)->where('purchase_invoice_id',$id)->pluck('id'))->delete();DB::table('inventory_lots')->where('company_id',$cid)->where('purchase_invoice_id',$id)->delete();DB::table('purchase_invoice_lines')->where('purchase_invoice_id',$id)->delete();DB::table('stock_movements')->where('company_id',$cid)->where('source_type','PURCHASE')->where('source_id',$id)->delete();}
-   $subtotal=0;$qtyTotal=0;$prepared=[];foreach($v['items'] as $i){$item=DB::table('items')->where('company_id',$cid)->where('id',$i['item_id'])->where('is_active',1)->first();if(!$item)throw new \RuntimeException('أحد الأصناف غير صالح.');$qty=round((float)$i['qty'],3);$price=round((float)$i['unit_price'],3);$disc=round((float)($i['discount_amount']??0),3);$base=max(0,round($qty*$price-$disc,3));$vatPct=(float)($i['vat_percent']??0);$vat=round($base*$vatPct/100,3);$prepared[]=[...$i,'qty'=>$qty,'unit_price'=>$price,'discount_amount'=>$disc,'base'=>$base,'vat_percent'=>$vatPct,'vat'=>$vat];$subtotal+=$base;$qtyTotal+=$qty;}
-   $discount=round((float)($v['discount_amount']??0),3);$transport=round((float)($v['transport_cost']??0),3);$extra=round((float)($v['extra_cost']??0),3);$vat=round((float)($v['vat_amount']??array_sum(array_column($prepared,'vat'))),3);$beforeVat=max(0,round($subtotal-$discount+$transport+$extra,3));$total=round($beforeVat+$vat,3);
-   $row=['company_id'=>$cid,'branch_id'=>$bid,'supplier_id'=>$v['supplier_id'],'car_id'=>$v['car_id']??null,'invoice_number'=>$v['invoice_number']??null,'invoice_date'=>$v['invoice_date'],'total_qty'=>$qtyTotal,'total_before_discount'=>$subtotal,'discount_amount'=>$discount,'vat_amount'=>$vat,'total_before_vat'=>$beforeVat,'total_after_vat'=>$total,'transport_cost'=>$transport,'extra_cost'=>$extra,'total_amount'=>$total,'notes'=>$v['notes']??null,'updated_at'=>now()];if($id){DB::table('purchase_invoices')->where('id',$id)->update($row);$invoiceId=$id;}else{$row+=['payment_status'=>'UNPAID','created_by'=>$ctx->userId($r),'created_at'=>now()];$invoiceId=DB::table('purchase_invoices')->insertGetId($row);}
-   $baseSum=max($subtotal,0.001);foreach($prepared as $p){$share=$p['base']/$baseSum;$allocated=round($p['base']-$discount*$share+($transport+$extra)*$share,3);$unitCost=$p['qty']>0?round($allocated/$p['qty'],3):0;$lineId=DB::table('purchase_invoice_lines')->insertGetId(['company_id'=>$cid,'purchase_invoice_id'=>$invoiceId,'item_id'=>$p['item_id'],'car_id'=>$v['car_id']??null,'qty'=>$p['qty'],'unit_price'=>$p['unit_price'],'discount_amount'=>$p['discount_amount'],'vat_percent'=>$p['vat_percent'],'vat_amount'=>$p['vat'],'total_before_vat'=>$p['base'],'total_after_vat'=>$p['base']+$p['vat'],'line_total'=>$p['base']+$p['vat'],'notes'=>$p['notes']??null,'created_at'=>now(),'updated_at'=>now()]);$qtyKg=round((float)$p['qty']*1000,3);$lotId=$lots->createInboundLot(['company_id'=>$cid,'branch_id'=>$bid,'item_id'=>$p['item_id'],'car_id'=>$v['car_id']??null,'purchase_invoice_id'=>$invoiceId,'purchase_invoice_line_id'=>$lineId,'qty_kg'=>$qtyKg,'base_cost'=>$allocated,'source_type'=>'PURCHASE','source_id'=>$invoiceId,'received_at'=>$v['invoice_date'].' 00:00:00','notes'=>'دفعة من فاتورة شراء','created_by'=>$ctx->userId($r)]);DB::table('stock_movements')->insert(['company_id'=>$cid,'branch_id'=>$bid,'item_id'=>$p['item_id'],'car_id'=>$v['car_id']??null,'inventory_lot_id'=>$lotId,'movement_type'=>'IN','source_type'=>'PURCHASE','source_id'=>$invoiceId,'movement_date'=>$v['invoice_date'],'qty'=>$p['qty'],'qty_kg'=>$qtyKg,'unit_cost'=>$unitCost,'unit_cost_per_kg'=>$qtyKg>0?round($allocated/$qtyKg,6):0,'total_cost'=>$allocated,'notes'=>'فاتورة شراء','created_by'=>$ctx->userId($r),'created_at'=>now(),'updated_at'=>now()]);}
-   $res=$a->purchase(['company_id'=>$cid,'invoice_id'=>$invoiceId,'created_by'=>$ctx->userId($r)]);if(!$res->success)throw new \RuntimeException($res->message);return response()->json(['status'=>true,'message'=>'تم حفظ فاتورة الشراء وترحيلها محاسبيًا','id'=>$invoiceId,'journal_entry_id'=>$res->journalEntryId]);});}
- public function destroy(Request $r,int $id,AccountingContext $c){$cid=$c->companyId($r);$q=DB::table('purchase_invoices')->where('company_id',$cid)->where('id',$id);$bid=$c->branchFilter($r);if($bid!==null)$q->where('branch_id',$bid);$inv=$q->first();if(!$inv)return response()->json(['status'=>false,'message'=>'الفاتورة غير موجودة'],404);if($inv->journal_entry_id)return response()->json(['status'=>false,'message'=>'لا يمكن حذف فاتورة مرحلة محاسبيًا.'],422);DB::transaction(function()use($cid,$id){DB::table('purchase_invoice_lines')->where('company_id',$cid)->where('purchase_invoice_id',$id)->delete();DB::table('stock_movements')->where('company_id',$cid)->where('source_type','PURCHASE')->where('source_id',$id)->delete();DB::table('purchase_invoices')->where('company_id',$cid)->where('id',$id)->delete();});return response()->json(['status'=>true,'message'=>'تم حذف الفاتورة']);}
+    public function meta(Request $r,AccountingContext $ctx,FinancialAccountService $money,DefaultPartyService $defaults)
+    {
+        $data=$this->metaData($r,$ctx,$money);$data['default_parties']=$defaults->ensure($ctx->companyId($r),$ctx->userId($r));
+        return response()->json(['status'=>true,'data'=>$data]);
+    }
+
+    public function index(Request $r,AccountingContext $ctx)
+    {
+        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);
+        $q=DB::table('purchase_invoices as p')
+            ->leftJoin('suppliers as s','s.id','=','p.supplier_id')
+            ->leftJoin('cars as c','c.id','=','p.car_id')
+            ->leftJoin('branches as b','b.id','=','p.branch_id')
+            ->where('p.company_id',$cid);
+        if($bid!==null)$q->where('p.branch_id',$bid);
+        if($r->filled('status'))$q->where('p.document_status',strtoupper((string)$r->query('status')));
+        return response()->json(['status'=>true,'data'=>$q->select(
+            'p.*','s.supplier_name','c.car_number','c.plate_number','b.branch_name',
+            DB::raw("(SELECT COUNT(*) FROM invoice_shipment_links l WHERE l.company_id=p.company_id AND l.invoice_type='PURCHASE' AND l.invoice_id=p.id) shipment_count")
+        )->orderByDesc('p.invoice_date')->orderByDesc('p.id')->limit(2000)->get()]);
+    }
+
+    public function show(Request $r,int $id,AccountingContext $ctx)
+    {
+        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);
+        $q=DB::table('purchase_invoices as p')->leftJoin('suppliers as s','s.id','=','p.supplier_id')->leftJoin('branches as b','b.id','=','p.branch_id')->leftJoin('cars as c','c.id','=','p.car_id')->where('p.company_id',$cid)->where('p.id',$id);
+        if($bid!==null)$q->where('p.branch_id',$bid);
+        $inv=$q->select('p.*','s.supplier_name','b.branch_name','c.car_number','c.plate_number')->first();
+        if(!$inv)return response()->json(['status'=>false,'message'=>'فاتورة الشراء غير موجودة.'],404);
+        $lines=DB::table('purchase_invoice_lines as l')->leftJoin('items as i','i.id','=','l.item_id')->leftJoin('shipments as sh','sh.id','=','l.shipment_id')->where('l.company_id',$cid)->where('l.purchase_invoice_id',$id)->select('l.*','i.item_name','i.item_code','sh.shipment_number')->orderBy('l.id')->get();
+        $shipments=DB::table('invoice_shipment_links as x')->join('shipments as sh','sh.id','=','x.shipment_id')->where('x.company_id',$cid)->where('x.invoice_type','PURCHASE')->where('x.invoice_id',$id)->select('x.*','sh.shipment_number','sh.shipment_date','sh.commercial_status')->orderBy('x.id')->get();
+        return response()->json(['status'=>true,'data'=>['invoice'=>$inv,'lines'=>$lines,'shipments'=>$shipments]]);
+    }
+
+    public function store(Request $r,AccountingContext $ctx,EnterpriseInvoiceService $service){return $this->save($r,null,$ctx,$service);}
+    public function update(Request $r,int $id,AccountingContext $ctx,EnterpriseInvoiceService $service){return $this->save($r,$id,$ctx,$service);}
+
+    public function post(Request $r,int $id,AccountingContext $ctx,EnterpriseInvoiceService $service)
+    {
+        try{return response()->json(['status'=>true,'data'=>$service->post('PURCHASE',$ctx->companyId($r),$id,$ctx->userId($r),$ctx->branchFilter($r))]);}
+        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+    }
+
+    public function void(Request $r,int $id,AccountingContext $ctx,EnterpriseInvoiceService $service)
+    {
+        $v=$r->validate(['reason'=>'required|string|min:5|max:2000']);
+        try{return response()->json(['status'=>true,'data'=>$service->void('PURCHASE',$ctx->companyId($r),$id,$ctx->userId($r),$v['reason'],$ctx->branchFilter($r))]);}
+        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+    }
+
+    public function destroy(Request $r,int $id,AccountingContext $ctx,EnterpriseInvoiceService $service)
+    {
+        try{$service->deleteDraft('PURCHASE',$ctx->companyId($r),$id,$ctx->branchFilter($r));return response()->json(['status'=>true,'message'=>'تم حذف مسودة فاتورة الشراء.']);}
+        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+    }
+
+    private function save(Request $r,?int $id,AccountingContext $ctx,EnterpriseInvoiceService $service)
+    {
+        $v=$r->validate([
+            'branch_id'=>'nullable|integer','supplier_id'=>'nullable|integer','car_id'=>'nullable|integer','invoice_number'=>'nullable|string|max:100','invoice_date'=>'required|date','document_type'=>'nullable|string|max:40',
+            'currency_code'=>'nullable|string|max:10','exchange_rate'=>'nullable|numeric|gt:0','discount_amount'=>'nullable|numeric|min:0','transport_cost'=>'nullable|numeric|min:0','extra_cost'=>'nullable|numeric|min:0','notes'=>'nullable|string|max:5000',
+            'shipment_ids'=>'nullable|array|max:200','shipment_ids.*'=>'integer',
+            'items'=>'nullable|array|max:500','items.*.item_id'=>'required_with:items|integer','items.*.qty_kg'=>'nullable|numeric|gt:0','items.*.qty'=>'nullable|numeric|gt:0','items.*.quantity'=>'nullable|numeric|gt:0','items.*.unit_code'=>'nullable|string|max:20','items.*.price_unit'=>'nullable|in:KG,TON,UNIT','items.*.unit_price'=>'required_with:items|numeric|min:0','items.*.discount_amount'=>'nullable|numeric|min:0','items.*.tax_code_id'=>'nullable|integer','items.*.vat_percent'=>'nullable|numeric|min:0|max:100','items.*.shipment_id'=>'nullable|integer','items.*.shipment_item_id'=>'nullable|integer','items.*.notes'=>'nullable|string|max:1000',
+        ]);
+        try{
+            $bid=$ctx->branchForOperation($r);
+            $newId=$service->saveDraft('PURCHASE',$v,$ctx->companyId($r),$bid,$ctx->userId($r),$id);
+            return response()->json(['status'=>true,'message'=>$id?'تم تحديث مسودة فاتورة الشراء.':'تم حفظ فاتورة الشراء كمسودة. لم يتأثر المخزون أو المحاسبة حتى الآن.','id'=>$newId],$id?200:201);
+        }catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+    }
+
+    private function metaData(Request $r,AccountingContext $ctx,FinancialAccountService $money): array
+    {
+        $cid=$ctx->companyId($r);$scoped=$ctx->branchFilter($r);
+        $branches=DB::table('branches')->where('company_id',$cid)->where('is_active',1)->when($scoped!==null,fn($q)=>$q->where('id',$scoped))->orderBy('branch_name')->get(['id','branch_name','branch_code']);
+        $parties=DB::table('suppliers')->where('company_id',$cid)->where('is_active',1)->orderBy('supplier_name')->get(['id','supplier_name','default_branch_id','scope_all_branches','is_system_default']);
+        foreach($parties as$p)$p->branch_ids=(int)($p->scope_all_branches??0)===1?[]:DB::table('supplier_branches')->where('company_id',$cid)->where('supplier_id',$p->id)->where('is_active',1)->pluck('branch_id')->map(fn($x)=>(int)$x)->all();
+        $cars=DB::table('cars')->where('company_id',$cid)->where('is_active',1)->when($scoped!==null,fn($q)=>$q->where(fn($x)=>$x->where('branch_id',$scoped)->orWhereNull('branch_id')))->orderBy('plate_number')->get(['id','branch_id','car_number','plate_number','ownership_type']);
+        $items=DB::table('items')->where('company_id',$cid)->where('is_active',1)->where('can_purchase',1)->orderBy('item_name')->get(['id','item_code','item_name','unit_name','default_buy_price','default_sell_price','item_type','track_inventory','base_unit_code','commercial_unit_code','commercial_to_base_factor']);
+        $currencies=DB::table('company_currencies as cc')->join('currencies as cu','cu.currency_code','=','cc.currency_code')->where('cc.company_id',$cid)->where('cc.is_active',1)->where('cu.is_active',1)->orderByDesc('cc.is_base')->get(['cc.currency_code','cc.is_base','cu.currency_name','cu.symbol','cu.decimal_places']);
+        $taxCodes=DB::table('tax_codes')->where('company_id',$cid)->where('is_active',1)->orderBy('tax_code')->get(['id','tax_code','tax_name','rate','is_zero_rated','is_exempt','is_out_of_scope','is_default_purchase']);
+        $ready=DB::table('shipments as sh')->leftJoin('suppliers as s','s.id','=','sh.supplier_id')->where('sh.company_id',$cid)->where('sh.shipment_type','PURCHASE')->where('sh.commercial_status','READY')->when($scoped!==null,fn($q)=>$q->where('sh.branch_id',$scoped))->whereNotExists(fn($q)=>$q->select(DB::raw(1))->from('invoice_shipment_links as l')->whereColumn('l.shipment_id','sh.id')->whereColumn('l.company_id','sh.company_id'))->select('sh.id','sh.branch_id','sh.supplier_id','sh.shipment_number','sh.shipment_date','sh.accepted_weight_kg',DB::raw('sh.total_before_discount as total_before_vat'),'sh.vat_amount','sh.total_amount','s.supplier_name')->orderByDesc('sh.id')->get();
+        return ['branches'=>$branches,'parties'=>$parties,'cars'=>$cars,'items'=>$items,'currencies'=>$currencies,'tax_codes'=>$taxCodes,'ready_shipments'=>$ready,'base_currency'=>$money->baseCurrency($cid),'scoped_branch_id'=>$scoped,'settings'=>DB::table('company_settings')->where('company_id',$cid)->first()];
+    }
 }

@@ -1,387 +1,78 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Accounting\AccountingContext;
+use App\Services\EntityAddressService;
+use App\Services\PartyBranchScopeService;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Throwable;
 
 class SupplierController extends Controller
 {
     use LogsActivity;
 
-    private function companyId(): ?int
+    public function index(Request $r,AccountingContext $ctx,PartyBranchScopeService $scope)
     {
-        $value = request()->header('X-Company-ID');
-        return is_numeric($value) ? (int) $value : null;
+        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);
+        $q=DB::table('suppliers as s')->leftJoin('branches as b','b.id','=','s.default_branch_id')->where('s.company_id',$cid)
+            ->select('s.*','b.branch_name as default_branch_name');
+        $scope->scopeQuery($q,$cid,'SUPPLIER',$bid);
+        if($r->filled('search')){$x=trim((string)$r->search);$q->where(function($z)use($x){$z->where('s.supplier_name','like','%'.$x.'%')->orWhere('s.supplier_code','like','%'.$x.'%')->orWhere('s.phone','like','%'.$x.'%')->orWhere('s.tax_number','like','%'.$x.'%');});}
+        if($r->filled('is_active'))$q->where('s.is_active',(int)$r->is_active);
+        $rows=$q->orderBy('s.supplier_name')->get();
+        foreach($rows as $row)$row->branch_ids=$scope->branchIds($cid,'SUPPLIER',(int)$row->id);
+        return response()->json(['status'=>true,'data'=>$rows]);
     }
 
-    private function branchId(): ?int
+    public function store(Request $r,AccountingContext $ctx,PartyBranchScopeService $scope,EntityAddressService $addresses)
     {
-        $value = request()->header('X-Branch-ID');
-        return is_numeric($value) ? (int) $value : null;
+        $cid=$ctx->companyId($r);$v=$this->validateData($r,$cid);$scoped=$ctx->branchFilter($r);
+        if($scoped!==null){$v['scope_all_branches']=false;$v['branch_ids']=[$scoped];$v['default_branch_id']=$scoped;}
+        elseif(empty($v['scope_all_branches'])&&empty($v['branch_ids'])&&empty($v['default_branch_id'])){$fallback=$ctx->branchForOperation($r);$v['branch_ids']=[$fallback];$v['default_branch_id']=$fallback;}
+        try{return DB::transaction(function()use($cid,$v,$scope,$addresses){
+            $id=DB::table('suppliers')->insertGetId(['company_id'=>$cid,'branch_id'=>$v['default_branch_id']??null,'default_branch_id'=>$v['default_branch_id']??null,'scope_all_branches'=>(int)($v['scope_all_branches']??0),
+                'supplier_code'=>$this->clean($v['supplier_code']??null),'supplier_name'=>trim($v['supplier_name']),'legal_name'=>$this->clean($v['legal_name']??null),'phone'=>$this->clean($v['phone']??null),'email'=>$this->clean($v['email']??null),
+                'registration_number'=>$this->clean($v['registration_number']??null),'tax_number'=>$this->clean($v['tax_number']??null),'country_code'=>$this->upper($v['country_code']??null),
+                'city'=>$this->clean($v['city']??null),'address'=>$this->clean($v['address']??null),'opening_balance'=>0,'notes'=>$this->clean($v['notes']??null),'is_active'=>(int)($v['is_active']??1),'created_at'=>now(),'updated_at'=>now()]);
+            $scope->sync($cid,'SUPPLIER',$id,(bool)($v['scope_all_branches']??false),$v['branch_ids']??[],$v['default_branch_id']??null);$addresses->upsertDefault($cid,'SUPPLIER',$id,$v);
+            $this->logCreate('Suppliers',$id,'تم إنشاء المورد: '.$v['supplier_name']);return response()->json(['status'=>true,'message'=>'تم إنشاء المورد بنجاح.','id'=>$id],201);
+        });}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
     }
 
-    private function roleCode(): string
+    public function show(Request $r,int $id,AccountingContext $ctx,PartyBranchScopeService $scope,EntityAddressService $addresses)
     {
-        return strtoupper(trim((string) request()->header('X-Role-Code', '')));
+        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);$q=DB::table('suppliers as s')->where('s.company_id',$cid)->where('s.id',$id);$scope->scopeQuery($q,$cid,'SUPPLIER',$bid);$row=$q->first();
+        if(!$row)return response()->json(['status'=>false,'message'=>'المورد غير موجود أو خارج نطاقك.'],404);$row->branch_ids=$scope->branchIds($cid,'SUPPLIER',$id);$row->address_details=$addresses->getDefault($cid,'SUPPLIER',$id);
+        return response()->json(['status'=>true,'data'=>$row]);
     }
 
-    private function isSuper(): bool
+    public function update(Request $r,int $id,AccountingContext $ctx,PartyBranchScopeService $scope,EntityAddressService $addresses)
     {
-        return $this->roleCode() === 'SUPER_ADMIN';
+        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);$existing=DB::table('suppliers as s')->where('s.company_id',$cid)->where('s.id',$id);$scope->scopeQuery($existing,$cid,'SUPPLIER',$bid);if(!$existing->exists())return response()->json(['status'=>false,'message'=>'المورد غير موجود أو خارج نطاقك.'],404);
+        $v=$this->validateData($r,$cid,$id);if($bid!==null){$v['scope_all_branches']=false;$v['branch_ids']=[$bid];$v['default_branch_id']=$bid;}
+        try{return DB::transaction(function()use($cid,$id,$v,$scope,$addresses){
+            DB::table('suppliers')->where('company_id',$cid)->where('id',$id)->update(['supplier_code'=>$this->clean($v['supplier_code']??null),'supplier_name'=>trim($v['supplier_name']),'legal_name'=>$this->clean($v['legal_name']??null),'phone'=>$this->clean($v['phone']??null),'email'=>$this->clean($v['email']??null),'registration_number'=>$this->clean($v['registration_number']??null),'tax_number'=>$this->clean($v['tax_number']??null),'country_code'=>$this->upper($v['country_code']??null),'city'=>$this->clean($v['city']??null),'address'=>$this->clean($v['address']??null),'notes'=>$this->clean($v['notes']??null),'is_active'=>(int)($v['is_active']??1),'updated_at'=>now()]);
+            $scope->sync($cid,'SUPPLIER',$id,(bool)($v['scope_all_branches']??false),$v['branch_ids']??[],$v['default_branch_id']??null);$addresses->upsertDefault($cid,'SUPPLIER',$id,$v);$this->logUpdate('Suppliers',$id,'تم تعديل المورد: '.$v['supplier_name']);return response()->json(['status'=>true,'message'=>'تم تحديث المورد بنجاح.']);
+        });}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
     }
 
-    private function isCompanyManager(): bool
+    public function destroy(Request $r,int $id,AccountingContext $ctx,PartyBranchScopeService $scope)
     {
-        return $this->roleCode() === 'MANAGER';
+        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);$q=DB::table('suppliers as s')->where('s.company_id',$cid)->where('s.id',$id);$scope->scopeQuery($q,$cid,'SUPPLIER',$bid);if(!$q->exists())return response()->json(['status'=>false,'message'=>'المورد غير موجود أو خارج نطاقك.'],404);
+        $used=DB::table('purchase_invoices')->where('company_id',$cid)->where('supplier_id',$id)->exists()||DB::table('journal_entry_lines')->where('company_id',$cid)->where('party_type','SUPPLIER')->where('party_id',$id)->exists();
+        if($used){DB::table('suppliers')->where('company_id',$cid)->where('id',$id)->update(['is_active'=>0,'updated_at'=>now()]);return response()->json(['status'=>true,'message'=>'المورد مستخدم في حركات سابقة، لذلك تم تعطيله مع المحافظة على التاريخ.']);}
+        DB::table('suppliers')->where('company_id',$cid)->where('id',$id)->delete();return response()->json(['status'=>true,'message'=>'تم حذف المورد.']);
     }
 
-    private function canManageSuppliers(): bool
+    private function validateData(Request $r,int $cid,?int $id=null): array
     {
-        return in_array(
-            $this->roleCode(),
-            ['SUPER_ADMIN', 'MANAGER', 'ACCOUNTANT'],
-            true
-        );
+        return $r->validate(['supplier_name'=>'required|string|max:255','supplier_code'=>['nullable','string','max:50',Rule::unique('suppliers','supplier_code')->where(fn($q)=>$q->where('company_id',$cid))->ignore($id)],
+            'legal_name'=>'nullable|string|max:255','phone'=>'nullable|string|max:50','email'=>'nullable|email|max:150','registration_number'=>'nullable|string|max:120','tax_number'=>'nullable|string|max:120','country_code'=>'nullable|string|size:2',
+            'scope_all_branches'=>'nullable|boolean','branch_ids'=>'nullable|array','branch_ids.*'=>'integer','default_branch_id'=>'nullable|integer','notes'=>'nullable|string|max:5000','is_active'=>'nullable|boolean',
+            'short_address'=>'nullable|string|max:100','building_no'=>'nullable|string|max:50','street_name'=>'nullable|string|max:200','district'=>'nullable|string|max:150','city'=>'nullable|string|max:150','state_region'=>'nullable|string|max:150','postal_code'=>'nullable|string|max:50','additional_no'=>'nullable|string|max:50','unit_no'=>'nullable|string|max:50','address'=>'nullable|string|max:500','address_line1'=>'nullable|string|max:500','address_line2'=>'nullable|string|max:500']);
     }
-
-    private function resolveTargetBranch(Request $request): ?int
-    {
-        if ($this->isSuper() || $this->isCompanyManager()) {
-            return $request->filled('branch_id')
-                ? $request->integer('branch_id')
-                : $this->branchId();
-        }
-
-        return $this->branchId();
-    }
-
-    public function index(Request $request)
-    {
-        $companyId = $this->companyId();
-        $branchId = $this->branchId();
-
-        $query = DB::table('suppliers as s')
-            ->leftJoin('companies as c', 'c.id', '=', 's.company_id')
-            ->leftJoin('branches as b', 'b.id', '=', 's.branch_id')
-            ->select(
-                's.*',
-                'c.company_name',
-                'b.branch_name'
-            );
-
-        if ($this->isSuper()) {
-            if ($request->filled('company_id')) {
-                $query->where('s.company_id', $request->integer('company_id'));
-            }
-
-            if ($request->filled('branch_id')) {
-                $query->where('s.branch_id', $request->integer('branch_id'));
-            }
-        } else {
-            if (!$companyId) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'تعذر تحديد الشركة الحالية.',
-                    'data' => [],
-                ], 403);
-            }
-
-            $query->where('s.company_id', $companyId);
-
-            if (!$this->isCompanyManager()) {
-                if (!$branchId) {
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'تعذر تحديد الفرع الحالي.',
-                        'data' => [],
-                    ], 403);
-                }
-
-                $query->where('s.branch_id', $branchId);
-            } elseif ($request->filled('branch_id')) {
-                $query->where('s.branch_id', $request->integer('branch_id'));
-            }
-        }
-
-        return response()->json([
-            'status' => true,
-            'data' => $query->orderByDesc('s.id')->get(),
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        if (!$this->canManageSuppliers()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لا تملك صلاحية إنشاء مورد.',
-            ], 403);
-        }
-
-        $companyId = $this->companyId();
-        $branchId = $this->resolveTargetBranch($request);
-
-        if (!$companyId || !$branchId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'تعذر تحديد الشركة أو الفرع الحالي.',
-            ], 422);
-        }
-
-        $request->merge([
-            'company_id' => $companyId,
-            'branch_id' => $branchId,
-        ]);
-
-        $request->validate([
-            'supplier_name' => ['required', 'string', 'max:255'],
-            'supplier_code' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::unique('suppliers', 'supplier_code')
-                    ->where(fn ($query) => $query
-                        ->where('company_id', $companyId)
-                        ->where('branch_id', $branchId)),
-            ],
-            'branch_id' => [
-                'required',
-                'integer',
-                Rule::exists('branches', 'id')
-                    ->where(fn ($query) => $query->where('company_id', $companyId)),
-            ],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'address' => ['nullable', 'string', 'max:1000'],
-            'opening_balance' => ['nullable', 'numeric'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-            'is_active' => ['nullable', 'in:0,1'],
-        ], [
-            'supplier_name.required' => 'اسم المورد مطلوب.',
-            'supplier_code.unique' => 'كود المورد مستخدم داخل هذا الفرع.',
-            'branch_id.exists' => 'الفرع المحدد لا يتبع الشركة الحالية.',
-        ]);
-
-        try {
-            $supplierId = DB::table('suppliers')->insertGetId([
-                'company_id' => $companyId,
-                'branch_id' => $branchId,
-                'supplier_code' => $request->filled('supplier_code')
-                    ? trim((string) $request->supplier_code)
-                    : null,
-                'supplier_name' => trim((string) $request->supplier_name),
-                'phone' => $request->filled('phone')
-                    ? trim((string) $request->phone)
-                    : null,
-                'city' => $request->filled('city')
-                    ? trim((string) $request->city)
-                    : null,
-                'address' => $request->filled('address')
-                    ? trim((string) $request->address)
-                    : null,
-                'opening_balance' => round((float) ($request->opening_balance ?? 0), 3),
-                'notes' => $request->filled('notes')
-                    ? trim((string) $request->notes)
-                    : null,
-                'is_active' => (int) ($request->is_active ?? 1),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $this->logCreate(
-                'Suppliers',
-                $supplierId,
-                'تم إنشاء مورد: ' . $request->supplier_name
-            );
-
-            return response()->json([
-                'status' => true,
-                'message' => 'تم إنشاء المورد بنجاح.',
-                'id' => $supplierId,
-            ], 201);
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return response()->json([
-                'status' => false,
-                'message' => $exception->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function show($id)
-    {
-        return $this->findSupplierResponse($id);
-    }
-
-    private function supplierQuery($id)
-    {
-        $query = DB::table('suppliers')->where('id', $id);
-
-        if (!$this->isSuper()) {
-            $query->where('company_id', $this->companyId());
-
-            if (!$this->isCompanyManager()) {
-                $query->where('branch_id', $this->branchId());
-            }
-        }
-
-        return $query;
-    }
-
-    private function findSupplierResponse($id)
-    {
-        $supplier = $this->supplierQuery($id)->first();
-
-        if (!$supplier) {
-            return response()->json([
-                'status' => false,
-                'message' => 'المورد غير موجود أو غير مسموح بالوصول إليه.',
-            ], 404);
-        }
-
-        return response()->json([
-            'status' => true,
-            'data' => $supplier,
-        ]);
-    }
-
-    public function update(Request $request, $id)
-    {
-        if (!$this->canManageSuppliers()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لا تملك صلاحية تعديل المورد.',
-            ], 403);
-        }
-
-        $supplier = $this->supplierQuery($id)->first();
-
-        if (!$supplier) {
-            return response()->json([
-                'status' => false,
-                'message' => 'المورد غير موجود أو غير مسموح بتعديله.',
-            ], 404);
-        }
-
-        $companyId = (int) $supplier->company_id;
-        $branchId = $this->resolveTargetBranch($request) ?: (int) $supplier->branch_id;
-
-        if (!$this->isSuper() && $companyId !== (int) $this->companyId()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'غير مسموح بنقل المورد إلى شركة أخرى.',
-            ], 403);
-        }
-
-        $request->merge(['branch_id' => $branchId]);
-
-        $request->validate([
-            'supplier_name' => ['required', 'string', 'max:255'],
-            'supplier_code' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::unique('suppliers', 'supplier_code')
-                    ->ignore($id)
-                    ->where(fn ($query) => $query
-                        ->where('company_id', $companyId)
-                        ->where('branch_id', $branchId)),
-            ],
-            'branch_id' => [
-                'required',
-                'integer',
-                Rule::exists('branches', 'id')
-                    ->where(fn ($query) => $query->where('company_id', $companyId)),
-            ],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'address' => ['nullable', 'string', 'max:1000'],
-            'opening_balance' => ['nullable', 'numeric'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-            'is_active' => ['nullable', 'in:0,1'],
-        ]);
-
-        $oldName = $supplier->supplier_name;
-
-        DB::table('suppliers')
-            ->where('id', $id)
-            ->update([
-                'branch_id' => $branchId,
-                'supplier_code' => $request->filled('supplier_code')
-                    ? trim((string) $request->supplier_code)
-                    : null,
-                'supplier_name' => trim((string) $request->supplier_name),
-                'phone' => $request->filled('phone')
-                    ? trim((string) $request->phone)
-                    : null,
-                'city' => $request->filled('city')
-                    ? trim((string) $request->city)
-                    : null,
-                'address' => $request->filled('address')
-                    ? trim((string) $request->address)
-                    : null,
-                'opening_balance' => round((float) ($request->opening_balance ?? 0), 3),
-                'notes' => $request->filled('notes')
-                    ? trim((string) $request->notes)
-                    : null,
-                'is_active' => (int) ($request->is_active ?? 1),
-                'updated_at' => now(),
-            ]);
-
-        $this->logUpdate(
-            'Suppliers',
-            $id,
-            'تم تعديل مورد: ' . $oldName . ' إلى ' . $request->supplier_name
-        );
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تم تحديث المورد بنجاح.',
-        ]);
-    }
-
-    public function destroy($id)
-    {
-        if (!$this->canManageSuppliers()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لا تملك صلاحية حذف المورد.',
-            ], 403);
-        }
-
-        $supplier = $this->supplierQuery($id)->first();
-
-        if (!$supplier) {
-            return response()->json([
-                'status' => false,
-                'message' => 'المورد غير موجود أو غير مسموح بحذفه.',
-            ], 404);
-        }
-
-        try {
-            DB::table('suppliers')->where('id', $id)->delete();
-
-            $this->logDelete(
-                'Suppliers',
-                $id,
-                'تم حذف مورد: ' . $supplier->supplier_name
-            );
-
-            return response()->json([
-                'status' => true,
-                'message' => 'تم حذف المورد بنجاح.',
-            ]);
-        } catch (Throwable $exception) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لا يمكن حذف المورد لأنه مرتبط بحركات أو فواتير.',
-            ], 422);
-        }
-    }
+    private function clean($v): ?string{$v=trim((string)$v);return$v===''?null:$v;}private function upper($v): ?string{$v=$this->clean($v);return$v?strtoupper($v):null;}
 }

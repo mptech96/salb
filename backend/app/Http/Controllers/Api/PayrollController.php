@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Accounting\AccountingContext;
+use App\Services\FinancialAccountService;
 use App\Services\Payroll\PayrollApprover;
 use App\Services\Payroll\PayrollPayment;
 use App\Services\Payroll\PayrollService;
@@ -42,6 +44,15 @@ class PayrollController extends Controller
         return null;
     }
 
+    public function meta(Request $request, AccountingContext $context, FinancialAccountService $money)
+    {
+        $cid=$context->companyId($request);$scoped=$context->branchFilter($request);
+        return response()->json(['status'=>true,'data'=>[
+            'branches'=>DB::table('branches')->where('company_id',$cid)->where('is_active',1)->when($scoped!==null,fn($q)=>$q->where('id',$scoped))->orderBy('branch_name')->get(['id','branch_name']),
+            'financial_accounts'=>$money->list($cid,$scoped),'base_currency'=>$money->baseCurrency($cid),'scoped_branch_id'=>$scoped,
+        ]]);
+    }
+
     public function index(Request $request)
     {
         if ($error = $this->companyRequired()) {
@@ -51,7 +62,6 @@ class PayrollController extends Controller
         $query = DB::table('worker_salary_runs as sr')
             ->leftJoin('branches as b', 'b.id', '=', 'sr.branch_id')
             ->where('sr.company_id', $this->companyId())
-            ->when($this->branchId(), fn ($q) => $q->where('sr.branch_id', $this->branchId()))
             ->select(
                 'sr.*',
                 'b.branch_name',
@@ -138,7 +148,6 @@ class PayrollController extends Controller
         $run = DB::table('worker_salary_runs as sr')
             ->leftJoin('branches as b', 'b.id', '=', 'sr.branch_id')
             ->where('sr.company_id', $this->companyId())
-            ->when($this->branchId(), fn ($q) => $q->where('sr.branch_id', $this->branchId()))
             ->where('sr.id', $id)
             ->select('sr.*', 'b.branch_name')
             ->first();
@@ -203,16 +212,18 @@ class PayrollController extends Controller
         }
 
         $validated = $request->validate([
-            'payment_method' => ['required', 'in:CASH,BANK'],
+            'payment_method' => ['required', 'in:CASH,BANK,WALLET,BANK_TRANSFER,CARD'],
+            'financial_account_id' => ['nullable', 'integer'],
         ], [
             'payment_method.required' => 'طريقة الدفع مطلوبة.',
-            'payment_method.in' => 'طريقة الدفع يجب أن تكون نقدًا أو بنكًا.',
+            'payment_method.in' => 'طريقة الدفع المحددة غير مدعومة.',
         ]);
 
         try {
             $data = $this->payment->pay(
                 $id,
-                $validated['payment_method']
+                $validated['payment_method'],
+                isset($validated['financial_account_id']) ? (int) $validated['financial_account_id'] : null
             );
 
             return response()->json([
@@ -245,7 +256,6 @@ class PayrollController extends Controller
             })
             ->leftJoin('branches as b', 'b.id', '=', 'sr.branch_id')
             ->where('sl.company_id', $this->companyId())
-            ->when($this->branchId(), fn ($q) => $q->where('sr.branch_id', $this->branchId()))
             ->where('sl.salary_run_id', $runId)
             ->where('sl.worker_id', $workerId)
             ->select(

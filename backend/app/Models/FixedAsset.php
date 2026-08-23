@@ -45,6 +45,9 @@ class FixedAsset extends Model
 
         'purchase_invoice_id',
         'journal_entry_id',
+        'acquisition_type',
+        'opening_accumulated_depreciation',
+        'opening_balance_batch_id',
 
         'asset_status',
         'is_active',

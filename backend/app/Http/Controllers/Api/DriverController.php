@@ -3,142 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Accounting\AccountingContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DriverController extends Controller
 {
-    private function companyId()
-    {
-        return request()->header('X-Company-ID');
-    }
-
-    public function index()
-    {
-        $companyId = $this->companyId();
-
-        $branchId = (int) request()->header('X-Branch-ID');
-
-        $data = DB::table('drivers')
-            ->where('company_id', $companyId)
-            ->when($branchId > 0, fn ($q) => $q->where('branch_id', $branchId))
-            ->orderByDesc('id')
-            ->get();
-
-        return response()->json([
-            'status' => true,
-            'data' => $data
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        $companyId = $this->companyId();
-
-        if (!$companyId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لم يتم تحديد الشركة الحالية'
-            ], 400);
-        }
-
-        $request->validate([
-            'driver_name' => 'required|string|max:255',
-        ]);
-
-        $id = DB::table('drivers')->insertGetId([
-            'company_id' => $companyId,
-            'branch_id' => $request->branch_id ?: request()->header('X-Branch-ID'),
-            'driver_name' => $request->driver_name,
-            'phone' => $request->phone,
-            'notes' => $request->notes,
-            'is_active' => $request->is_active ?? 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تم حفظ السائق',
-            'id' => $id
-        ]);
-    }
-
-    public function show($id)
-    {
-        $companyId = $this->companyId();
-
-        $branchId = (int) request()->header('X-Branch-ID');
-
-        $row = DB::table('drivers')
-            ->where('company_id', $companyId)
-            ->when($branchId > 0, fn ($q) => $q->where('branch_id', $branchId))
-            ->where('id', $id)
-            ->first();
-
-        if (!$row) {
-            return response()->json([
-                'status' => false,
-                'message' => 'السائق غير موجود'
-            ], 404);
-        }
-
-        return response()->json([
-            'status' => true,
-            'data' => $row
-        ]);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $companyId = $this->companyId();
-
-        $request->validate([
-            'driver_name' => 'required|string|max:255',
-        ]);
-
-        $branchId = (int) request()->header('X-Branch-ID');
-
-        $updated = DB::table('drivers')
-            ->where('company_id', $companyId)
-            ->when($branchId > 0, fn ($q) => $q->where('branch_id', $branchId))
-            ->where('id', $id)
-            ->update([
-                'driver_name' => $request->driver_name,
-                'phone' => $request->phone,
-                'notes' => $request->notes,
-                'is_active' => $request->is_active ?? 1,
-                'updated_at' => now(),
-            ]);
-
-        if (!$updated) {
-            return response()->json([
-                'status' => false,
-                'message' => 'السائق غير موجود'
-            ], 404);
-        }
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تم تعديل السائق'
-        ]);
-    }
-
-    public function destroy($id)
-    {
-        $companyId = $this->companyId();
-
-        $branchId = (int) request()->header('X-Branch-ID');
-
-        DB::table('drivers')
-            ->where('company_id', $companyId)
-            ->when($branchId > 0, fn ($q) => $q->where('branch_id', $branchId))
-            ->where('id', $id)
-            ->delete();
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تم حذف السائق'
-        ]);
-    }
+    public function meta(Request $r,AccountingContext $ctx){$cid=$ctx->companyId($r);return response()->json(['status'=>true,'data'=>['suppliers'=>DB::table('suppliers')->where('company_id',$cid)->where('is_active',1)->orderBy('supplier_name')->get(['id','supplier_name']),'customers'=>DB::table('customers')->where('company_id',$cid)->where('is_active',1)->orderBy('customer_name')->get(['id','customer_name']),'affiliation_types'=>[['code'=>'COMPANY','name'=>'الشركة'],['code'=>'SUPPLIER','name'=>'مورد'],['code'=>'CUSTOMER','name'=>'عميل'],['code'=>'CARRIER','name'=>'ناقل / شركة نقل'],['code'=>'INDEPENDENT','name'=>'سائق مستقل']]]]);}
+    public function index(Request $r,AccountingContext $ctx){$cid=$ctx->companyId($r);return response()->json(['status'=>true,'data'=>DB::table('drivers as d')->leftJoin('branches as b','b.id','=','d.branch_id')->where('d.company_id',$cid)->select('d.*','b.branch_name',DB::raw('(SELECT COUNT(*) FROM weighbridge_cards w WHERE w.company_id=d.company_id AND w.driver_id=d.id) weighbridge_count'))->orderBy('d.driver_name')->get()]);}
+    public function show(Request $r,int $id,AccountingContext $ctx){$x=DB::table('drivers')->where('company_id',$ctx->companyId($r))->where('id',$id)->first();return$x?response()->json(['status'=>true,'data'=>$x]):response()->json(['status'=>false,'message'=>'السائق غير موجود.'],404);}
+    public function store(Request $r,AccountingContext $ctx){return$this->save($r,$ctx,null);} public function update(Request $r,int$id,AccountingContext$ctx){return$this->save($r,$ctx,$id);}
+    public function destroy(Request $r,int$id,AccountingContext$ctx){$cid=$ctx->companyId($r);$x=DB::table('drivers')->where('company_id',$cid)->where('id',$id)->first();if(!$x)return response()->json(['status'=>false,'message'=>'السائق غير موجود.'],404);if(DB::table('weighbridge_cards')->where('company_id',$cid)->where('driver_id',$id)->exists()||DB::table('shipments')->where('company_id',$cid)->where('driver_id',$id)->exists()){DB::table('drivers')->where('id',$id)->update(['is_active'=>0,'updated_at'=>now()]);return response()->json(['status'=>true,'message'=>'للسائق سجل تاريخي؛ تم تعطيله بدل حذفه.']);}DB::table('drivers')->where('id',$id)->delete();return response()->json(['status'=>true,'message'=>'تم حذف السائق.']);}
+    private function save(Request$r,AccountingContext$ctx,?int$id){$v=$r->validate(['driver_name'=>'required|string|max:255','phone'=>'nullable|string|max:50','id_number'=>'nullable|string|max:100','license_number'=>'nullable|string|max:100','affiliation_type'=>'required|in:COMPANY,SUPPLIER,CUSTOMER,CARRIER,INDEPENDENT','affiliation_id'=>'nullable|integer','notes'=>'nullable|string','is_active'=>'nullable|boolean']);$cid=$ctx->companyId($r);$type=strtoupper($v['affiliation_type']);$affId=isset($v['affiliation_id'])&&(int)$v['affiliation_id']>0?(int)$v['affiliation_id']:null;if($type==='SUPPLIER'&&(!$affId||!DB::table('suppliers')->where('company_id',$cid)->where('id',$affId)->exists()))return response()->json(['status'=>false,'message'=>'اختر المورد الذي يتبعه السائق.'],422);if($type==='CUSTOMER'&&(!$affId||!DB::table('customers')->where('company_id',$cid)->where('id',$affId)->exists()))return response()->json(['status'=>false,'message'=>'اختر العميل الذي يتبعه السائق.'],422);if(in_array($type,['COMPANY','INDEPENDENT','CARRIER'],true))$affId=null;$data=['driver_name'=>$v['driver_name'],'phone'=>$v['phone']??null,'id_number'=>$v['id_number']??null,'license_number'=>$v['license_number']??null,'affiliation_type'=>$type,'affiliation_id'=>$affId,'notes'=>$v['notes']??null,'is_active'=>(int)($v['is_active']??1),'updated_at'=>now()];if($id){if(!DB::table('drivers')->where('company_id',$cid)->where('id',$id)->exists())return response()->json(['status'=>false,'message'=>'السائق غير موجود.'],404);DB::table('drivers')->where('id',$id)->update($data);return response()->json(['status'=>true,'message'=>'تم تحديث السائق.']);}$new=DB::table('drivers')->insertGetId(['company_id'=>$cid,...$data,'created_at'=>now()]);return response()->json(['status'=>true,'message'=>'تم حفظ السائق.','id'=>$new],201);}
 }

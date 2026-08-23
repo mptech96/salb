@@ -61,13 +61,17 @@ class AccountingReportService
         $asOf=$filters['as_of']??$filters['to_date']??now()->toDateString();
         $s=$this->sums($companyId,$branchId,null,$asOf,false,false);
         $acc=DB::table('accounts')->where('company_id',$companyId)->where('is_active',1)->where('is_group',0)->whereIn('account_type',['ASSET','LIABILITY','EQUITY'])->orderBy('account_code')->get();
-        $assets=[];$liab=[];$equity=[];$at=0;$lt=0;$et=0;
+        $assets=[];$liab=[];$equity=[];$at=0;$lt=0;$et=0;$eliminations=[];$eliminatedAsset=0.0;$eliminatedLiability=0.0;
+        $dueFrom=$this->settingAccountId($companyId,'INTERBRANCH_DUE_FROM_ACCOUNT');$dueTo=$this->settingAccountId($companyId,'INTERBRANCH_DUE_TO_ACCOUNT');
         foreach($acc as $a){$d=(float)($s[$a->id]->debit??0);$c=(float)($s[$a->id]->credit??0);$amount=$a->account_type==='ASSET'?($d-$c):($c-$d);if(abs($amount)<0.0001)continue;
             $row=['account_id'=>$a->id,'account_code'=>$a->account_code,'account_name'=>$a->account_name,'amount'=>$amount];
+            // في القوائم الموحدة فقط نلغي جاري الفروع حتى لا تتضخم أصول/التزامات الشركة.
+            if($branchId===null&&($a->id===$dueFrom||$a->id===$dueTo)){$eliminations[]=$row;if($a->account_type==='ASSET')$eliminatedAsset+=$amount;else$eliminatedLiability+=$amount;continue;}
             if($a->account_type==='ASSET'){$assets[]=$row;$at+=$amount;}elseif($a->account_type==='LIABILITY'){$liab[]=$row;$lt+=$amount;}else{$equity[]=$row;$et+=$amount;}}
         $fy=DB::table('financial_years')->where('company_id',$companyId)->whereDate('start_date','<=',$asOf)->whereDate('end_date','>=',$asOf)->first();
         $current=0.0;if($fy && !(int)$fy->is_closed){$is=$this->incomeStatement($companyId,$branchId,['from_date'=>$fy->start_date,'to_date'=>$asOf]);$current=(float)$is['net_result'];}
         return ['as_of'=>$asOf,'financial_year'=>$fy,'assets'=>$assets,'liabilities'=>$liab,'equity'=>$equity,'current_period_result'=>$current,
+            'interbranch_eliminations'=>$eliminations,'interbranch_eliminated_asset'=>$eliminatedAsset,'interbranch_eliminated_liability'=>$eliminatedLiability,
             'total_assets'=>$at,'total_liabilities'=>$lt,'total_equity'=>$et+$current,'total_liabilities_equity'=>$lt+$et+$current,'difference'=>round($at-($lt+$et+$current),3)];
     }
 
@@ -83,9 +87,12 @@ class AccountingReportService
         if(!empty($filters['party_id']))$base->where('l.party_id',(int)$filters['party_id']);
         $opening=(clone $base)->whereDate('e.entry_date','<',$from)->selectRaw('COALESCE(SUM(l.debit-l.credit),0) v')->value('v');
         $rows=(clone $base)->leftJoin('branches as b','b.id','=','l.branch_id')->leftJoin('cost_centers as cc','cc.id','=','l.cost_center_id')
+            ->leftJoin('financial_accounts as fa','fa.id','=','l.financial_account_id')->leftJoin('branches as cb','cb.id','=','l.counterparty_branch_id')
             ->whereDate('e.entry_date','>=',$from)->whereDate('e.entry_date','<=',$to)
             ->select('l.id','e.id as entry_id','e.entry_number','e.entry_date','e.source_type','e.source_id','e.description as entry_description','e.is_closing_entry',
-                'l.description','l.debit','l.credit','l.party_type','l.party_id','b.branch_name','cc.cost_center_name')->orderBy('e.entry_date')->orderBy('e.id')->orderBy('l.id')->get();
+                'l.description','l.debit','l.credit','l.party_type','l.party_id','l.currency_code','l.foreign_debit','l.foreign_credit','l.exchange_rate',
+                'b.branch_name','cc.cost_center_name','fa.id as financial_account_id','fa.account_name as financial_account_name','cb.branch_name as counterparty_branch_name')
+            ->orderBy('e.entry_date')->orderBy('e.id')->orderBy('l.id')->get();
         $running=(float)$opening;$td=0;$tc=0;foreach($rows as $r){$td+=(float)$r->debit;$tc+=(float)$r->credit;$running+=(float)$r->debit-(float)$r->credit;$r->running_balance=round(abs($running),3);$r->running_side=$running>=0?'DEBIT':'CREDIT';}
         return ['account'=>$account,'from_date'=>$from,'to_date'=>$to,'financial_year'=>$fy,'opening_balance'=>abs((float)$opening),'opening_side'=>(float)$opening>=0?'DEBIT':'CREDIT',
             'rows'=>$rows,'total_debit'=>$td,'total_credit'=>$tc,'closing_balance'=>abs($running),'closing_side'=>$running>=0?'DEBIT':'CREDIT'];
@@ -96,4 +103,11 @@ class AccountingReportService
         $income=$this->incomeStatement($companyId,$branchId,$filters);$balance=$this->balanceSheet($companyId,$branchId,['as_of'=>$filters['to_date']??now()->toDateString()]);$trial=$this->trialBalance($companyId,$branchId,$filters);
         return ['income'=>$income,'balance_sheet'=>$balance,'trial_balance_difference'=>$trial['totals']['difference']];
     }
+
+    private function settingAccountId(int $companyId,string $key): ?int
+    {
+        $id=DB::table('accounting_settings')->where('company_id',$companyId)->where('setting_key',$key)->value('account_id');
+        return $id?(int)$id:null;
+    }
+
 }

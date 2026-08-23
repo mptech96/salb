@@ -58,7 +58,7 @@ class SellShipmentService
 
                 $unitPrice = (float) ($row['unit_price'] ?? 0);
                 $discount = (float) ($row['discount_amount'] ?? 0);
-                $vatPercent = (float) ($row['vat_percent'] ?? 15);
+                $vatPercent = (float) ($row['vat_percent'] ?? 0);
 
                 $beforeDiscount = round($qtyTon * $unitPrice, 3);
                 $beforeVat = max($beforeDiscount - $discount, 0);
