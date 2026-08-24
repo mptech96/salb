@@ -51,6 +51,9 @@ final class SupportSessionService
         if(!$session||(int)$session->platform_user_id!==(int)$request->user()?->id||(int)$session->personal_access_token_id!==(int)$token?->id)throw new HttpException(403,'SUPPORT_SESSION_INVALID');
         $abilityCompany=(int)($this->abilityValue((array)$token->abilities,'support-company:')??0);
         if($abilityCompany!==(int)$session->company_id)throw new HttpException(403,'SUPPORT_SCOPE_MISMATCH');
+        $abilityBranch=$this->abilityValue((array)$token->abilities,'support-branch:');
+        $durableBranch=$session->branch_id?(int)$session->branch_id:null;
+        if(($abilityBranch!==null?(int)$abilityBranch:null)!==$durableBranch)throw new HttpException(403,'SUPPORT_BRANCH_SCOPE_MISMATCH');
         if($session->status!=='ACTIVE')throw new HttpException(403,'SUPPORT_SESSION_CLOSED');
         if(CarbonImmutable::parse($session->expires_at)->isPast()){$this->expire($request,$session);throw new HttpException(403,'SUPPORT_SESSION_EXPIRED');}
         return $session;
@@ -71,8 +74,10 @@ final class SupportSessionService
     private function close(Request $request,object $session,string $status,string $timestamp,string $action): void
     {
         DB::transaction(function()use($request,$session,$status,$timestamp,$action){
-            DB::table('support_sessions')->where('id',$session->id)->where('status','ACTIVE')->update(['status'=>$status,$timestamp=>now(),'updated_at'=>now()]);
-            if($session->personal_access_token_id)DB::table('personal_access_tokens')->where('id',$session->personal_access_token_id)->delete();
+            $current=DB::table('support_sessions')->where('id',$session->id)->lockForUpdate()->first();
+            if(!$current||$current->status!=='ACTIVE')return;
+            DB::table('support_sessions')->where('id',$current->id)->update(['status'=>$status,$timestamp=>now(),'updated_at'=>now()]);
+            if($current->personal_access_token_id)DB::table('personal_access_tokens')->where('id',$current->personal_access_token_id)->delete();
             $this->audit->record($request,['actor_type'=>'PLATFORM_ADMIN','target_company_id'=>(int)$session->company_id,'branch_id'=>$session->branch_id,
                 'support_session_id'=>$session->support_session_id,'ticket_reference'=>$session->ticket_reference,'reason'=>$session->reason,
                 'resource'=>'SupportSession','action'=>$action,'result'=>'SUCCESS','scope'=>['status'=>$status]]);

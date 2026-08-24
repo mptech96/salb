@@ -444,6 +444,10 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
 
         Route::get('/official-documents', [OfficialDocumentController::class, 'index']);
         Route::post('/official-documents', [OfficialDocumentController::class, 'store']);
+        Route::get(
+            '/official-documents/attachments/{attachmentId}/download',
+            [OfficialDocumentController::class, 'downloadAttachment']
+        );
         Route::get('/official-documents/{id}', [OfficialDocumentController::class, 'show']);
         Route::put('/official-documents/{id}', [OfficialDocumentController::class, 'update']);
         Route::delete('/official-documents/{id}', [OfficialDocumentController::class, 'destroy']);

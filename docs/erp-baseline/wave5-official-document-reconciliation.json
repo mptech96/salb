@@ -1,0 +1,25 @@
+{
+    "generated_at": "2026-08-24T20:21:42+00:00",
+    "mode": "DRY_RUN_READ_ONLY",
+    "roots": {
+        "public": "D:\\Projects\\scrap-system\\backend\\storage\\app/public/official-documents",
+        "private": "D:\\Projects\\scrap-system\\backend\\storage\\app/private/official-documents"
+    },
+    "summary": {
+        "database_attachment_records": 0,
+        "physical_public_files": 0,
+        "matched_records": 0,
+        "missing_files": 0,
+        "orphan_files": 0,
+        "duplicate_references": 0,
+        "duplicate_physical_hash_groups": 0,
+        "invalid_paths": 0,
+        "destination_conflicts": 0,
+        "ready_files": 0,
+        "total_public_bytes": 0,
+        "bytes_ready_to_move": 0,
+        "database_updates_required": 0
+    },
+    "duplicate_hash_groups": [],
+    "manifest": []
+}

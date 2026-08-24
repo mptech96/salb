@@ -188,6 +188,21 @@ export default function OfficialDocumentsPage() {
     loadDocs();
   };
 
+  const downloadAttachment = async (attachment: any) => {
+    const response = await api.get(
+      `/official-documents/attachments/${attachment.id}/download`,
+      { responseType: "blob" }
+    );
+    const objectUrl = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = attachment.original_name || "attachment";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  };
+
   const addFloatingImage = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -515,7 +530,7 @@ export default function OfficialDocumentsPage() {
                   <div className="mt-4 space-y-2">
                     {savedAttachments.map((att) => (
                       <div key={att.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 text-sm">
-                        <a href={att.url} target="_blank" className="font-bold text-[#0B2A4A]">{att.original_name}</a>
+                        <button onClick={() => downloadAttachment(att)} className="font-bold text-[#0B2A4A]">{att.original_name}</button>
                         <button
                           onClick={async () => {
                             await api.delete(`/official-documents/attachments/${att.id}`);

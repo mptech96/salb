@@ -67,7 +67,7 @@ final class TenantScope
          * تأتي من ResolveAuthenticatedContext ولا تؤخذ من المتصفح.
          */
         if ((bool) $request->attributes->get('is_support_mode', false)) {
-            return true;
+            return self::rawBranchId($request) === null;
         }
 
         return in_array(

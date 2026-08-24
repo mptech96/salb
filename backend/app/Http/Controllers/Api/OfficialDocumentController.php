@@ -117,7 +117,7 @@ class OfficialDocumentController extends Controller
             ->orderByDesc('id')
             ->get()
             ->map(function ($row) {
-                $row->url = asset('storage/' . $row->file_path);
+                $row->url = url('/api/official-documents/attachments/'.$row->id.'/download');
                 return $row;
             });
 
@@ -193,7 +193,7 @@ class OfficialDocumentController extends Controller
         $saved = [];
 
         foreach ($request->file('files', []) as $file) {
-            $path = $file->store("official-documents/{$companyId}/{$id}", 'public');
+            $path = $file->store("official-documents/{$companyId}/{$id}", 'local');
 
             $attachmentId = DB::table('official_document_attachments')->insertGetId([
                 'company_id' => $companyId,
@@ -210,7 +210,7 @@ class OfficialDocumentController extends Controller
                 'id' => $attachmentId,
                 'original_name' => $file->getClientOriginalName(),
                 'file_path' => $path,
-                'url' => asset('storage/' . $path),
+                'url' => url('/api/official-documents/attachments/'.$attachmentId.'/download'),
             ];
         }
 
@@ -221,6 +221,25 @@ class OfficialDocumentController extends Controller
             'message' => 'تم رفع المرفقات',
             'data' => $saved
         ]);
+    }
+
+    public function downloadAttachment($attachmentId)
+    {
+        $companyId = $this->companyId();
+        $attachment = DB::table('official_document_attachments as a')
+            ->join('official_documents as d', 'd.id', '=', 'a.document_id')
+            ->where('a.company_id', $companyId)
+            ->where('d.company_id', $companyId)
+            ->when((int) $this->branchId() > 0, fn ($q) => $q->where('d.branch_id', (int) $this->branchId()))
+            ->where('a.id', $attachmentId)
+            ->select('a.*')
+            ->first();
+        if (!$attachment) return response()->json(['status'=>false,'message'=>'المرفق غير موجود'],404);
+
+        $disk = Storage::disk('local')->exists($attachment->file_path) ? 'local' : 'public';
+        if (!Storage::disk($disk)->exists($attachment->file_path)) return response()->json(['status'=>false,'message'=>'ملف المرفق غير موجود'],404);
+
+        return Storage::disk($disk)->download($attachment->file_path, $attachment->original_name);
     }
 
     public function deleteAttachment($attachmentId)
@@ -243,8 +262,8 @@ class OfficialDocumentController extends Controller
             ], 404);
         }
 
-        if ($attachment->file_path && Storage::disk('public')->exists($attachment->file_path)) {
-            Storage::disk('public')->delete($attachment->file_path);
+        if ($attachment->file_path) {
+            foreach (['local','public'] as $disk) if (Storage::disk($disk)->exists($attachment->file_path)) Storage::disk($disk)->delete($attachment->file_path);
         }
 
         DB::table('official_document_attachments')
@@ -280,9 +299,7 @@ class OfficialDocumentController extends Controller
             ->get();
 
         foreach ($attachments as $attachment) {
-            if ($attachment->file_path && Storage::disk('public')->exists($attachment->file_path)) {
-                Storage::disk('public')->delete($attachment->file_path);
-            }
+            if ($attachment->file_path) foreach (['local','public'] as $disk) if (Storage::disk($disk)->exists($attachment->file_path)) Storage::disk($disk)->delete($attachment->file_path);
         }
 
         DB::table('official_document_attachments')
