@@ -3,6 +3,8 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
+use App\Services\Subscription\SubscriptionAccessModeResolver;
+use App\Services\Subscription\SubscriptionLifecycleService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -35,8 +37,15 @@ class SessionContextService
         return collect(array_keys($set))->values();
     }
 
+    public function __construct(
+        private SubscriptionLifecycleService $subscriptions,
+        private SubscriptionAccessModeResolver $accessModes,
+    ) {
+    }
+
     public function allPermissions(): Collection{return DB::table('permissions')->orderBy('id')->pluck('permission_code')->unique()->values();}
-    public function latestSubscription(int $companyId): ?object{return DB::table('subscriptions as s')->leftJoin('plans as p','p.id','=','s.plan_id')->where('s.company_id',$companyId)->orderByDesc('s.id')->select('s.*','p.plan_name','p.plan_code','p.max_branches','p.max_users','p.max_cars','p.max_invoices')->first();}
+    public function effectiveSubscription(int $companyId): ?object{return $this->subscriptions->effectiveForCompany($companyId);}
+    public function latestSubscription(int $companyId): ?object{return $this->effectiveSubscription($companyId);}
 
     public function userPayload(User $user): array
     {
@@ -54,5 +63,5 @@ class SessionContextService
     }
 
     public function subscriptionPayload(?object $s): ?array
-    {if(!$s)return null;return ['id'=>isset($s->id)?(int)$s->id:null,'plan_name'=>$s->plan_name??null,'plan_code'=>$s->plan_code??null,'start_date'=>$s->start_date??null,'end_date'=>$s->end_date??null,'max_branches'=>isset($s->max_branches)?(int)$s->max_branches:null,'max_users'=>isset($s->max_users)?(int)$s->max_users:null,'max_cars'=>isset($s->max_cars)?(int)$s->max_cars:null,'max_invoices'=>isset($s->max_invoices)?(int)$s->max_invoices:null,'status'=>$s->status??null];}
+    {if(!$s)return null;return ['id'=>isset($s->id)?(int)$s->id:null,'plan_name'=>$s->plan_name??null,'plan_code'=>$s->plan_code??null,'start_date'=>$s->start_date??null,'end_date'=>$s->end_date??null,'max_branches'=>isset($s->max_branches)?(int)$s->max_branches:null,'max_users'=>isset($s->max_users)?(int)$s->max_users:null,'max_cars'=>isset($s->max_cars)?(int)$s->max_cars:null,'max_invoices'=>isset($s->max_invoices)?(int)$s->max_invoices:null,'status'=>$s->effective_status??$s->status??null,'stored_status'=>$s->stored_status??$s->status??null,'access_mode'=>$this->accessModes->resolve($s)];}
 }

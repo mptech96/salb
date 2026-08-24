@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Traits\LogsActivity;
+use App\Services\Subscription\SubscriptionLifecycleService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -413,13 +414,6 @@ class SubscriptionController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            DB::table('companies')
-                ->where('id', $subscription->company_id)
-                ->update([
-                    'is_active' => 1,
-                    'updated_at' => now(),
-                ]);
-
             DB::commit();
 
             $this->logCreate(
@@ -531,12 +525,14 @@ class SubscriptionController extends Controller
      */
     public function updateStatus(
         Request $request,
-        int $id
+        int $id,
+        SubscriptionLifecycleService $lifecycle
     ): JsonResponse {
         $request->validate([
             'status' => [
                 'required',
                 Rule::in([
+                    'PENDING',
                     'ACTIVE',
                     'TRIAL',
                     'SUSPENDED',
@@ -547,71 +543,25 @@ class SubscriptionController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            $subscription = DB::table('subscriptions')
-                ->where('id', $id)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$subscription) {
-                DB::rollBack();
-
-                return response()->json([
-                    'status' => false,
-                    'message' => 'الاشتراك غير موجود',
-                ], 404);
-            }
-
             $status = strtoupper($request->status);
-
-            DB::table('subscriptions')
-                ->where('id', $id)
-                ->update([
-                    'status' => $status,
-                    'notes' => $request->notes
-                        ?? $subscription->notes,
-                    'updated_at' => now(),
-                ]);
-
-            DB::table('companies')
-                ->where('id', $subscription->company_id)
-                ->update([
-                    'is_active' => in_array(
-                        $status,
-                        ['ACTIVE', 'TRIAL'],
-                        true
-                    ) ? 1 : 0,
-                    'updated_at' => now(),
-                ]);
-
-            DB::commit();
-
-            $this->logUpdate(
-                'Subscriptions',
-                $id,
-                'تم تغيير حالة الاشتراك رقم ' .
-                    $id .
-                    ' إلى ' .
-                    $status
-            );
+            $subscription = $lifecycle->transition($id, $status, $request->notes);
 
             return response()->json([
                 'status' => true,
                 'message' => 'تم تحديث حالة الاشتراك بنجاح',
+                'data' => $subscription,
             ]);
         } catch (\Throwable $e) {
-            DB::rollBack();
             report($e);
 
             return response()->json([
                 'status' => false,
-                'message' => 'تعذر تحديث حالة الاشتراك',
+                'message' => $e->getMessage(),
                 'error' => app()->environment('local')
                     ? $e->getMessage()
                     : null,
-            ], 500);
+            ], 422);
         }
     }
 
@@ -620,80 +570,26 @@ class SubscriptionController extends Controller
      */
     public function extend(
         Request $request,
-        int $id
+        int $id,
+        SubscriptionLifecycleService $lifecycle
     ): JsonResponse {
         $request->validate([
             'days' => 'required|integer|min:1|max:3650',
             'notes' => 'nullable|string',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            $subscription = DB::table('subscriptions')
-                ->where('id', $id)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$subscription) {
-                DB::rollBack();
-
-                return response()->json([
-                    'status' => false,
-                    'message' => 'الاشتراك غير موجود',
-                ], 404);
-            }
-
-            $currentEndDate = Carbon::parse(
-                $subscription->end_date
-            );
-
-            $baseDate = $currentEndDate->isPast()
-                ? Carbon::today()
-                : $currentEndDate;
-
-            $newEndDate = $baseDate
-                ->copy()
-                ->addDays((int) $request->days)
-                ->toDateString();
-
-            DB::table('subscriptions')
-                ->where('id', $id)
-                ->update([
-                    'end_date' => $newEndDate,
-                    'status' => 'ACTIVE',
-                    'notes' => $request->notes
-                        ?? $subscription->notes,
-                    'updated_at' => now(),
-                ]);
-
-            DB::table('companies')
-                ->where('id', $subscription->company_id)
-                ->update([
-                    'is_active' => 1,
-                    'updated_at' => now(),
-                ]);
-
-            DB::commit();
-
-            $this->logUpdate(
-                'Subscriptions',
-                $id,
-                'تم تمديد الاشتراك رقم ' .
-                    $id .
-                    ' حتى ' .
-                    $newEndDate
-            );
+            $subscription = $lifecycle->extend($id, (int) $request->days, $request->notes);
 
             return response()->json([
                 'status' => true,
                 'message' => 'تم تمديد الاشتراك بنجاح',
                 'data' => [
-                    'end_date' => $newEndDate,
+                    'end_date' => $subscription->end_date,
+                    'status' => $subscription->status,
                 ],
             ]);
         } catch (\Throwable $e) {
-            DB::rollBack();
             report($e);
 
             return response()->json([
@@ -702,7 +598,7 @@ class SubscriptionController extends Controller
                 'error' => app()->environment('local')
                     ? $e->getMessage()
                     : null,
-            ], 500);
+            ], 422);
         }
     }
 

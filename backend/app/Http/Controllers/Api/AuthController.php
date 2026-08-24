@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\SessionContextService;
+use App\Services\Subscription\SubscriptionAccessModeResolver;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,8 @@ class AuthController extends Controller
 
     public function login(
         Request $request,
-        SessionContextService $sessions
+        SessionContextService $sessions,
+        SubscriptionAccessModeResolver $accessModes,
     ) {
         $validated = $request->validate([
             'username' => ['required', 'string', 'max:100'],
@@ -93,7 +95,7 @@ class AuthController extends Controller
                 ], 403);
             }
 
-            $subscription = $sessions->latestSubscription((int) $user->company_id);
+            $subscription = $sessions->effectiveSubscription((int) $user->company_id);
 
             if (!$subscription) {
                 return response()->json([
@@ -103,21 +105,12 @@ class AuthController extends Controller
                 ], 403);
             }
 
-            if (
-                strtoupper((string) $subscription->status) !== 'ACTIVE'
-                || ($subscription->end_date && now()->toDateString() > $subscription->end_date)
-            ) {
-                DB::table('subscriptions')
-                    ->where('id', $subscription->id)
-                    ->update([
-                        'status' => 'EXPIRED',
-                        'updated_at' => now(),
-                    ]);
-
+            $accessMode = $accessModes->resolve($subscription);
+            if ($accessMode === SubscriptionAccessModeResolver::BLOCKED) {
                 return response()->json([
                     'status' => false,
-                    'code' => 'SUBSCRIPTION_EXPIRED',
-                    'message' => 'انتهى اشتراك الشركة، يرجى التجديد.',
+                    'code' => 'SUBSCRIPTION_BLOCKED',
+                    'message' => 'الاشتراك الحالي لا يسمح بالدخول إلى بوابة الشركة.',
                 ], 403);
             }
         }
@@ -178,7 +171,7 @@ class AuthController extends Controller
             : $sessions->userPayload($user);
 
         $subscription = $companyId
-            ? $sessions->latestSubscription((int) $companyId)
+            ? $sessions->effectiveSubscription((int) $companyId)
             : null;
 
         return response()->json([

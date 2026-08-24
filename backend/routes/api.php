@@ -232,7 +232,7 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
     |-----------------------------------------------------------------------
     */
 
-    Route::middleware(['company.context', 'tenant.scope', 'route.permission'])->group(function () {
+    Route::middleware(['company.context', 'subscription.access', 'tenant.scope', 'route.permission'])->group(function () {
         Route::get('/items/meta', [ItemController::class, 'meta']);
         Route::post('/item-groups', [ItemController::class, 'storeGroup']);
         Route::post('/item-categories', [ItemController::class, 'storeCategory']);

@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Support;
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+
+abstract class Wave1SubscriptionTestCase extends PlatformControlPlaneTestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        foreach (['audit_logs','personal_access_tokens','user_permission_overrides','role_permissions','permissions','user_roles','roles','users','branches','subscriptions','plans','companies','retained_documents'] as $table) {
+            Schema::dropIfExists($table);
+        }
+
+        Schema::create('companies', function (Blueprint $table): void {$table->id();$table->string('company_name');$table->boolean('is_active')->default(true);$table->timestamps();});
+        Schema::create('plans', function (Blueprint $table): void {$table->id();$table->string('plan_name');$table->string('plan_code');$table->integer('max_branches')->nullable();$table->integer('max_users')->nullable();$table->integer('max_cars')->nullable();$table->integer('max_invoices')->nullable();});
+        Schema::create('subscriptions', function (Blueprint $table): void {$table->id();$table->foreignId('company_id');$table->foreignId('plan_id');$table->date('start_date');$table->date('end_date');$table->string('status');$table->text('notes')->nullable();$table->timestamps();});
+        Schema::create('branches', function (Blueprint $table): void {$table->id();$table->foreignId('company_id');$table->string('branch_name');$table->boolean('is_active')->default(true);});
+        Schema::create('users', function (Blueprint $table): void {$table->id();$table->foreignId('company_id')->nullable();$table->foreignId('branch_id')->nullable();$table->string('name');$table->string('username')->unique();$table->string('email')->nullable();$table->string('phone')->nullable();$table->string('password');$table->boolean('is_active')->default(true);$table->rememberToken();$table->timestamps();});
+        Schema::create('roles', function (Blueprint $table): void {$table->id();$table->string('role_name');$table->string('role_code');$table->boolean('is_active')->default(true);});
+        Schema::create('user_roles', function (Blueprint $table): void {$table->id();$table->foreignId('user_id');$table->foreignId('role_id');$table->foreignId('company_id')->nullable();$table->boolean('is_active')->default(true);});
+        Schema::create('permissions', function (Blueprint $table): void {$table->id();$table->string('permission_code');});
+        Schema::create('role_permissions', function (Blueprint $table): void {$table->id();$table->foreignId('role_id');$table->foreignId('permission_id');$table->foreignId('company_id')->nullable();$table->boolean('is_active')->default(true);});
+        Schema::create('user_permission_overrides', function (Blueprint $table): void {$table->id();$table->foreignId('company_id');$table->foreignId('user_id');$table->foreignId('permission_id');$table->string('effect');});
+        Schema::create('personal_access_tokens', function (Blueprint $table): void {$table->id();$table->string('tokenable_type');$table->unsignedBigInteger('tokenable_id');$table->string('name');$table->string('token',64)->unique();$table->text('abilities')->nullable();$table->timestamp('last_used_at')->nullable();$table->timestamp('expires_at')->nullable();$table->timestamps();$table->index(['tokenable_type','tokenable_id']);});
+        Schema::create('audit_logs', function (Blueprint $table): void {$table->id();$table->foreignId('company_id')->nullable();$table->foreignId('branch_id')->nullable();$table->foreignId('user_id')->nullable();$table->string('module_name');$table->string('action_type');$table->unsignedBigInteger('record_id')->nullable();$table->text('description')->nullable();$table->string('ip_address')->nullable();$table->text('user_agent')->nullable();$table->timestamps();});
+        Schema::create('retained_documents', function (Blueprint $table): void {$table->id();$table->foreignId('company_id');$table->string('document_number');});
+    }
+
+    protected function companyUserWithSubscription(string $status, string $startDate = '2026-01-01', string $endDate = '2026-12-31'): array
+    {
+        $companyId=DB::table('companies')->insertGetId(['company_name'=>'Tenant A','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+        $planId=DB::table('plans')->insertGetId(['plan_name'=>'Core','plan_code'=>'CORE']);
+        $branchId=DB::table('branches')->insertGetId(['company_id'=>$companyId,'branch_name'=>'Main','is_active'=>1]);
+        $roleId=DB::table('roles')->insertGetId(['role_name'=>'Company Manager','role_code'=>'MANAGER','is_active'=>1]);
+        $userId=DB::table('users')->insertGetId(['company_id'=>$companyId,'branch_id'=>$branchId,'name'=>'Manager','username'=>'manager-'.$status.'-'.$companyId,'password'=>Hash::make('password123'),'is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+        DB::table('user_roles')->insert(['user_id'=>$userId,'role_id'=>$roleId,'company_id'=>$companyId,'is_active'=>1]);
+        $subscriptionId=DB::table('subscriptions')->insertGetId(['company_id'=>$companyId,'plan_id'=>$planId,'start_date'=>$startDate,'end_date'=>$endDate,'status'=>$status,'created_at'=>now(),'updated_at'=>now()]);
+        return compact('companyId','planId','branchId','roleId','userId','subscriptionId');
+    }
+}

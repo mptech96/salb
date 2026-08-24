@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Throwable;
+use App\Services\Subscription\SubscriptionLifecycleService;
 
 class SubscriptionPaymentController extends Controller
 {
@@ -385,7 +386,7 @@ class SubscriptionPaymentController extends Controller
     /**
      * تسجيل دفعة جديدة وتحديث الفاتورة تلقائيًا.
      */
-    public function storePayment(Request $request)
+    public function storePayment(Request $request, SubscriptionLifecycleService $lifecycle)
     {
         $validator = Validator::make($request->all(), [
             'invoice_id' => [
@@ -480,7 +481,7 @@ class SubscriptionPaymentController extends Controller
         }
 
         try {
-            $result = DB::transaction(function () use ($request) {
+            $result = DB::transaction(function () use ($request, $lifecycle) {
                 $invoice = DB::table('subscription_invoices')
                     ->where('id', $request->integer('invoice_id'))
                     ->lockForUpdate()
@@ -605,27 +606,9 @@ class SubscriptionPaymentController extends Controller
 
                 if ($newStatus === 'PAID') {
                     if ($invoice->subscription_id) {
-                        DB::table('subscriptions')
-                            ->where('id', $invoice->subscription_id)
-                            ->update([
-                                'status' => 'ACTIVE',
-                                'updated_at' => now(),
-                            ]);
+                        $lifecycle->transition((int) $invoice->subscription_id, 'ACTIVE');
                     }
 
-                    DB::table('companies')
-                        ->where('id', $invoice->company_id)
-                        ->update([
-                            'is_active' => 1,
-                            'updated_at' => now(),
-                        ]);
-
-                    DB::table('users')
-                        ->where('company_id', $invoice->company_id)
-                        ->update([
-                            'is_active' => 1,
-                            'updated_at' => now(),
-                        ]);
                 }
 
                 return [

@@ -2,8 +2,8 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
+use App\Services\Subscription\SubscriptionLifecycleService;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,72 +22,22 @@ Artisan::command('inspire', function () {
 |
 | يقوم الأمر بالتالي:
 | 1. يبحث عن الاشتراكات ACTIVE التي انتهى تاريخها.
-| 2. يحول حالتها إلى EXPIRED.
-| 3. يوقف الشركة إذا لم يوجد لها اشتراك ACTIVE آخر غير منتهٍ.
+| 2. يحول حالتها إلى EXPIRED عبر خدمة دورة الحياة المركزية.
+| 3. لا يغير الحالة التشغيلية للشركة ولا يحذف أي بيانات.
 |
 */
 
-Artisan::command('subscriptions:expire', function () {
+Artisan::command('subscriptions:expire', function (SubscriptionLifecycleService $lifecycle) {
     $this->info('بدء فحص الاشتراكات المنتهية...');
 
     try {
-        $result = DB::transaction(function () {
-            $today = now()->toDateString();
-
-            $expiredSubscriptions = DB::table('subscriptions')
-                ->where('status', 'ACTIVE')
-                ->whereDate('end_date', '<', $today)
-                ->lockForUpdate()
-                ->get();
-
-            $expiredSubscriptionsCount = 0;
-            $deactivatedCompaniesCount = 0;
-
-            foreach ($expiredSubscriptions as $subscription) {
-                DB::table('subscriptions')
-                    ->where('id', $subscription->id)
-                    ->update([
-                        'status' => 'EXPIRED',
-                        'updated_at' => now(),
-                    ]);
-
-                $expiredSubscriptionsCount++;
-
-                $hasAnotherActiveSubscription = DB::table('subscriptions')
-                    ->where('company_id', $subscription->company_id)
-                    ->where('id', '<>', $subscription->id)
-                    ->where('status', 'ACTIVE')
-                    ->whereDate('end_date', '>=', $today)
-                    ->exists();
-
-                if (!$hasAnotherActiveSubscription) {
-                    DB::table('companies')
-                        ->where('id', $subscription->company_id)
-                        ->update([
-                            'is_active' => 0,
-                            'updated_at' => now(),
-                        ]);
-
-                    $deactivatedCompaniesCount++;
-                }
-            }
-
-            return [
-                'expired_subscriptions' => $expiredSubscriptionsCount,
-                'deactivated_companies' => $deactivatedCompaniesCount,
-            ];
-        });
+        $expiredSubscriptionsCount = $lifecycle->expireElapsedSubscriptions();
 
         $this->newLine();
 
         $this->info(
             'تم تحويل الاشتراكات المنتهية: ' .
-            $result['expired_subscriptions']
-        );
-
-        $this->info(
-            'تم إيقاف الشركات: ' .
-            $result['deactivated_companies']
+            $expiredSubscriptionsCount
         );
 
         $this->newLine();

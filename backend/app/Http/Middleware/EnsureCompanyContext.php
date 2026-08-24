@@ -61,32 +61,6 @@ class EnsureCompanyContext
             }
         }
 
-        if (!$isSupportMode) {
-            $subscription = DB::table('subscriptions')
-                ->where('company_id', $companyId)
-                ->orderByDesc('id')
-                ->first();
-
-            if (!$subscription) {
-                return response()->json([
-                    'status' => false,
-                    'code' => 'SUBSCRIPTION_MISSING',
-                    'message' => 'لا يوجد اشتراك مرتبط بالشركة.',
-                ], 403);
-            }
-
-            if (
-                strtoupper((string) $subscription->status) !== 'ACTIVE'
-                || ($subscription->end_date && now()->toDateString() > $subscription->end_date)
-            ) {
-                return response()->json([
-                    'status' => false,
-                    'code' => 'SUBSCRIPTION_INACTIVE',
-                    'message' => 'اشتراك الشركة غير فعال أو منتهي.',
-                ], 403);
-            }
-        }
-
         return $next($request);
     }
 }
