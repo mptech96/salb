@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+
+/* =========================================================
+   SULB ERP - Professional print mode
+   ========================================================= */
+.print-only { display: none !important; }
+@media print {
+  @page { size: A4; margin: 10mm; }
+  html, body { background: #fff !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  body * { visibility: hidden !important; }
+  .sulb-print-area, .sulb-print-area * { visibility: visible !important; }
+  .sulb-print-area { position: absolute !important; inset: 0 !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; background: #fff !important; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; visibility: visible !important; }
+  table { width: 100% !important; border-collapse: collapse !important; }
+  thead { display: table-header-group !important; }
+  tfoot { display: table-footer-group !important; }
+  tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+  h1, h2, h3 { break-after: avoid !important; page-break-after: avoid !important; }
+  a { color: inherit !important; text-decoration: none !important; }
+}

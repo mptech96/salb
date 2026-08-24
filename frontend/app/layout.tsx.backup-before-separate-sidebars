@@ -1,0 +1,537 @@
+"use client";
+
+import Link from "next/link";
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import "./globals.css";
+
+/*
+|--------------------------------------------------------------------------
+| عناصر القائمة الرئيسية
+|--------------------------------------------------------------------------
+*/
+
+const menu = [
+  {
+    href: "/",
+    label: "الرئيسية",
+    permission: "dashboard.view",
+  },
+  {
+    href: "/system-center",
+    label: "مركز التحكم",
+    permission: "system.center",
+    superOnly: true,
+  },
+  {
+    href: "/users",
+    label: "المستخدمين",
+    permission: "users.view",
+  },
+  {
+    href: "/branches",
+    label: "الفروع",
+    permission: "branches.view",
+  },
+  {
+    href: "/items",
+    label: "الأصناف",
+    permission: "items.view",
+  },
+  {
+    href: "/cars",
+    label: "السيارات",
+    permission: "cars.view",
+  },
+  {
+    href: "/suppliers",
+    label: "الموردين",
+    permission: "suppliers.view",
+  },
+  {
+    href: "/customers",
+    label: "العملاء",
+    permission: "customers.view",
+  },
+  {
+    href: "/purchases",
+    label: "المشتريات",
+    permission: "purchases.view",
+  },
+  {
+    href: "/sales",
+    label: "المبيعات",
+    permission: "sales.view",
+  },
+  {
+    href: "/inventory",
+    label: "المخزون",
+    permission: "inventory.view",
+  },
+
+  /*
+  |--------------------------------------------------------------------------
+  | الأصول الثابتة
+  |--------------------------------------------------------------------------
+  */
+
+  {
+    href: "/fixed-assets/workspace",
+    label: "الأصول الثابتة",
+    permission: "dashboard.view",
+  },
+
+  {
+    href: "/drivers",
+    label: "السائقين",
+    permission: "drivers.view",
+  },
+  {
+    href: "/expenses",
+    label: "المصروفات",
+    permission: "expenses.view",
+  },
+  {
+    href: "/vouchers",
+    label: "السندات",
+    permission: "vouchers.view",
+  },
+  {
+    href: "/statements",
+    label: "كشف الحسابات",
+    permission: "statements.view",
+  },
+  {
+    href: "/reports",
+    label: "التقارير",
+    permission: "reports.view",
+  },
+  {
+    href: "/settings",
+    label: "إعدادات المكتب",
+    permission: "settings.view",
+  },
+  {
+    href: "/official-documents",
+    label: "الأوراق الرسمية",
+    permission:
+      "official_documents.view",
+  },
+  {
+    href: "/audit-logs",
+    label: "سجل الأنشطة",
+    permission: "audit_logs.view",
+  },
+  {
+    href: "/shipments",
+    label: "الحمولات",
+    permission: "shipments.view",
+  },
+  {
+    href: "/workers",
+    label: "الموارد البشرية",
+    permission: "workers.view",
+  },
+  {
+    href: "/expense-types",
+    label: "أنواع المصروفات",
+    permission: "expenses.view",
+  },
+  {
+    href: "/accounts",
+    label: "شجرة الحسابات",
+    permission: "accounts.view",
+  },
+];
+
+/*
+|--------------------------------------------------------------------------
+| المسارات الخاصة بمدير النظام
+|--------------------------------------------------------------------------
+*/
+
+const superOnlyPaths = [
+  "/system-center",
+  "/companies",
+];
+
+/*
+|--------------------------------------------------------------------------
+| التخطيط الرئيسي للنظام
+|--------------------------------------------------------------------------
+*/
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const [ready, setReady] =
+    useState(false);
+
+  const [user, setUser] =
+    useState<any>(null);
+
+  const [
+    permissions,
+    setPermissions,
+  ] = useState<string[]>([]);
+
+  const isLoginPage =
+    pathname === "/login";
+
+  /*
+  |--------------------------------------------------------------------------
+  | تحميل المستخدم والصلاحيات
+  |--------------------------------------------------------------------------
+  */
+
+  useEffect(() => {
+    const savedUser =
+      localStorage.getItem(
+        "scrap_user"
+      );
+
+    const savedPermissions =
+      localStorage.getItem(
+        "scrap_permissions"
+      );
+
+    if (
+      !savedUser &&
+      !isLoginPage
+    ) {
+      router.replace("/login");
+      return;
+    }
+
+    if (savedUser) {
+      try {
+        const parsedUser =
+          JSON.parse(savedUser);
+
+        setUser(parsedUser);
+
+        const roleCode =
+          parsedUser?.role
+            ?.role_code;
+
+        const isSuperUser =
+          roleCode ===
+          "SUPER_ADMIN";
+
+        const isSuperPath =
+          superOnlyPaths.some(
+            (path) =>
+              pathname === path ||
+              pathname.startsWith(
+                `${path}/`
+              )
+          );
+
+        if (
+          isSuperPath &&
+          !isSuperUser
+        ) {
+          router.replace("/");
+          return;
+        }
+
+        if (
+          pathname ===
+          "/companies"
+        ) {
+          router.replace(
+            "/system-center"
+          );
+          return;
+        }
+      } catch {
+        localStorage.removeItem(
+          "scrap_user"
+        );
+
+        localStorage.removeItem(
+          "scrap_permissions"
+        );
+
+        router.replace("/login");
+        return;
+      }
+    }
+
+    if (savedPermissions) {
+      try {
+        const parsedPermissions =
+          JSON.parse(
+            savedPermissions
+          );
+
+        setPermissions(
+          Array.isArray(
+            parsedPermissions
+          )
+            ? parsedPermissions
+            : []
+        );
+      } catch {
+        setPermissions([]);
+      }
+    } else {
+      setPermissions([]);
+    }
+
+    setReady(true);
+  }, [
+    pathname,
+    router,
+    isLoginPage,
+  ]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | التحقق من مدير النظام
+  |--------------------------------------------------------------------------
+  */
+
+  const isSuper =
+    user?.role?.role_code ===
+    "SUPER_ADMIN";
+
+  /*
+  |--------------------------------------------------------------------------
+  | القائمة المسموحة
+  |--------------------------------------------------------------------------
+  */
+
+  const allowedMenu =
+    useMemo(() => {
+      if (!user) {
+        return [];
+      }
+
+      if (isSuper) {
+        return menu;
+      }
+
+      return menu.filter(
+        (item) => {
+          if (item.superOnly) {
+            return false;
+          }
+
+          return permissions.includes(
+            item.permission
+          );
+        }
+      );
+    }, [
+      user,
+      permissions,
+      isSuper,
+    ]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | تسجيل الخروج
+  |--------------------------------------------------------------------------
+  */
+
+  function logout() {
+    localStorage.removeItem(
+      "scrap_user"
+    );
+
+    localStorage.removeItem(
+      "scrap_subscription"
+    );
+
+    localStorage.removeItem(
+      "scrap_permissions"
+    );
+
+    router.replace("/login");
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | تحديد العنصر النشط
+  |--------------------------------------------------------------------------
+  */
+
+  function isMenuItemActive(
+    href: string
+  ): boolean {
+    if (href === "/") {
+      return pathname === "/";
+    }
+
+    return (
+      pathname === href ||
+      pathname.startsWith(
+        `${href}/`
+      )
+    );
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | شاشة التحميل
+  |--------------------------------------------------------------------------
+  */
+
+  if (
+    !ready &&
+    !isLoginPage
+  ) {
+    return (
+      <html
+        lang="ar"
+        dir="rtl"
+      >
+        <body className="min-h-screen bg-slate-100">
+          <div className="flex min-h-screen items-center justify-center font-bold text-[#0B2A4A]">
+            جاري تحميل النظام...
+          </div>
+        </body>
+      </html>
+    );
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | صفحة تسجيل الدخول
+  |--------------------------------------------------------------------------
+  */
+
+  if (isLoginPage) {
+    return (
+      <html
+        lang="ar"
+        dir="rtl"
+      >
+        <body className="min-h-screen bg-slate-100 text-slate-900">
+          {children}
+        </body>
+      </html>
+    );
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | واجهة النظام
+  |--------------------------------------------------------------------------
+  */
+
+  return (
+    <html
+      lang="ar"
+      dir="rtl"
+    >
+      <body className="min-h-screen bg-slate-100 text-slate-900">
+        <div className="flex min-h-screen flex-col lg:flex-row">
+          {/*
+          |--------------------------------------------------------------------------
+          | القائمة الجانبية
+          |--------------------------------------------------------------------------
+          */}
+
+          <aside className="bg-[#0B2A4A] text-white lg:w-72 lg:shrink-0">
+            <div className="border-b border-white/10 p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-black text-[#0B2A4A]">
+                  MG
+                </div>
+
+                <div>
+                  <h1 className="text-xl font-bold">
+                    MG Scrap ERP
+                  </h1>
+
+                  <p className="mt-1 text-xs text-blue-100">
+                    {user?.company_name ||
+                      "نظام السكراب"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-white/10 p-3">
+                <div className="text-sm font-bold">
+                  {user?.name || "-"}
+                </div>
+
+                <div className="mt-1 text-xs text-blue-100">
+                  {user?.branch_name ||
+                    "-"}{" "}
+                  |{" "}
+                  {user?.role
+                    ?.role_name || "-"}
+                </div>
+              </div>
+            </div>
+
+            {/*
+            |--------------------------------------------------------------------------
+            | روابط النظام
+            |--------------------------------------------------------------------------
+            */}
+
+            <nav className="flex gap-2 overflow-x-auto px-4 py-4 lg:block lg:max-h-[calc(100vh-190px)] lg:space-y-2 lg:overflow-y-auto">
+              {allowedMenu.map(
+                (item) => {
+                  const active =
+                    isMenuItemActive(
+                      item.href
+                    );
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`block whitespace-nowrap rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                        active
+                          ? "bg-white text-[#0B2A4A]"
+                          : "text-blue-50 hover:bg-blue-900"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                }
+              )}
+
+              <button
+                type="button"
+                onClick={logout}
+                className="mt-4 w-full whitespace-nowrap rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-700"
+              >
+                تسجيل الخروج
+              </button>
+            </nav>
+          </aside>
+
+          {/*
+          |--------------------------------------------------------------------------
+          | محتوى الصفحات
+          |--------------------------------------------------------------------------
+          */}
+
+          <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+            {children}
+          </main>
+        </div>
+      </body>
+    </html>
+  );
+}

@@ -1,0 +1,288 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import api from "../api";
+
+export default function SystemCenterPage() {
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const [filters, setFilters] = useState({
+    company_id: "",
+    module_name: "",
+    action_type: "",
+    search: "",
+  });
+
+  const modules = useMemo(() => {
+    return Array.from(new Set(logs.map((x) => x.module_name).filter(Boolean)));
+  }, [logs]);
+
+  const loadData = async () => {
+    setLoading(true);
+
+    try {
+      const params: any = {};
+
+      if (filters.company_id) params.company_id = filters.company_id;
+      if (filters.module_name) params.module_name = filters.module_name;
+      if (filters.action_type) params.action_type = filters.action_type;
+      if (filters.search) params.search = filters.search;
+
+      const [companiesRes, logsRes] = await Promise.all([
+        api.get("/companies"),
+        api.get("/audit-logs", { params }),
+      ]);
+
+      setCompanies(companiesRes.data.data || []);
+      setLogs(logsRes.data.data || []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const supportAccess = async (companyId: number) => {
+    const res = await api.get(`/companies/${companyId}/support-access`);
+
+    localStorage.setItem("scrap_user", JSON.stringify(res.data.user));
+    localStorage.setItem(
+      "scrap_subscription",
+      JSON.stringify(res.data.subscription)
+    );
+    localStorage.setItem(
+      "scrap_permissions",
+      JSON.stringify(res.data.user.permissions || [])
+    );
+
+    window.location.href = "/";
+  };
+
+  return (
+    <section dir="rtl" className="space-y-5">
+      <div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
+        <p className="text-sm text-blue-100">Super Admin Console</p>
+        <h1 className="mt-2 text-3xl font-black">مركز إدارة النظام</h1>
+        <p className="mt-2 text-sm text-blue-100">
+          مراقبة الشركات والاشتراكات وسجل النشاط والدخول كدعم فني.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="rounded-3xl bg-white p-5 shadow-sm">
+          <div className="text-sm text-slate-500">إجمالي الشركات</div>
+          <div className="mt-2 text-3xl font-black text-[#0B2A4A]">
+            {companies.length}
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-5 shadow-sm">
+          <div className="text-sm text-slate-500">الشركات النشطة</div>
+          <div className="mt-2 text-3xl font-black text-emerald-600">
+            {companies.filter((c) => Number(c.is_active) === 1).length}
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-5 shadow-sm">
+          <div className="text-sm text-slate-500">السجلات المعروضة</div>
+          <div className="mt-2 text-3xl font-black text-[#0B2A4A]">
+            {logs.length}
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-5 shadow-sm">
+          <div className="text-sm text-slate-500">آخر تحديث</div>
+          <div className="mt-2 text-lg font-black text-slate-700">
+            الآن
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b p-4">
+          <h2 className="text-xl font-black text-[#0B2A4A]">
+            الشركات والاشتراكات
+          </h2>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-[1100px] w-full text-right">
+            <thead className="bg-slate-100 text-slate-700">
+              <tr>
+                <th className="p-4">الشركة</th>
+                <th className="p-4">المالك</th>
+                <th className="p-4">الجوال</th>
+                <th className="p-4">الباقة</th>
+                <th className="p-4">بداية الاشتراك</th>
+                <th className="p-4">نهاية الاشتراك</th>
+                <th className="p-4">الحالة</th>
+                <th className="p-4">الدعم</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {companies.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-slate-500">
+                    لا توجد شركات
+                  </td>
+                </tr>
+              ) : (
+                companies.map((company) => (
+                  <tr key={company.id} className="border-t hover:bg-slate-50">
+                    <td className="p-4 font-bold text-[#0B2A4A]">
+                      {company.company_name}
+                    </td>
+                    <td className="p-4">{company.owner_name || "-"}</td>
+                    <td className="p-4">{company.phone || "-"}</td>
+                    <td className="p-4">{company.plan_name || "-"}</td>
+                    <td className="p-4">{company.start_date || "-"}</td>
+                    <td className="p-4">{company.end_date || "-"}</td>
+                    <td className="p-4">
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                        {company.status || "ACTIVE"}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => supportAccess(company.id)}
+                        className="rounded-xl bg-[#0B2A4A] px-4 py-2 text-sm font-bold text-white"
+                      >
+                        دخول دعم
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <h2 className="text-xl font-black text-[#0B2A4A]">سجل النشاط</h2>
+
+          <button
+            onClick={loadData}
+            className="rounded-2xl bg-[#0B2A4A] px-5 py-3 font-bold text-white"
+          >
+            تحديث
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <input
+            className="rounded-2xl border bg-slate-50 p-4"
+            placeholder="بحث..."
+            value={filters.search}
+            onChange={(e) =>
+              setFilters({ ...filters, search: e.target.value })
+            }
+          />
+
+          <select
+            className="rounded-2xl border bg-slate-50 p-4"
+            value={filters.company_id}
+            onChange={(e) =>
+              setFilters({ ...filters, company_id: e.target.value })
+            }
+          >
+            <option value="">كل الشركات</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.company_name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="rounded-2xl border bg-slate-50 p-4"
+            value={filters.module_name}
+            onChange={(e) =>
+              setFilters({ ...filters, module_name: e.target.value })
+            }
+          >
+            <option value="">كل الوحدات</option>
+            {modules.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="rounded-2xl border bg-slate-50 p-4"
+            value={filters.action_type}
+            onChange={(e) =>
+              setFilters({ ...filters, action_type: e.target.value })
+            }
+          >
+            <option value="">كل العمليات</option>
+            <option value="CREATE">CREATE</option>
+            <option value="UPDATE">UPDATE</option>
+            <option value="DELETE">DELETE</option>
+            <option value="LOGIN">LOGIN</option>
+            <option value="SUPPORT_ACCESS">SUPPORT_ACCESS</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-[1200px] w-full text-right">
+            <thead className="bg-slate-100 text-slate-700">
+              <tr>
+                <th className="p-4">الوقت</th>
+                <th className="p-4">الشركة</th>
+                <th className="p-4">المستخدم</th>
+                <th className="p-4">الوحدة</th>
+                <th className="p-4">العملية</th>
+                <th className="p-4">الوصف</th>
+                <th className="p-4">IP</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="p-6 text-center">
+                    جاري التحميل...
+                  </td>
+                </tr>
+              ) : logs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-6 text-center text-slate-500">
+                    لا توجد سجلات نشاط
+                  </td>
+                </tr>
+              ) : (
+                logs.map((log) => (
+                  <tr key={log.id} className="border-t hover:bg-slate-50">
+                    <td className="p-4">{log.created_at}</td>
+                    <td className="p-4">{log.company_name || "-"}</td>
+                    <td className="p-4">
+                      {log.user_name || log.username || "النظام"}
+                    </td>
+                    <td className="p-4">{log.module_name}</td>
+                    <td className="p-4">
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+                        {log.action_type}
+                      </span>
+                    </td>
+                    <td className="p-4">{log.description || "-"}</td>
+                    <td className="p-4">{log.ip_address || "-"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}

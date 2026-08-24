@@ -13,4 +13,7 @@ frontend/.env.local
 
 *.log
 .DS_Store
-Thumbs.dbfrontend.rar
+Thumbs.db
+frontend.rar
+*.rar
+scrap-system-archives/
