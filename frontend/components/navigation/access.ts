@@ -14,12 +14,34 @@ export const MANAGER_ROLES = new Set([
   "BRANCH_MANAGER",
 ]);
 
+const NAVIGATION_FEATURES: Array<[string, string]> = [
+  ["/weighing", "weighbridge"], ["/shipments", "shipments"],
+  ["/purchases", "purchases"], ["/sales", "sales"], ["/commercial-returns", "sales"],
+  ["/inventory-operations", "processing"], ["/inventory", "inventory"],
+  ["/accounting", "accounting"], ["/journal-entries", "accounting"], ["/financial-years", "accounting"],
+  ["/accounts", "accounting"], ["/tax-reports", "tax"], ["/reports", "reports"],
+  ["/imports", "imports"], ["/fixed-assets", "fixed_assets"], ["/payroll", "payroll"],
+  ["/official-documents", "official_documents"],
+];
+
+function featureAllowed(href: string, entitlements: Record<string, boolean>): boolean {
+  if (Object.keys(entitlements).length === 0) return true;
+  const match = NAVIGATION_FEATURES.find(([prefix]) => href === prefix || href.startsWith(`${prefix}/`));
+  return !match || entitlements[match[1]] === true;
+}
+
+export function canAccessEntitledPath(href: string, entitlements: Record<string, boolean>): boolean {
+  return featureAllowed(href, entitlements);
+}
+
 export function canAccessNavigationItem(
   item: NavigationItem,
   roleCode: string,
   permissions: string[],
-  allowAll: boolean
+  allowAll: boolean,
+  entitlements: Record<string, boolean> = {}
 ): boolean {
+  if (!featureAllowed(item.href, entitlements)) return false;
   if (allowAll) return true;
   if (item.hiddenForRoles?.includes(roleCode)) return false;
 
@@ -43,13 +65,14 @@ export function filterNavigation(
   groups: NavigationGroup[],
   roleCode: string,
   permissions: string[],
-  allowAll: boolean
+  allowAll: boolean,
+  entitlements: Record<string, boolean> = {}
 ): NavigationGroup[] {
   return groups
     .map((group) => ({
       ...group,
       items: group.items.filter((item) =>
-        canAccessNavigationItem(item, roleCode, permissions, allowAll)
+        canAccessNavigationItem(item, roleCode, permissions, allowAll, entitlements)
       ),
     }))
     .filter((group) => group.items.length > 0);
@@ -58,7 +81,8 @@ export function filterNavigation(
 export function getCompanyLandingPath(
   roleCodeValue: string,
   permissions: string[],
-  isSupportMode = false
+  isSupportMode = false,
+  entitlements: Record<string, boolean> = {}
 ): string {
   const roleCode = String(roleCodeValue || "").toUpperCase();
   const allowAll = isSupportMode || MANAGER_ROLES.has(roleCode);
@@ -66,7 +90,8 @@ export function getCompanyLandingPath(
     companyNavigation,
     roleCode,
     permissions,
-    allowAll
+    allowAll,
+    entitlements
   );
 
   const visiblePaths = new Set(

@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\{
     DashboardController,
     DriverController,
     ExpenseController,
+    EntitlementAdminController,
     FixedAssetCategoryController,
     FixedAssetController,
     FinancialYearController,
@@ -96,7 +97,7 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
     | يعمل لمدير المنصة أو مدير الشركة حسب السياق الذي حسمه الخادم.
     */
 
-    Route::middleware('route.permission')->group(function () {
+    Route::middleware(['usage.limit', 'route.permission'])->group(function () {
         Route::apiResource('branches', BranchController::class);
         Route::apiResource('users', UserController::class);
         Route::get('/roles', [RoleController::class, 'index']);
@@ -153,6 +154,12 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
         Route::put('/system-admin/plans/{id}', [PlanController::class, 'update']);
         Route::put('/system-admin/plans/{id}/toggle', [PlanController::class, 'toggle']);
         Route::delete('/system-admin/plans/{id}', [PlanController::class, 'destroy']);
+        Route::get('/system-admin/features', [EntitlementAdminController::class, 'catalog']);
+        Route::get('/system-admin/plans/{planId}/features', [EntitlementAdminController::class, 'plan']);
+        Route::put('/system-admin/plans/{planId}/features', [EntitlementAdminController::class, 'updatePlan']);
+        Route::get('/system-admin/companies/{companyId}/entitlements', [EntitlementAdminController::class, 'effective']);
+        Route::post('/system-admin/companies/{companyId}/entitlement-overrides', [EntitlementAdminController::class, 'override']);
+        Route::post('/system-admin/subscriptions/{subscriptionId}/entitlement-snapshot', [EntitlementAdminController::class, 'snapshot']);
 
         Route::get(
             '/system-admin/payment-dashboard',
@@ -232,7 +239,7 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
     |-----------------------------------------------------------------------
     */
 
-    Route::middleware(['company.context', 'subscription.access', 'tenant.scope', 'route.permission'])->group(function () {
+    Route::middleware(['company.context', 'subscription.access', 'tenant.scope', 'feature.entitlement', 'usage.limit', 'route.permission'])->group(function () {
         Route::get('/items/meta', [ItemController::class, 'meta']);
         Route::post('/item-groups', [ItemController::class, 'storeGroup']);
         Route::post('/item-categories', [ItemController::class, 'storeCategory']);

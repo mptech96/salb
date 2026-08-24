@@ -16,7 +16,7 @@ class TenantIsolationTest extends PlatformControlPlaneTestCase
     public function test_company_portal_uses_company_and_tenant_middleware(): void
     {
         $routes = $this->productionSource('routes/api.php');
-        self::assertStringContainsString("['company.context', 'tenant.scope', 'route.permission']", $routes);
+        self::assertStringContainsString("['company.context', 'subscription.access', 'tenant.scope', 'feature.entitlement', 'usage.limit', 'route.permission']", $routes);
     }
 
     public function test_every_company_resource_and_foreign_key_has_central_or_policy_scope_coverage(): void

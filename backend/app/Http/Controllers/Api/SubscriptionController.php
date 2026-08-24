@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Entitlement\EntitlementSnapshotService;
 use App\Traits\LogsActivity;
 use App\Services\Subscription\SubscriptionLifecycleService;
 use Carbon\Carbon;
@@ -233,7 +234,11 @@ class SubscriptionController extends Controller
     /**
      * تجديد الاشتراك.
      */
-    public function renew(Request $request, int $id): JsonResponse
+    public function renew(
+        Request $request,
+        int $id,
+        EntitlementSnapshotService $entitlementSnapshots
+    ): JsonResponse
     {
         $request->validate([
             'end_date' => 'required|date',
@@ -364,6 +369,8 @@ class SubscriptionController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+            $entitlementSnapshots->capture($newSubscriptionId);
 
             $invoiceDate = Carbon::today()->toDateString();
 

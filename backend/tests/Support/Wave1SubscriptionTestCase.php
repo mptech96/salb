@@ -15,7 +15,7 @@ abstract class Wave1SubscriptionTestCase extends PlatformControlPlaneTestCase
     {
         parent::setUp();
 
-        foreach (['audit_logs','personal_access_tokens','user_permission_overrides','role_permissions','permissions','user_roles','roles','users','branches','subscriptions','plans','companies','retained_documents'] as $table) {
+        foreach (['company_entitlement_overrides','subscription_entitlement_snapshots','plan_features','feature_catalog','official_documents','sales_invoices','purchase_invoices','cars','stores','audit_logs','personal_access_tokens','user_permission_overrides','role_permissions','permissions','user_roles','roles','users','branches','subscriptions','plans','companies','retained_documents'] as $table) {
             Schema::dropIfExists($table);
         }
 
@@ -32,6 +32,13 @@ abstract class Wave1SubscriptionTestCase extends PlatformControlPlaneTestCase
         Schema::create('personal_access_tokens', function (Blueprint $table): void {$table->id();$table->string('tokenable_type');$table->unsignedBigInteger('tokenable_id');$table->string('name');$table->string('token',64)->unique();$table->text('abilities')->nullable();$table->timestamp('last_used_at')->nullable();$table->timestamp('expires_at')->nullable();$table->timestamps();$table->index(['tokenable_type','tokenable_id']);});
         Schema::create('audit_logs', function (Blueprint $table): void {$table->id();$table->foreignId('company_id')->nullable();$table->foreignId('branch_id')->nullable();$table->foreignId('user_id')->nullable();$table->string('module_name');$table->string('action_type');$table->unsignedBigInteger('record_id')->nullable();$table->text('description')->nullable();$table->string('ip_address')->nullable();$table->text('user_agent')->nullable();$table->timestamps();});
         Schema::create('retained_documents', function (Blueprint $table): void {$table->id();$table->foreignId('company_id');$table->string('document_number');});
+        Schema::create('cars', function (Blueprint $table): void {$table->id();$table->foreignId('company_id');$table->boolean('is_active')->default(true);});
+        Schema::create('stores', function (Blueprint $table): void {$table->id();$table->foreignId('company_id');$table->boolean('is_active')->default(true);});
+        foreach(['purchase_invoices','sales_invoices','official_documents'] as $table)Schema::create($table,function(Blueprint $t):void{$t->id();$t->foreignId('company_id');});
+        Schema::create('feature_catalog',function(Blueprint $t):void{$t->id();$t->string('feature_code')->unique();$t->string('feature_name')->nullable();$t->string('feature_type')->default('BOOLEAN');$t->string('module_name')->nullable();$t->boolean('is_active')->default(true);});
+        Schema::create('plan_features',function(Blueprint $t):void{$t->id();$t->foreignId('plan_id');$t->string('feature_code');$t->boolean('is_enabled')->nullable();$t->unsignedBigInteger('limit_value')->nullable();});
+        Schema::create('subscription_entitlement_snapshots',function(Blueprint $t):void{$t->id();$t->foreignId('subscription_id');$t->foreignId('company_id');$t->foreignId('plan_id');$t->string('feature_code');$t->boolean('is_enabled')->nullable();$t->unsignedBigInteger('limit_value')->nullable();$t->dateTime('effective_from');$t->dateTime('effective_to')->nullable();$t->string('source')->default('PLAN');});
+        Schema::create('company_entitlement_overrides',function(Blueprint $t):void{$t->id();$t->foreignId('company_id');$t->string('feature_code');$t->boolean('is_enabled')->nullable();$t->unsignedBigInteger('limit_value')->nullable();$t->dateTime('effective_from');$t->dateTime('effective_to')->nullable();});
     }
 
     protected function companyUserWithSubscription(string $status, string $startDate = '2026-01-01', string $endDate = '2026-12-31'): array

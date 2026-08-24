@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use App\Models\User;
 use App\Services\Subscription\SubscriptionAccessModeResolver;
 use App\Services\Subscription\SubscriptionLifecycleService;
+use App\Services\Entitlement\EffectiveEntitlementService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -40,6 +41,7 @@ class SessionContextService
     public function __construct(
         private SubscriptionLifecycleService $subscriptions,
         private SubscriptionAccessModeResolver $accessModes,
+        private EffectiveEntitlementService $entitlements,
     ) {
     }
 
@@ -63,5 +65,5 @@ class SessionContextService
     }
 
     public function subscriptionPayload(?object $s): ?array
-    {if(!$s)return null;return ['id'=>isset($s->id)?(int)$s->id:null,'plan_name'=>$s->plan_name??null,'plan_code'=>$s->plan_code??null,'start_date'=>$s->start_date??null,'end_date'=>$s->end_date??null,'max_branches'=>isset($s->max_branches)?(int)$s->max_branches:null,'max_users'=>isset($s->max_users)?(int)$s->max_users:null,'max_cars'=>isset($s->max_cars)?(int)$s->max_cars:null,'max_invoices'=>isset($s->max_invoices)?(int)$s->max_invoices:null,'status'=>$s->effective_status??$s->status??null,'stored_status'=>$s->stored_status??$s->status??null,'access_mode'=>$this->accessModes->resolve($s)];}
+    {if(!$s)return null;$effective=isset($s->company_id)?$this->entitlements->resolve((int)$s->company_id):null;return ['id'=>isset($s->id)?(int)$s->id:null,'plan_name'=>$s->plan_name??null,'plan_code'=>$s->plan_code??null,'start_date'=>$s->start_date??null,'end_date'=>$s->end_date??null,'max_branches'=>isset($s->max_branches)?(int)$s->max_branches:null,'max_users'=>isset($s->max_users)?(int)$s->max_users:null,'max_cars'=>isset($s->max_cars)?(int)$s->max_cars:null,'max_invoices'=>isset($s->max_invoices)?(int)$s->max_invoices:null,'status'=>$s->effective_status??$s->status??null,'stored_status'=>$s->stored_status??$s->status??null,'access_mode'=>$this->accessModes->resolve($s),'effective_entitlements'=>$effective];}
 }

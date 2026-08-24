@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Entitlement\EntitlementSnapshotService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ use Throwable;
 
 class PublicRegistrationController extends Controller
 {
-    public function register(Request $request)
+    public function register(Request $request, EntitlementSnapshotService $entitlementSnapshots)
     {
         $validator = Validator::make($request->all(), [
             'company_name' => ['required', 'string', 'max:255'],
@@ -51,7 +52,7 @@ class PublicRegistrationController extends Controller
         }
 
         try {
-            $result = DB::transaction(function () use ($request) {
+            $result = DB::transaction(function () use ($request, $entitlementSnapshots) {
                 $plan = DB::table('plans')
                     ->where('id', $request->integer('plan_id'))
                     ->lockForUpdate()
@@ -131,6 +132,8 @@ class PublicRegistrationController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                $entitlementSnapshots->capture($subscriptionId);
 
                 $taxRate = round((float) env('SUBSCRIPTION_TAX_RATE', 0), 3);
                 $subtotal = round((float) $period['subtotal'], 3);

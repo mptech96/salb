@@ -18,6 +18,7 @@ import {
 } from "@/components/navigation/menu";
 import {
   MANAGER_ROLES,
+  canAccessEntitledPath,
   filterNavigation,
   getCompanyLandingPath,
 } from "@/components/navigation/access";
@@ -78,6 +79,7 @@ export default function AppShell({
   const isSupportMode = user?.is_support_mode === true;
   const isPlatformAdmin =
     roleCode === "SUPER_ADMIN" && !user?.company_id && !isSupportMode;
+  const effectiveFeatures = ((session?.subscription as { effective_entitlements?: { features?: Record<string, boolean> } } | null)?.effective_entitlements?.features) ?? {};
 
   const syncLocalSession = useCallback(() => {
     setSession(readSession());
@@ -178,9 +180,10 @@ export default function AppShell({
       companyNavigation,
       roleCode,
       session?.permissions ?? [],
-      allowAll
+      allowAll,
+      effectiveFeatures
     );
-  }, [isPlatformAdmin, isSupportMode, roleCode, session?.permissions, user]);
+  }, [effectiveFeatures, isPlatformAdmin, isSupportMode, roleCode, session?.permissions, user]);
 
   const companyLandingPath = useMemo(() => {
     if (!user || isPlatformAdmin) return "/system-center";
@@ -188,12 +191,18 @@ export default function AppShell({
     return getCompanyLandingPath(
       roleCode,
       session?.permissions ?? [],
-      isSupportMode
+      isSupportMode,
+      effectiveFeatures
     );
-  }, [isPlatformAdmin, isSupportMode, roleCode, session?.permissions, user]);
+  }, [effectiveFeatures, isPlatformAdmin, isSupportMode, roleCode, session?.permissions, user]);
 
   useEffect(() => {
     if (!ready || isPublicPath || !user) return;
+
+    if (!isPlatformAdmin && !canAccessEntitledPath(pathname, effectiveFeatures)) {
+      router.replace('/no-access');
+      return;
+    }
 
     const isPlatformPath = PLATFORM_PATHS.some((path) =>
       pathMatches(pathname, path)
@@ -218,6 +227,7 @@ export default function AppShell({
     }
   }, [
     companyLandingPath,
+    effectiveFeatures,
     isPlatformAdmin,
     isPublicPath,
     pathname,

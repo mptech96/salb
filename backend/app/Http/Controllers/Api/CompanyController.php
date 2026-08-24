@@ -6,6 +6,7 @@ use App\Domain\Accounting\Services\AccountingBootstrapService;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\SessionContextService;
+use App\Services\Entitlement\EntitlementSnapshotService;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,7 +47,8 @@ class CompanyController extends Controller
 
     public function store(
         Request $request,
-        AccountingBootstrapService $bootstrap
+        AccountingBootstrapService $bootstrap,
+        EntitlementSnapshotService $entitlementSnapshots
     ) {
         $validated = $request->validate([
             'company_name' => ['required', 'string', 'min:3', 'max:255'],
@@ -94,7 +96,7 @@ class CompanyController extends Controller
                 'updated_at' => now(),
             ]);
 
-            DB::table('subscriptions')->insert([
+            $subscriptionId = DB::table('subscriptions')->insertGetId([
                 'company_id' => $companyId,
                 'plan_id' => (int) $validated['plan_id'],
                 'start_date' => $validated['start_date'],
@@ -103,6 +105,8 @@ class CompanyController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            $entitlementSnapshots->capture($subscriptionId);
 
             $branchId = DB::table('branches')->insertGetId([
                 'company_id' => $companyId,

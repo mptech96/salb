@@ -4,6 +4,8 @@ use App\Http\Middleware\EnsureCompanyContext;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsureRoutePermission;
 use App\Http\Middleware\EnsureSubscriptionAccess;
+use App\Http\Middleware\EnsureFeatureEntitlement;
+use App\Http\Middleware\EnforceUsageLimit;
 use App\Http\Middleware\EnforceTenantScope;
 use App\Http\Middleware\ResolveAuthenticatedContext;
 use Illuminate\Foundation\Application;
@@ -37,6 +39,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'route.permission' => EnsureRoutePermission::class,
             'subscription.access' => EnsureSubscriptionAccess::class,
             'tenant.scope' => EnforceTenantScope::class,
+            'feature.entitlement' => EnsureFeatureEntitlement::class,
+            'usage.limit' => EnforceUsageLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
