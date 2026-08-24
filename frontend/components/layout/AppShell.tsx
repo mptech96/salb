@@ -471,6 +471,10 @@ export default function AppShell({
           ) : null}
 
           <div className="min-w-0">
+            {isSupportMode ? <div className={`sticky top-0 z-[60] border-b px-4 py-3 text-center text-sm font-black ${user.support_access_level === "WRITE" ? "border-red-300 bg-red-100 text-red-900" : "border-amber-300 bg-amber-100 text-amber-950"}`}>
+              وضع الدعم · {user.company_name} · {user.support_access_level === "WRITE" ? "WRITE" : "READ ONLY"} · التذكرة: {user.support_ticket_reference || "-"} · الانتهاء: {user.support_expires_at || "-"}
+              <button type="button" onClick={requestExitSupport} className="mr-4 rounded-xl bg-slate-900 px-3 py-1.5 text-white">خروج من وضع الدعم</button>
+            </div> : null}
             <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 lg:px-8">
               <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">

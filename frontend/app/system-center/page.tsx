@@ -186,6 +186,10 @@ export default function SystemCenterPage() {
 
   async function confirmSupportAccess() {
     if (!supportCompany) return;
+    const reason = window.prompt("سبب الدخول إلى وضع الدعم:")?.trim();
+    if (!reason) return;
+    const ticketReference = window.prompt("رقم التذكرة / المرجع:")?.trim();
+    if (!ticketReference) return;
 
     setSupportLoading(true);
 
@@ -194,7 +198,7 @@ export default function SystemCenterPage() {
 
       const response = await api.post(
         `/companies/${supportCompany.id}/support-access`,
-        { reason: "دخول دعم فني من لوحة إدارة المنصة" }
+        { reason, ticket_reference: ticketReference, expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), access_level: "READ_ONLY" }
       );
 
       saveSession({

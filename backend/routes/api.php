@@ -97,7 +97,7 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
     | يعمل لمدير المنصة أو مدير الشركة حسب السياق الذي حسمه الخادم.
     */
 
-    Route::middleware(['usage.limit', 'route.permission'])->group(function () {
+    Route::middleware(['support.access', 'usage.limit', 'route.permission'])->group(function () {
         Route::apiResource('branches', BranchController::class);
         Route::apiResource('users', UserController::class);
         Route::get('/roles', [RoleController::class, 'index']);
@@ -110,13 +110,14 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
     |-----------------------------------------------------------------------
     */
 
-    Route::middleware('platform.admin')->group(function () {
+    Route::middleware(['platform.admin','privileged.audit'])->group(function () {
         Route::get('/companies', [CompanyController::class, 'index']);
         Route::post('/companies', [CompanyController::class, 'store']);
         Route::post(
             '/companies/{id}/support-access',
             [CompanyController::class, 'supportAccess']
         );
+        Route::post('/system-admin/support-sessions/{supportSessionId}/revoke',[CompanyController::class,'revokeSupport']);
 
         Route::get(
             '/system-admin/dashboard',
@@ -239,7 +240,7 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
     |-----------------------------------------------------------------------
     */
 
-    Route::middleware(['company.context', 'subscription.access', 'tenant.scope', 'feature.entitlement', 'usage.limit', 'route.permission'])->group(function () {
+    Route::middleware(['company.context', 'support.access', 'subscription.access', 'tenant.scope', 'feature.entitlement', 'usage.limit', 'route.permission'])->group(function () {
         Route::get('/items/meta', [ItemController::class, 'meta']);
         Route::post('/item-groups', [ItemController::class, 'storeGroup']);
         Route::post('/item-categories', [ItemController::class, 'storeCategory']);

@@ -27,6 +27,12 @@ export type SessionUser = {
   is_support_mode?: boolean;
   actual_role_code?: string | null;
   platform_admin_id?: number | null;
+  support_session_id?: string | null;
+  support_access_level?: "READ_ONLY" | "WRITE" | null;
+  support_capabilities?: string[];
+  support_ticket_reference?: string | null;
+  support_expires_at?: string | null;
+  support_status?: string | null;
 };
 
 export type StoredSession = {

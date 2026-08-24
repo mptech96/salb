@@ -36,7 +36,8 @@ class EnsureRoutePermission
         }
 
         // وضع الدعم ومدير الشركة: كل وحدات الشركة، لكن العزل يظل مفروضًا من الخادم.
-        if ($support || in_array($role, self::COMPANY_MANAGER_ROLES, true)) {
+        if ($support) return $next($request); // EnsureSupportAccess enforced the durable support capability first.
+        if (in_array($role, self::COMPANY_MANAGER_ROLES, true)) {
             return $next($request);
         }
 

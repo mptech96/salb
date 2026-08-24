@@ -40,6 +40,12 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = getAuthToken();
+    const currentSession = readSession();
+    const method = String(config.method || "GET").toUpperCase();
+    if (currentSession?.user?.is_support_mode && currentSession.user.support_access_level === "READ_ONLY"
+      && !["GET", "HEAD", "OPTIONS"].includes(method) && !String(config.url || "").endsWith("/support/exit")) {
+      return Promise.reject(new Error("جلسة الدعم الحالية للقراءة فقط."));
+    }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

@@ -24,15 +24,15 @@ class SessionContextService
     public function permissionsForUser(int $userId,?int $companyId): Collection
     {
         $role=$this->roleForUser($userId);
-        if($role&&in_array(strtoupper((string)$role->role_code),self::COMPANY_MANAGER_ROLES,true))return $this->allPermissions();
+        if($role&&in_array(strtoupper((string)$role->role_code),self::COMPANY_MANAGER_ROLES,true))return $this->companyPermissions();
 
         $baseline=DB::table('user_roles as ur')->join('users as u','u.id','=','ur.user_id')->join('role_permissions as rp','rp.role_id','=','ur.role_id')->join('permissions as p','p.id','=','rp.permission_id')
-            ->where('ur.user_id',$userId)->where('ur.is_active',1)->where(fn($q)=>$q->whereNull('ur.company_id')->orWhereColumn('ur.company_id','u.company_id'))->where('rp.is_active',1)
+            ->where('ur.user_id',$userId)->where('ur.is_active',1)->where(fn($q)=>$q->whereNull('ur.company_id')->orWhereColumn('ur.company_id','u.company_id'))->where('rp.is_active',1)->where('p.permission_scope','COMPANY')
             ->when($companyId,fn($q)=>$q->where(fn($x)=>$x->whereNull('rp.company_id')->orWhere('rp.company_id',$companyId)),fn($q)=>$q->whereNull('rp.company_id'))
             ->pluck('p.permission_code')->unique()->values();
 
         if(!$companyId||!Schema::hasTable('user_permission_overrides'))return $baseline;
-        $overrides=DB::table('user_permission_overrides as o')->join('permissions as p','p.id','=','o.permission_id')->where('o.company_id',$companyId)->where('o.user_id',$userId)->get(['p.permission_code','o.effect']);
+        $overrides=DB::table('user_permission_overrides as o')->join('permissions as p','p.id','=','o.permission_id')->where('o.company_id',$companyId)->where('o.user_id',$userId)->where('p.permission_scope','COMPANY')->get(['p.permission_code','o.effect']);
         $set=array_fill_keys($baseline->all(),true);
         foreach($overrides as$o){if(strtoupper((string)$o->effect)==='DENY')unset($set[$o->permission_code]);else$set[$o->permission_code]=true;}
         return collect(array_keys($set))->values();
@@ -45,7 +45,9 @@ class SessionContextService
     ) {
     }
 
-    public function allPermissions(): Collection{return DB::table('permissions')->orderBy('id')->pluck('permission_code')->unique()->values();}
+    public function companyPermissions(): Collection{return DB::table('permissions')->where('permission_scope','COMPANY')->orderBy('id')->pluck('permission_code')->unique()->values();}
+    public function platformPermissions(): Collection{return DB::table('permissions')->where('permission_scope','PLATFORM')->orderBy('id')->pluck('permission_code')->unique()->values();}
+    public function allPermissions(): Collection{return $this->companyPermissions();}
     public function effectiveSubscription(int $companyId): ?object{return $this->subscriptions->effectiveForCompany($companyId);}
     public function latestSubscription(int $companyId): ?object{return $this->effectiveSubscription($companyId);}
 
@@ -58,10 +60,10 @@ class SessionContextService
         return ['id'=>(int)$user->id,'company_id'=>$companyId,'branch_id'=>$branchId,'name'=>$user->name,'username'=>$user->username,'email'=>$user->email,'phone'=>$user->phone,'company_name'=>$isPlatformAdmin?'إدارة منصة صلب':($company->company_name??null),'branch_name'=>$isPlatformAdmin?'مركز التحكم':($branch->branch_name??null),'role'=>$role?['id'=>(int)$role->id,'role_name'=>$role->role_name,'role_code'=>$role->role_code]:null,'permissions'=>$permissions->all(),'is_support_mode'=>false,'platform_admin_id'=>$isPlatformAdmin?(int)$user->id:null];
     }
 
-    public function supportPayload(User $platformAdmin,int $companyId,?int $branchId): array
+    public function supportPayload(User $platformAdmin,object $session): array
     {
-        $company=DB::table('companies')->where('id',$companyId)->first();$q=DB::table('branches')->where('company_id',$companyId);if($branchId)$q->where('id',$branchId);else$q->orderByDesc('is_active')->orderBy('id');$branch=$q->first();
-        return ['id'=>(int)$platformAdmin->id,'company_id'=>$companyId,'branch_id'=>$branch?->id?(int)$branch->id:null,'name'=>$platformAdmin->name,'username'=>$platformAdmin->username,'email'=>$platformAdmin->email,'phone'=>$platformAdmin->phone,'company_name'=>$company->company_name??'شركة غير معروفة','branch_name'=>$branch->branch_name??'بدون فرع محدد','role'=>['id'=>null,'role_name'=>'دعم فني للمنصة','role_code'=>'MANAGER'],'permissions'=>$this->allPermissions()->all(),'is_support_mode'=>true,'actual_role_code'=>'SUPER_ADMIN','platform_admin_id'=>(int)$platformAdmin->id,'support_company_id'=>$companyId];
+        $company=DB::table('companies')->where('id',$session->company_id)->first();$branch=$session->branch_id?DB::table('branches')->where('company_id',$session->company_id)->where('id',$session->branch_id)->first():null;
+        return ['id'=>(int)$platformAdmin->id,'company_id'=>(int)$session->company_id,'branch_id'=>$branch?->id?(int)$branch->id:null,'name'=>$platformAdmin->name,'username'=>$platformAdmin->username,'email'=>$platformAdmin->email,'phone'=>$platformAdmin->phone,'company_name'=>$company->company_name??'شركة غير معروفة','branch_name'=>$branch->branch_name??'بدون فرع محدد','role'=>['id'=>null,'role_name'=>'دعم منصة','role_code'=>'SUPPORT'],'permissions'=>[],'is_support_mode'=>true,'actual_role_code'=>'SUPER_ADMIN','platform_admin_id'=>(int)$platformAdmin->id,'support_company_id'=>(int)$session->company_id,'support_session_id'=>$session->support_session_id,'support_access_level'=>$session->access_level,'support_capabilities'=>json_decode($session->capabilities_json?:'[]',true),'support_ticket_reference'=>$session->ticket_reference,'support_expires_at'=>$session->expires_at,'support_status'=>$session->status];
     }
 
     public function subscriptionPayload(?object $s): ?array

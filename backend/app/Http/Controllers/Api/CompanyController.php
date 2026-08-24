@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\SessionContextService;
 use App\Services\Provisioning\CompanyProvisioningService;
+use App\Services\Support\SupportSessionService;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -115,77 +116,34 @@ class CompanyController extends Controller
     public function supportAccess(
         Request $request,
         int $id,
-        SessionContextService $sessions
+        SessionContextService $sessions,
+        SupportSessionService $supportSessions
     ) {
-        $request->validate([
-            'reason' => ['nullable', 'string', 'max:500'],
+        $validated=$request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+            'ticket_reference'=>['required','string','max:150'],
+            'expires_at'=>['required','date','after:now'],
+            'access_level'=>['nullable','in:READ_ONLY,WRITE'],
+            'capabilities'=>['nullable','array'],
+            'capabilities.*'=>['string','max:255'],
+            'branch_id'=>['nullable','integer'],
         ]);
-
-        $company = DB::table('companies')->where('id', $id)->first();
-
-        if (!$company) {
-            return response()->json([
-                'status' => false,
-                'message' => 'الشركة غير موجودة.',
-            ], 404);
-        }
-
-        $branch = DB::table('branches')
-            ->where('company_id', $id)
-            ->orderByDesc('is_active')
-            ->orderBy('id')
-            ->first();
-
         /** @var User $platformAdmin */
         $platformAdmin = $request->user();
-
-        // نلغي جلسات الدعم القديمة لنفس مدير المنصة حتى لا تتراكم Tokens.
-        $platformAdmin->tokens()
-            ->where('name', 'like', 'support:%')
-            ->delete();
-
-        $expiresAt = now()->addHours(2);
-        $abilities = [
-            'session',
-            'support-mode',
-            'support-company:' . $id,
-        ];
-
-        if ($branch?->id) {
-            $abilities[] = 'support-branch:' . $branch->id;
-        }
-
-        $token = $platformAdmin
-            ->createToken(
-                'support:' . $id,
-                $abilities,
-                $expiresAt
-            )
-            ->plainTextToken;
-
+        $created=$supportSessions->create($request,$platformAdmin,[...$validated,'company_id'=>$id]);$session=$created['session'];
         $subscription = $sessions->latestSubscription($id);
-        $payload = $sessions->supportPayload(
-            $platformAdmin,
-            $id,
-            $branch?->id ? (int) $branch->id : null
-        );
-
-        $reason = trim((string) $request->input('reason', ''));
-
-        $this->logSupportAccess(
-            $company->id,
-            'تم الدخول على الشركة كدعم فني: ' . $company->company_name .
-            ($reason !== '' ? ' | السبب: ' . $reason : '')
-        );
-
         return response()->json([
-            'status' => true,
-            'message' => 'تم فتح جلسة دعم فني آمنة لمدة ساعتين.',
-            'token' => $token,
-            'token_type' => 'Bearer',
-            'expires_at' => $expiresAt->toISOString(),
-            'user' => $payload,
+            'status'=>true,'message'=>'تم فتح جلسة دعم مسجلة وآمنة.','token'=>$created['plain_text_token'],'token_type'=>'Bearer',
+            'expires_at'=>$session->expires_at,'support_session_id'=>$session->support_session_id,
+            'user'=>$sessions->supportPayload($platformAdmin,$session),
             'subscription' => $sessions->subscriptionPayload($subscription),
         ]);
+    }
+
+    public function revokeSupport(Request $request,string $supportSessionId,SupportSessionService $sessions)
+    {
+        $session=DB::table('support_sessions')->where('support_session_id',$supportSessionId)->first();
+        if(!$session)return response()->json(['status'=>false,'message'=>'جلسة الدعم غير موجودة.'],404);
+        $sessions->revoke($request,$session);return response()->json(['status'=>true,'message'=>'تم إلغاء جلسة الدعم.']);
     }
 }

@@ -20,8 +20,10 @@ final class EnsureSubscriptionAccess
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ((bool) $request->attributes->get('is_support_mode', false)) {
-            $request->attributes->set('subscription_access_mode', SubscriptionAccessModeResolver::FULL);
+        if ((bool) $request->attributes->get('is_support_mode', false)
+            && $request->attributes->get('support_access_level') === 'READ_ONLY') {
+            // Narrow diagnostic exception: read-only support may inspect suspended/expired tenants.
+            $request->attributes->set('subscription_access_mode', SubscriptionAccessModeResolver::RESTRICTED_READ_ONLY);
             return $next($request);
         }
 

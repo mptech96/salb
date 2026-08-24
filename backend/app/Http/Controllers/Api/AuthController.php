@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\SessionContextService;
+use App\Services\Support\SupportSessionService;
 use App\Services\Subscription\SubscriptionAccessModeResolver;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
@@ -163,11 +164,7 @@ class AuthController extends Controller
         $branchId = $request->attributes->get('tenant_branch_id');
 
         $payload = $isSupportMode
-            ? $sessions->supportPayload(
-                $user,
-                (int) $companyId,
-                $branchId ? (int) $branchId : null
-            )
+            ? $sessions->supportPayload($user,$request->attributes->get('support_session'))
             : $sessions->userPayload($user);
 
         $subscription = $companyId
@@ -181,8 +178,12 @@ class AuthController extends Controller
         ]);
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request,SupportSessionService $supportSessions)
     {
+        if((bool)$request->attributes->get('is_support_mode',false)){
+            $supportSessions->exit($request,$request->attributes->get('support_session'));
+            return response()->json(['status'=>true,'message'=>'تم إنهاء جلسة الدعم الفني.']);
+        }
         $token = $request->user()?->currentAccessToken();
 
         if ($token && method_exists($token, 'delete')) {
@@ -195,7 +196,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function exitSupport(Request $request)
+    public function exitSupport(Request $request,SupportSessionService $supportSessions)
     {
         if (!(bool) $request->attributes->get('is_support_mode', false)) {
             return response()->json([
@@ -205,11 +206,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $token = $request->user()?->currentAccessToken();
-
-        if ($token && method_exists($token, 'delete')) {
-            $token->delete();
-        }
+        $supportSessions->exit($request,$request->attributes->get('support_session'));
 
         return response()->json([
             'status' => true,

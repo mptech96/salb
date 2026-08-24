@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\Auth\SessionContextService;
+use App\Services\Support\SupportSessionService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +12,8 @@ use Symfony\Component\HttpFoundation\Response;
 class ResolveAuthenticatedContext
 {
     public function __construct(
-        private readonly SessionContextService $sessions
+        private readonly SessionContextService $sessions,
+        private readonly SupportSessionService $supportSessions
     ) {
     }
 
@@ -55,8 +57,9 @@ class ResolveAuthenticatedContext
                 ], 403);
             }
 
-            $companyId = $this->abilityInteger($abilities, 'support-company:');
-            $branchId = $this->abilityInteger($abilities, 'support-branch:');
+            $supportSession=$this->supportSessions->resolve($request);
+            $companyId = (int)$supportSession->company_id;
+            $branchId = $supportSession->branch_id?(int)$supportSession->branch_id:null;
 
             if (!$companyId || !DB::table('companies')->where('id', $companyId)->exists()) {
                 return response()->json([
@@ -77,10 +80,8 @@ class ResolveAuthenticatedContext
                 ], 403);
             }
 
-            // مهم: نمرر دور مدير شركة للـControllers القديمة حتى يبقى الدعم
-            // محصورًا داخل الشركة بدل تجاوز العزل كمدير منصة.
-            $effectiveRoleCode = 'MANAGER';
-            $permissions = $this->sessions->allPermissions();
+            $effectiveRoleCode = 'SUPPORT';
+            $permissions = collect();
         } else {
             $permissions = $this->sessions->permissionsForUser(
                 (int) $user->id,
@@ -101,6 +102,7 @@ class ResolveAuthenticatedContext
         $request->attributes->set('effective_role_code', $effectiveRoleCode);
         $request->attributes->set('is_support_mode', $isSupportMode);
         $request->attributes->set('permission_codes', $permissions->all());
+        if(isset($supportSession)){$request->attributes->set('support_session',$supportSession);$request->attributes->set('support_session_id',$supportSession->support_session_id);$request->attributes->set('support_access_level',$supportSession->access_level);}
 
         return $next($request);
     }
