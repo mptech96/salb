@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import api from "../../api";
 import SystemDialog from "@/components/common/SystemDialog";
@@ -93,6 +93,7 @@ function statusLabel(status: string | null, active: number): string {
 }
 
 export default function CompaniesPage() {
+  const provisioningKey = useRef(crypto.randomUUID());
   const [companies, setCompanies] = useState<Company[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,13 +210,14 @@ export default function CompaniesPage() {
 
     try {
       const response = await api.post("/companies", {
-        ...form,
-        company_name: companyName,
-        owner_name: ownerName,
-        phone,
-        plan_id: Number(form.plan_id),
-      });
+          ...form,
+          company_name: companyName,
+          owner_name: ownerName,
+          phone,
+          plan_id: Number(form.plan_id),
+        }, { headers: { "Idempotency-Key": provisioningKey.current } });
 
+      provisioningKey.current = crypto.randomUUID();
       setForm(emptyForm);
       setShowForm(false);
       await loadData();
@@ -225,7 +227,9 @@ export default function CompaniesPage() {
         type: "success",
         title: "تم تأسيس الشركة",
         message:
-          response.data?.message ||
+          response.data?.data?.temporary_password
+            ? `${response.data?.message || "تم تأسيس الشركة."} اسم المستخدم: ${response.data.data.username} — كلمة المرور المؤقتة: ${response.data.data.temporary_password}`
+            : response.data?.message ||
           "تم إنشاء الشركة والفرع الرئيسي والتأسيس المحاسبي بنجاح.",
         action: "none",
       });

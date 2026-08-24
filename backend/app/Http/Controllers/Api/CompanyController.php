@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Domain\Accounting\Services\AccountingBootstrapService;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\SessionContextService;
-use App\Services\Entitlement\EntitlementSnapshotService;
+use App\Services\Provisioning\CompanyProvisioningService;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,10 +46,11 @@ class CompanyController extends Controller
 
     public function store(
         Request $request,
-        AccountingBootstrapService $bootstrap,
-        EntitlementSnapshotService $entitlementSnapshots
+        CompanyProvisioningService $provisioning
     ) {
+        $request->merge(['idempotency_key' => $request->header('Idempotency-Key', $request->input('idempotency_key'))]);
         $validated = $request->validate([
+            'idempotency_key' => ['required', 'string', 'max:100'],
             'company_name' => ['required', 'string', 'min:3', 'max:255'],
             'owner_name' => ['required', 'string', 'min:3', 'max:255'],
             'phone' => ['required', 'string', 'regex:/^[0-9]{7,15}$/'],
@@ -60,6 +60,10 @@ class CompanyController extends Controller
             'plan_id' => ['required', 'integer', 'exists:plans,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'username' => ['nullable', 'string', 'max:150'],
+            'password' => ['nullable', 'string', 'min:12', 'max:100'],
+            'subscription_mode' => ['nullable', 'in:PAID,TRIAL'],
+            'company_is_active' => ['nullable', 'boolean'],
         ], [
             'company_name.required' => 'اسم الشركة مطلوب.',
             'company_name.min' => 'اسم الشركة يجب ألا يقل عن 3 أحرف.',
@@ -75,78 +79,29 @@ class CompanyController extends Controller
             'end_date.after_or_equal' => 'تاريخ النهاية يجب أن يكون بعد البداية أو مساويًا لها.',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            $companyId = DB::table('companies')->insertGetId([
-                'company_name' => trim((string) $validated['company_name']),
-                'owner_name' => trim((string) $validated['owner_name']),
-                'phone' => trim((string) $validated['phone']),
-                'email' => !empty($validated['email'])
-                    ? trim((string) $validated['email'])
-                    : null,
-                'city' => !empty($validated['city'])
-                    ? trim((string) $validated['city'])
-                    : null,
-                'address' => !empty($validated['address'])
-                    ? trim((string) $validated['address'])
-                    : null,
-                'is_active' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
+            $result = $provisioning->provision([...$validated,
+                'channel' => 'PLATFORM_ADMIN',
+                'trial_allowed' => ($validated['subscription_mode'] ?? 'PAID') === 'TRIAL',
+                'billing_period' => 'CUSTOM',
+                'currency_code' => 'SAR',
+                'company_is_active' => $validated['company_is_active'] ?? true,
             ]);
 
-            $subscriptionId = DB::table('subscriptions')->insertGetId([
-                'company_id' => $companyId,
-                'plan_id' => (int) $validated['plan_id'],
-                'start_date' => $validated['start_date'],
-                'end_date' => $validated['end_date'],
-                'status' => 'ACTIVE',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $entitlementSnapshots->capture($subscriptionId);
-
-            $branchId = DB::table('branches')->insertGetId([
-                'company_id' => $companyId,
-                'branch_name' => 'الفرع الرئيسي',
-                'branch_code' => 'MAIN-' . $companyId,
-                'phone' => $validated['phone'],
-                'city' => $validated['city'] ?? null,
-                'address' => $validated['address'] ?? null,
-                'is_active' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $accounting = $bootstrap->bootstrapCompany(
-                $companyId,
-                $branchId
-            );
-
-            DB::commit();
-
-            $this->logCreate(
-                'Companies',
-                $companyId,
-                'تم إنشاء شركة جديدة مع التأسيس المحاسبي: ' .
-                $validated['company_name']
-            );
+            if (!$result['idempotent_replay']) {
+                $this->logCreate(
+                    'Companies',
+                    $result['company_id'],
+                    'تم إنشاء شركة جديدة مع التأسيس المحاسبي: ' . $validated['company_name']
+                );
+            }
 
             return response()->json([
                 'status' => true,
                 'message' => 'تم إنشاء الشركة والفرع الرئيسي والسنة المالية وشجرة الحسابات ومراكز التكلفة بنجاح.',
-                'data' => [
-                    'company_id' => $companyId,
-                    'main_branch_id' => $branchId,
-                    'financial_year_id' => $accounting['financial_year_id'],
-                    'company_cost_center_id' => $accounting['company_cost_center_id'],
-                    'branch_cost_center_id' => $accounting['branch_cost_center_id'],
-                ],
-            ], 201);
+                'data' => $result,
+            ], $result['idempotent_replay'] ? 200 : 201);
         } catch (Throwable $e) {
-            DB::rollBack();
             report($e);
 
             return response()->json([

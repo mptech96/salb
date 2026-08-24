@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import api from "../api";
 
 type Plan = {
@@ -54,6 +54,7 @@ const billingLabels: Record<BillingPeriod, string> = {
 const money = (value: number | string | undefined) => Number(value || 0).toFixed(3);
 
 export default function RegisterPage() {
+  const provisioningKey = useRef(crypto.randomUUID());
   const [plans, setPlans] = useState<Plan[]>([]);
   const [form, setForm] = useState(initialForm);
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -111,10 +112,11 @@ export default function RegisterPage() {
 
     try {
       const res = await api.post("/register-company", {
-        ...form,
-        plan_id: Number(form.plan_id),
-      });
+          ...form,
+          plan_id: Number(form.plan_id),
+        }, { headers: { "Idempotency-Key": provisioningKey.current } });
 
+      provisioningKey.current = crypto.randomUUID();
       setResult(res.data.data);
       localStorage.setItem("sulb_pending_registration", JSON.stringify(res.data.data));
     } catch (error: any) {
