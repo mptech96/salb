@@ -11,8 +11,9 @@ class VoucherPosting
     public function post(array $data): PostingResult
     {
         try {
+            return DB::transaction(function()use($data){
             $cid=(int)$data['company_id'];$id=(int)$data['voucher_id'];
-            $v=DB::table('vouchers as v')->leftJoin('voucher_types as t','t.id','=','v.voucher_type_id')->where('v.company_id',$cid)->where('v.id',$id)->select('v.*','t.type_code')->first();
+            $v=DB::table('vouchers as v')->leftJoin('voucher_types as t','t.id','=','v.voucher_type_id')->where('v.company_id',$cid)->where('v.id',$id)->select('v.*','t.type_code')->lockForUpdate()->first();
             if(!$v)throw new \RuntimeException('السند غير موجود.');
             if($v->journal_entry_id)return PostingResult::success('السند مرحل مسبقًا',(int)$v->journal_entry_id,$id);
 
@@ -34,6 +35,7 @@ class VoucherPosting
             $jid=$this->journals->post(['company_id'=>$cid,'branch_id'=>$bid,'entry_date'=>$v->voucher_date,'source_type'=>'VOUCHER','source_id'=>$id,'description'=>($isReceipt?'سند قبض ':'سند صرف ').$v->voucher_number,'currency_code'=>$currency,'exchange_rate'=>$rate,'lines'=>$lines,'is_system_generated'=>1,'created_by'=>$data['created_by']??$v->created_by]);
             DB::table('vouchers')->where('id',$id)->update(['journal_entry_id'=>$jid,'cash_account_id'=>$cash,'financial_account_id'=>(int)$fa->id,'currency_code'=>$currency,'exchange_rate'=>$rate,'updated_at'=>now()]);
             return PostingResult::success('تم ترحيل السند',$jid,$id);
+            });
         } catch(\Throwable $e){return PostingResult::error($e->getMessage());}
     }
 }

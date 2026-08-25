@@ -1,0 +1,361 @@
+{
+    "execution_id": "wave6-fy-20260825-090525-fe4af862",
+    "timestamp": "2026-08-25T09:05:25+00:00",
+    "company_id": 4,
+    "created_financial_year_id": 3,
+    "financial_year": {
+        "company_id": 4,
+        "year_name": "2026",
+        "start_date": "2026-06-17",
+        "end_date": "2027-02-24",
+        "is_closed": 0,
+        "closed_at": null,
+        "closed_by": null
+    },
+    "headers": [
+        {
+            "journal_id": 1,
+            "entry_number": "JE-2026-000001",
+            "entry_date": "2026-06-27",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 2,
+            "entry_number": "JE-2026-000002",
+            "entry_date": "2026-06-27",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 3,
+            "entry_number": "JE-2026-000003",
+            "entry_date": "2026-06-27",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 4,
+            "entry_number": "JE-2026-000004",
+            "entry_date": "2026-06-27",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 7,
+            "entry_number": "JE-2026-000005",
+            "entry_date": "2026-06-27",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 8,
+            "entry_number": "JE-2026-000008",
+            "entry_date": "2026-06-30",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 9,
+            "entry_number": "JE-2026-000009",
+            "entry_date": "2026-06-30",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 10,
+            "entry_number": "JE-2026-000010",
+            "entry_date": "2026-06-30",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 11,
+            "entry_number": "JE-2026-000011",
+            "entry_date": "2026-06-30",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 12,
+            "entry_number": "JE-2026-000012",
+            "entry_date": "2026-06-30",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 13,
+            "entry_number": "JE-2026-000013",
+            "entry_date": "2026-06-30",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 14,
+            "entry_number": "JE-2026-000014",
+            "entry_date": "2026-07-31",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "journal_id": 15,
+            "entry_number": "JE-2026-000015",
+            "entry_date": "2026-07-09",
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        }
+    ],
+    "lines": [
+        {
+            "line_id": 1,
+            "journal_entry_id": 1,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 2,
+            "journal_entry_id": 1,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 3,
+            "journal_entry_id": 2,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 4,
+            "journal_entry_id": 2,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 5,
+            "journal_entry_id": 3,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 6,
+            "journal_entry_id": 3,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 7,
+            "journal_entry_id": 4,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 8,
+            "journal_entry_id": 4,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 13,
+            "journal_entry_id": 7,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 14,
+            "journal_entry_id": 7,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 15,
+            "journal_entry_id": 8,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 16,
+            "journal_entry_id": 8,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 17,
+            "journal_entry_id": 8,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 18,
+            "journal_entry_id": 9,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 19,
+            "journal_entry_id": 9,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 20,
+            "journal_entry_id": 10,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 21,
+            "journal_entry_id": 10,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 22,
+            "journal_entry_id": 11,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 23,
+            "journal_entry_id": 11,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 24,
+            "journal_entry_id": 12,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 25,
+            "journal_entry_id": 12,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 26,
+            "journal_entry_id": 13,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 27,
+            "journal_entry_id": 13,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 28,
+            "journal_entry_id": 14,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 29,
+            "journal_entry_id": 14,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 30,
+            "journal_entry_id": 14,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 31,
+            "journal_entry_id": 15,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        },
+        {
+            "line_id": 32,
+            "journal_entry_id": 15,
+            "old_financial_year_id": null,
+            "new_financial_year_id": "CREATED_FINANCIAL_YEAR_ID"
+        }
+    ],
+    "before_invariants": {
+        "header_count": 13,
+        "line_count": 28,
+        "debit_total": 58007,
+        "credit_total": 58007,
+        "global_gl_debit_total": 583667,
+        "global_gl_credit_total": 583667,
+        "unbalanced_journal_count": 0,
+        "journal_line_parent_mismatch_count": 0,
+        "invalid_year_count": 13,
+        "duplicate_number_collision_count": 0
+    },
+    "safety_gates": {
+        "company": "PASS",
+        "subscription_period": "PASS",
+        "financial_year_overlap": "PASS",
+        "header_allowlist_and_fingerprints": "PASS",
+        "line_allowlist_and_fingerprints": "PASS",
+        "parent_completeness": "PASS",
+        "journal_balancing": "PASS",
+        "numbering_collisions": "PASS",
+        "global_general_ledger": "PASS"
+    },
+    "transaction": "COMMITTED",
+    "rollback": {
+        "approved_line_ids": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+        ],
+        "approved_header_ids": [
+            1,
+            2,
+            3,
+            4,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+        ],
+        "only_created_financial_year_id": 3,
+        "requires_no_new_year_journals": true,
+        "requires_year_not_closed": true
+    },
+    "after_invariants": {
+        "created_financial_year_id": 3,
+        "updated_headers": 13,
+        "updated_lines": 28,
+        "header_line_year_mismatches": 0,
+        "duplicate_number_collisions": 0,
+        "debit_total": 58007,
+        "credit_total": 58007
+    }
+}

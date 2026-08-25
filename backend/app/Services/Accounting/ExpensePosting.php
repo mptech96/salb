@@ -11,7 +11,11 @@ class ExpensePosting
     public function post(array $data): PostingResult
     {
         try {
+            return DB::transaction(function()use($data){
             $cid=(int)$data['company_id'];$bid=(int)$data['branch_id'];$eid=(int)$data['expense_id'];$amount=round((float)$data['amount'],3);$paid=strtoupper($data['payment_status']??'PAID')==='PAID';
+            $expense=DB::table('expenses')->where('company_id',$cid)->where('id',$eid)->lockForUpdate()->first();
+            if(!$expense)throw new \RuntimeException('المصروف غير موجود.');
+            if($expense->journal_entry_id)return PostingResult::success('المصروف مرحل مسبقًا',(int)$expense->journal_entry_id,$expense->voucher_id?(int)$expense->voucher_id:null);
             $expenseAcc=(int)($data['expense_account_id']??0);if(!$expenseAcc)$expenseAcc=$this->support->setting($cid,'GENERAL_EXPENSE_ACCOUNT');
             $fa=null;$creditAcc=$this->support->setting($cid,'ACCRUED_EXPENSE_ACCOUNT');$currency=null;$rate=null;
             if($paid){$fa=$this->support->financialAccount($cid,$bid,$data['payment_method']??'CASH',isset($data['financial_account_id'])?(int)$data['financial_account_id']:null,'PAYMENT');$creditAcc=(int)$fa->gl_account_id;$currency=strtoupper((string)($data['currency_code']??$fa->currency_code));$rate=(float)($data['exchange_rate']??1);}
@@ -26,6 +30,7 @@ class ExpensePosting
             }
             DB::table('expenses')->where('company_id',$cid)->where('id',$eid)->update(['voucher_id'=>$voucherId,'journal_entry_id'=>$jid,'financial_account_id'=>$fa?->id,'currency_code'=>$currency,'exchange_rate'=>$rate,'foreign_amount'=>$data['foreign_amount']??null,'updated_at'=>now()]);
             return PostingResult::success('تم ترحيل المصروف',$jid,$voucherId);
+            });
         } catch(\Throwable $e){return PostingResult::error($e->getMessage());}
     }
 }

@@ -1,0 +1,1086 @@
+{
+    "manifest_version": 1,
+    "generated_at": "2026-08-25T07:30:20+00:00",
+    "mode": "MYSQL_READ_ONLY_DISCOVERY",
+    "database": "scrap_system",
+    "summary": {
+        "counts_by_defect": {
+            "DEF-W6-ACC-002": 13,
+            "DEF-W6-INV-001": 7,
+            "DEF-W6-ACC-003": 4,
+            "DEF-W6-SHP-001": 3,
+            "DEF-W6-ACC-004": 7
+        },
+        "critical_high_total": 34,
+        "previous_report_total": 34,
+        "arithmetic_matches_previous": true,
+        "auto_safe": 11,
+        "manual_review": 13,
+        "no_repair": 10
+    },
+    "journal_financial_years": [
+        {
+            "journal_entry_id": 1,
+            "entry_number": "JE-2026-000001",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-27",
+            "posted_at": null,
+            "source_type": "WORKER_COMMISSION",
+            "source_id": 8,
+            "debit_total": 300,
+            "credit_total": 300,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 2,
+            "entry_number": "JE-2026-000002",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-27",
+            "posted_at": null,
+            "source_type": "WORKER_COMMISSION",
+            "source_id": 9,
+            "debit_total": 500,
+            "credit_total": 500,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 3,
+            "entry_number": "JE-2026-000003",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-27",
+            "posted_at": null,
+            "source_type": "WORKER_COMMISSION_PAYMENT",
+            "source_id": 8,
+            "debit_total": 300,
+            "credit_total": 300,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 4,
+            "entry_number": "JE-2026-000004",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-27",
+            "posted_at": null,
+            "source_type": "WORKER_COMMISSION",
+            "source_id": 3,
+            "debit_total": 200,
+            "credit_total": 200,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 7,
+            "entry_number": "JE-2026-000005",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-27",
+            "posted_at": null,
+            "source_type": "WORKER_LOAN",
+            "source_id": 4,
+            "debit_total": 600,
+            "credit_total": 600,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 8,
+            "entry_number": "JE-2026-000008",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-30",
+            "posted_at": null,
+            "source_type": "PURCHASE_INVOICE",
+            "source_id": 7,
+            "debit_total": 49657,
+            "credit_total": 49657,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 9,
+            "entry_number": "JE-2026-000009",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-30",
+            "posted_at": null,
+            "source_type": "WORKER_COMMISSION_PAYMENT",
+            "source_id": 3,
+            "debit_total": 200,
+            "credit_total": 200,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 10,
+            "entry_number": "JE-2026-000010",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-30",
+            "posted_at": null,
+            "source_type": "WORKER_COMMISSION",
+            "source_id": 10,
+            "debit_total": 300,
+            "credit_total": 300,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 11,
+            "entry_number": "JE-2026-000011",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-30",
+            "posted_at": null,
+            "source_type": "WORKER_COMMISSION_PAYMENT",
+            "source_id": 10,
+            "debit_total": 300,
+            "credit_total": 300,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 12,
+            "entry_number": "JE-2026-000012",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-30",
+            "posted_at": null,
+            "source_type": "SHIPMENT_COST",
+            "source_id": 1,
+            "debit_total": 500,
+            "credit_total": 500,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 13,
+            "entry_number": "JE-2026-000013",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-06-30",
+            "posted_at": null,
+            "source_type": "SHIPMENT_COST",
+            "source_id": 2,
+            "debit_total": 250,
+            "credit_total": 250,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 14,
+            "entry_number": "JE-2026-000014",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-07-31",
+            "posted_at": null,
+            "source_type": "PAYROLL",
+            "source_id": 1,
+            "debit_total": 3000,
+            "credit_total": 3000,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        },
+        {
+            "journal_entry_id": 15,
+            "entry_number": "JE-2026-000015",
+            "company_id": 4,
+            "branch_id": 6,
+            "current_financial_year_id": null,
+            "entry_date": "2026-07-09",
+            "posted_at": null,
+            "source_type": "PAYROLL_PAYMENT",
+            "source_id": 1,
+            "debit_total": 1900,
+            "credit_total": 1900,
+            "current_year_reference": null,
+            "date_company_target_years": [],
+            "exactly_one_valid_target": false,
+            "classification": "NO_MATCH",
+            "reason": "NULL_FINANCIAL_YEAR",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "financial_year_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "448eee5459530bd56dad5dd6027fd7ee33cf7790b67bae198067248cdd7597ef",
+            "repair_bucket": "MANUAL_REVIEW"
+        }
+    ],
+    "inventory_lot_mismatches": [
+        {
+            "inventory_lot_id": 1,
+            "company_id": 1,
+            "branch_id": 1,
+            "item_id": 3,
+            "source_type": "LEGACY_OPENING",
+            "source_id": null,
+            "original_quantity_kg": 1000,
+            "qty_remaining_kg": 1000,
+            "movement_ledger_balance": 0,
+            "difference": -1000,
+            "movements": [],
+            "purchase_source": null,
+            "fifo_allocation_count": 0,
+            "has_been_consumed": false,
+            "return_or_void_affected": false,
+            "classification": "LEDGER_INCONSISTENCY",
+            "likely_cause": "MISSING_INBOUND_MOVEMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "qty_remaining_kg": 1000
+            },
+            "proposed_after": {
+                "action": "CREATE_MISSING_OPENING_LEDGER_MOVEMENT",
+                "movement_type": "IN",
+                "qty_kg": 1000,
+                "total_cost": 20,
+                "movement_at": "2026-06-13 00:00:00",
+                "accounting_impact": "NONE",
+                "inventory_balance_impact": "NONE"
+            },
+            "before_checksum": "e2114c4cb88c6bb36da58ad747fddcb720523fe91c48327312c5727999db6a2f",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "inventory_lot_id": 2,
+            "company_id": 1,
+            "branch_id": 1,
+            "item_id": 5,
+            "source_type": "LEGACY_OPENING",
+            "source_id": null,
+            "original_quantity_kg": 1000000,
+            "qty_remaining_kg": 1000000,
+            "movement_ledger_balance": 0,
+            "difference": -1000000,
+            "movements": [],
+            "purchase_source": null,
+            "fifo_allocation_count": 0,
+            "has_been_consumed": false,
+            "return_or_void_affected": false,
+            "classification": "LEDGER_INCONSISTENCY",
+            "likely_cause": "MISSING_INBOUND_MOVEMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "qty_remaining_kg": 1000000
+            },
+            "proposed_after": {
+                "action": "CREATE_MISSING_OPENING_LEDGER_MOVEMENT",
+                "movement_type": "IN",
+                "qty_kg": 1000000,
+                "total_cost": 30000,
+                "movement_at": "2026-06-13 00:00:00",
+                "accounting_impact": "NONE",
+                "inventory_balance_impact": "NONE"
+            },
+            "before_checksum": "6d6b00d24151bfe9ddee07c3b06398fbd9ddac3e21ce6bcabad5833ad38ddfc2",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "inventory_lot_id": 3,
+            "company_id": 4,
+            "branch_id": 1,
+            "item_id": 7,
+            "source_type": "LEGACY_OPENING",
+            "source_id": null,
+            "original_quantity_kg": 12000000,
+            "qty_remaining_kg": 12000000,
+            "movement_ledger_balance": 0,
+            "difference": -12000000,
+            "movements": [],
+            "purchase_source": null,
+            "fifo_allocation_count": 0,
+            "has_been_consumed": false,
+            "return_or_void_affected": false,
+            "classification": "LEDGER_INCONSISTENCY",
+            "likely_cause": "MISSING_INBOUND_MOVEMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "qty_remaining_kg": 12000000
+            },
+            "proposed_after": {
+                "action": "CREATE_MISSING_OPENING_LEDGER_MOVEMENT",
+                "movement_type": "IN",
+                "qty_kg": 12000000,
+                "total_cost": 372000,
+                "movement_at": "2026-06-18 00:00:00",
+                "accounting_impact": "NONE",
+                "inventory_balance_impact": "NONE"
+            },
+            "before_checksum": "a7fc3820643810a355e3d0f454e9a92c835b957bd37f55663e557fd7721f4559",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "inventory_lot_id": 4,
+            "company_id": 4,
+            "branch_id": 1,
+            "item_id": 8,
+            "source_type": "LEGACY_OPENING",
+            "source_id": null,
+            "original_quantity_kg": 250080000,
+            "qty_remaining_kg": 250080000,
+            "movement_ledger_balance": 0,
+            "difference": -250080000,
+            "movements": [],
+            "purchase_source": null,
+            "fifo_allocation_count": 0,
+            "has_been_consumed": false,
+            "return_or_void_affected": false,
+            "classification": "LEDGER_INCONSISTENCY",
+            "likely_cause": "MISSING_INBOUND_MOVEMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "qty_remaining_kg": 250080000
+            },
+            "proposed_after": {
+                "action": "CREATE_MISSING_OPENING_LEDGER_MOVEMENT",
+                "movement_type": "IN",
+                "qty_kg": 250080000,
+                "total_cost": 312600000,
+                "movement_at": "2026-06-19 00:00:00",
+                "accounting_impact": "NONE",
+                "inventory_balance_impact": "NONE"
+            },
+            "before_checksum": "94d4fe78301c7fe210d12cdff4f9c284df8d1e078aa24a168eff4b2a0ce963f5",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "inventory_lot_id": 5,
+            "company_id": 4,
+            "branch_id": 6,
+            "item_id": 7,
+            "source_type": "LEGACY_OPENING",
+            "source_id": null,
+            "original_quantity_kg": 4000000,
+            "qty_remaining_kg": 4000000,
+            "movement_ledger_balance": 0,
+            "difference": -4000000,
+            "movements": [],
+            "purchase_source": null,
+            "fifo_allocation_count": 0,
+            "has_been_consumed": false,
+            "return_or_void_affected": false,
+            "classification": "LEDGER_INCONSISTENCY",
+            "likely_cause": "MISSING_INBOUND_MOVEMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "qty_remaining_kg": 4000000
+            },
+            "proposed_after": {
+                "action": "CREATE_MISSING_OPENING_LEDGER_MOVEMENT",
+                "movement_type": "IN",
+                "qty_kg": 4000000,
+                "total_cost": 0,
+                "movement_at": "2026-06-20 00:00:00",
+                "accounting_impact": "NONE",
+                "inventory_balance_impact": "NONE"
+            },
+            "before_checksum": "4116b45b6d92809b8f6c28afb35a06d06fad4fe72475d289eb4d65c0c53d81b3",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "inventory_lot_id": 6,
+            "company_id": 4,
+            "branch_id": 6,
+            "item_id": 8,
+            "source_type": "LEGACY_OPENING",
+            "source_id": null,
+            "original_quantity_kg": 11784000,
+            "qty_remaining_kg": 11784000,
+            "movement_ledger_balance": 0,
+            "difference": -11784000,
+            "movements": [],
+            "purchase_source": null,
+            "fifo_allocation_count": 0,
+            "has_been_consumed": false,
+            "return_or_void_affected": false,
+            "classification": "LEDGER_INCONSISTENCY",
+            "likely_cause": "MISSING_INBOUND_MOVEMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "qty_remaining_kg": 11784000
+            },
+            "proposed_after": {
+                "action": "CREATE_MISSING_OPENING_LEDGER_MOVEMENT",
+                "movement_type": "IN",
+                "qty_kg": 11784000,
+                "total_cost": 58735.006,
+                "movement_at": "2026-06-20 00:00:00",
+                "accounting_impact": "NONE",
+                "inventory_balance_impact": "NONE"
+            },
+            "before_checksum": "c237a0d60927898bbaef546cac7f84a38dd932f106b1f8302fb2783993f99365",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "inventory_lot_id": 7,
+            "company_id": 4,
+            "branch_id": 6,
+            "item_id": 8,
+            "source_type": "LEGACY_OPENING",
+            "source_id": null,
+            "original_quantity_kg": 6000000,
+            "qty_remaining_kg": 6000000,
+            "movement_ledger_balance": 0,
+            "difference": -6000000,
+            "movements": [],
+            "purchase_source": null,
+            "fifo_allocation_count": 0,
+            "has_been_consumed": false,
+            "return_or_void_affected": false,
+            "classification": "LEDGER_INCONSISTENCY",
+            "likely_cause": "MISSING_INBOUND_MOVEMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "qty_remaining_kg": 6000000
+            },
+            "proposed_after": {
+                "action": "CREATE_MISSING_OPENING_LEDGER_MOVEMENT",
+                "movement_type": "IN",
+                "qty_kg": 6000000,
+                "total_cost": 0,
+                "movement_at": "2026-06-20 00:00:00",
+                "accounting_impact": "NONE",
+                "inventory_balance_impact": "NONE"
+            },
+            "before_checksum": "8e32683c48c4711501d00120f8029b984692d7237d055752cbc05e39a4584c6e",
+            "repair_bucket": "AUTO_SAFE"
+        }
+    ],
+    "cross_company_branches": [
+        {
+            "resource_type": "PURCHASE_INVOICE",
+            "record_id": 3,
+            "company_id": 4,
+            "branch_id": 1,
+            "branch_actual_company_id": 1,
+            "source_document": {
+                "invoice_number": "5",
+                "status": "DRAFT"
+            },
+            "related_shipment": null,
+            "related_invoice": null,
+            "related_movements": [],
+            "related_journal": null,
+            "authoritative_company_id": 4,
+            "candidate_branches": [
+                {
+                    "id": 6,
+                    "company_id": 4,
+                    "branch_name": "الفرع الرئيسي"
+                }
+            ],
+            "classification": "BRANCH_ID_WRONG",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "company_id": 4,
+                "branch_id": 1
+            },
+            "proposed_after": {
+                "company_id": 4,
+                "branch_id": 6
+            },
+            "before_checksum": "8d13f3bd3566d548433c495d587d722f4d7f01931a1177bbd9439d75cc62b349",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "resource_type": "PURCHASE_INVOICE",
+            "record_id": 4,
+            "company_id": 4,
+            "branch_id": 1,
+            "branch_actual_company_id": 1,
+            "source_document": {
+                "invoice_number": null,
+                "status": "DRAFT"
+            },
+            "related_shipment": null,
+            "related_invoice": null,
+            "related_movements": [],
+            "related_journal": null,
+            "authoritative_company_id": 4,
+            "candidate_branches": [
+                {
+                    "id": 6,
+                    "company_id": 4,
+                    "branch_name": "الفرع الرئيسي"
+                }
+            ],
+            "classification": "BRANCH_ID_WRONG",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "company_id": 4,
+                "branch_id": 1
+            },
+            "proposed_after": {
+                "company_id": 4,
+                "branch_id": 6
+            },
+            "before_checksum": "8d13f3bd3566d548433c495d587d722f4d7f01931a1177bbd9439d75cc62b349",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "resource_type": "INVENTORY_LOT",
+            "record_id": 3,
+            "company_id": 4,
+            "branch_id": 1,
+            "branch_actual_company_id": 1,
+            "source_document": {
+                "source_type": "LEGACY_OPENING",
+                "source_id": null
+            },
+            "related_shipment": null,
+            "related_invoice": null,
+            "related_movements": [],
+            "related_journal": null,
+            "authoritative_company_id": 4,
+            "candidate_branches": [
+                {
+                    "id": 6,
+                    "company_id": 4,
+                    "branch_name": "الفرع الرئيسي"
+                }
+            ],
+            "classification": "BRANCH_ID_WRONG",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "company_id": 4,
+                "branch_id": 1
+            },
+            "proposed_after": {
+                "company_id": 4,
+                "branch_id": 6
+            },
+            "before_checksum": "8d13f3bd3566d548433c495d587d722f4d7f01931a1177bbd9439d75cc62b349",
+            "repair_bucket": "AUTO_SAFE"
+        },
+        {
+            "resource_type": "INVENTORY_LOT",
+            "record_id": 4,
+            "company_id": 4,
+            "branch_id": 1,
+            "branch_actual_company_id": 1,
+            "source_document": {
+                "source_type": "LEGACY_OPENING",
+                "source_id": null
+            },
+            "related_shipment": null,
+            "related_invoice": null,
+            "related_movements": [],
+            "related_journal": null,
+            "authoritative_company_id": 4,
+            "candidate_branches": [
+                {
+                    "id": 6,
+                    "company_id": 4,
+                    "branch_name": "الفرع الرئيسي"
+                }
+            ],
+            "classification": "BRANCH_ID_WRONG",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "before": {
+                "company_id": 4,
+                "branch_id": 1
+            },
+            "proposed_after": {
+                "company_id": 4,
+                "branch_id": 6
+            },
+            "before_checksum": "8d13f3bd3566d548433c495d587d722f4d7f01931a1177bbd9439d75cc62b349",
+            "repair_bucket": "AUTO_SAFE"
+        }
+    ],
+    "shipments_without_closed_card": [
+        {
+            "shipment_id": 2,
+            "shipment_number": "1",
+            "company_id": 4,
+            "branch_id": 6,
+            "shipment_type": "PURCHASE",
+            "status": "APPROVED",
+            "commercial_status": "DRAFT",
+            "supplier_id": 2,
+            "customer_id": null,
+            "created_at": "2026-06-20 19:13:00",
+            "closed_at": null,
+            "approved_at": null,
+            "invoice_links": [],
+            "weighbridge_cards": [],
+            "reading_count": 0,
+            "material_lines": [
+                {
+                    "id": 5,
+                    "item_id": 8,
+                    "accepted_qty_kg": 3000000,
+                    "unit_price_per_kg": 0,
+                    "line_total": 0
+                },
+                {
+                    "id": 6,
+                    "item_id": 7,
+                    "accepted_qty_kg": 2000000,
+                    "unit_price_per_kg": 0,
+                    "line_total": 0
+                }
+            ],
+            "accepted_quantity_kg": 5000000,
+            "pricing_total": 0,
+            "inventory_movement_count": 2,
+            "classification": "LEGACY_MANUAL_SHIPMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "proposed_after": null,
+            "repair_bucket": "NO_REPAIR"
+        },
+        {
+            "shipment_id": 3,
+            "shipment_number": "2",
+            "company_id": 4,
+            "branch_id": 6,
+            "shipment_type": "PURCHASE",
+            "status": "APPROVED",
+            "commercial_status": "DRAFT",
+            "supplier_id": 2,
+            "customer_id": null,
+            "created_at": "2026-06-20 20:00:57",
+            "closed_at": null,
+            "approved_at": null,
+            "invoice_links": [],
+            "weighbridge_cards": [],
+            "reading_count": 0,
+            "material_lines": [
+                {
+                    "id": 7,
+                    "item_id": 8,
+                    "accepted_qty_kg": 11750000,
+                    "unit_price_per_kg": 0,
+                    "line_total": 14805
+                },
+                {
+                    "id": 8,
+                    "item_id": 7,
+                    "accepted_qty_kg": 3890000,
+                    "unit_price_per_kg": 0,
+                    "line_total": 124480
+                }
+            ],
+            "accepted_quantity_kg": 15640000,
+            "pricing_total": 139285,
+            "inventory_movement_count": 3,
+            "classification": "LEGACY_MANUAL_SHIPMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "proposed_after": null,
+            "repair_bucket": "NO_REPAIR"
+        },
+        {
+            "shipment_id": 4,
+            "shipment_number": "SHP-2026-00004",
+            "company_id": 4,
+            "branch_id": 6,
+            "shipment_type": "PURCHASE",
+            "status": "APPROVED",
+            "commercial_status": "DRAFT",
+            "supplier_id": 2,
+            "customer_id": null,
+            "created_at": "2026-06-30 21:05:40",
+            "closed_at": null,
+            "approved_at": "2026-06-30 21:06:49",
+            "invoice_links": [],
+            "weighbridge_cards": [],
+            "reading_count": 0,
+            "material_lines": [
+                {
+                    "id": 9,
+                    "item_id": 8,
+                    "accepted_qty_kg": 34000,
+                    "unit_price_per_kg": 0,
+                    "line_total": 49657
+                }
+            ],
+            "accepted_quantity_kg": 34000,
+            "pricing_total": 49657,
+            "inventory_movement_count": 2,
+            "classification": "LEGACY_MANUAL_SHIPMENT",
+            "root_cause": "A_LEGACY_DATA",
+            "current_code_risk": false,
+            "proposed_after": null,
+            "repair_bucket": "NO_REPAIR"
+        }
+    ],
+    "missing_account_mappings": [
+        {
+            "company_id": 5,
+            "company_name": "شركة صنعاء للمعادن",
+            "mapping_key": "VAT_INPUT_ACCOUNT",
+            "expected_purpose": "Input VAT",
+            "has_chart_of_accounts": true,
+            "candidate_accounts": [],
+            "bootstrap_account_code": "1410",
+            "normally_created_by_bootstrap": true,
+            "historical_candidate_usage": [],
+            "classification": "COMPANY_NOT_OPERATIONAL",
+            "root_cause": "E_INCOMPLETE_ONBOARDING_BOOTSTRAP",
+            "current_code_risk": false,
+            "before": {
+                "setting_key": "VAT_INPUT_ACCOUNT",
+                "account_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "43e2abdb0495b1451a20207e0a37d2fa1087b65164d0db84d4fb38a33969c558",
+            "operational_activity": {
+                "journals": 0,
+                "purchases": 0,
+                "sales": 0,
+                "stock_movements": 0
+            },
+            "repair_bucket": "NO_REPAIR"
+        },
+        {
+            "company_id": 5,
+            "company_name": "شركة صنعاء للمعادن",
+            "mapping_key": "VAT_OUTPUT_ACCOUNT",
+            "expected_purpose": "Output VAT",
+            "has_chart_of_accounts": true,
+            "candidate_accounts": [],
+            "bootstrap_account_code": "2300",
+            "normally_created_by_bootstrap": true,
+            "historical_candidate_usage": [],
+            "classification": "COMPANY_NOT_OPERATIONAL",
+            "root_cause": "E_INCOMPLETE_ONBOARDING_BOOTSTRAP",
+            "current_code_risk": false,
+            "before": {
+                "setting_key": "VAT_OUTPUT_ACCOUNT",
+                "account_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "5cbaf0c82308ab34e3aa388e1340b17e5ff23a52636cf028d52ceede58a574a8",
+            "operational_activity": {
+                "journals": 0,
+                "purchases": 0,
+                "sales": 0,
+                "stock_movements": 0
+            },
+            "repair_bucket": "NO_REPAIR"
+        },
+        {
+            "company_id": 5,
+            "company_name": "شركة صنعاء للمعادن",
+            "mapping_key": "INVENTORY_ACCOUNT",
+            "expected_purpose": "Inventory",
+            "has_chart_of_accounts": true,
+            "candidate_accounts": [],
+            "bootstrap_account_code": "1310",
+            "normally_created_by_bootstrap": true,
+            "historical_candidate_usage": [],
+            "classification": "COMPANY_NOT_OPERATIONAL",
+            "root_cause": "E_INCOMPLETE_ONBOARDING_BOOTSTRAP",
+            "current_code_risk": false,
+            "before": {
+                "setting_key": "INVENTORY_ACCOUNT",
+                "account_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "ea0693bd478b472177d20082c8118fabec6214032937224dafa9c592dacd3f1a",
+            "operational_activity": {
+                "journals": 0,
+                "purchases": 0,
+                "sales": 0,
+                "stock_movements": 0
+            },
+            "repair_bucket": "NO_REPAIR"
+        },
+        {
+            "company_id": 5,
+            "company_name": "شركة صنعاء للمعادن",
+            "mapping_key": "COGS_ACCOUNT",
+            "expected_purpose": "COGS",
+            "has_chart_of_accounts": true,
+            "candidate_accounts": [],
+            "bootstrap_account_code": "5100",
+            "normally_created_by_bootstrap": true,
+            "historical_candidate_usage": [],
+            "classification": "COMPANY_NOT_OPERATIONAL",
+            "root_cause": "E_INCOMPLETE_ONBOARDING_BOOTSTRAP",
+            "current_code_risk": false,
+            "before": {
+                "setting_key": "COGS_ACCOUNT",
+                "account_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "a4c8b77342f3e2ea2083bd7baa06e19d3edf8e194853377976a42d905d38a4ae",
+            "operational_activity": {
+                "journals": 0,
+                "purchases": 0,
+                "sales": 0,
+                "stock_movements": 0
+            },
+            "repair_bucket": "NO_REPAIR"
+        },
+        {
+            "company_id": 5,
+            "company_name": "شركة صنعاء للمعادن",
+            "mapping_key": "SALES_ACCOUNT",
+            "expected_purpose": "Sales revenue",
+            "has_chart_of_accounts": true,
+            "candidate_accounts": [],
+            "bootstrap_account_code": "4100",
+            "normally_created_by_bootstrap": true,
+            "historical_candidate_usage": [],
+            "classification": "COMPANY_NOT_OPERATIONAL",
+            "root_cause": "E_INCOMPLETE_ONBOARDING_BOOTSTRAP",
+            "current_code_risk": false,
+            "before": {
+                "setting_key": "SALES_ACCOUNT",
+                "account_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "5d5f2bdbf8092bbb31313d400e0be4e6fd030da24f29c1d853114bf978afa138",
+            "operational_activity": {
+                "journals": 0,
+                "purchases": 0,
+                "sales": 0,
+                "stock_movements": 0
+            },
+            "repair_bucket": "NO_REPAIR"
+        },
+        {
+            "company_id": 5,
+            "company_name": "شركة صنعاء للمعادن",
+            "mapping_key": "CUSTOMER_ACCOUNT",
+            "expected_purpose": "Accounts receivable",
+            "has_chart_of_accounts": true,
+            "candidate_accounts": [],
+            "bootstrap_account_code": "1210",
+            "normally_created_by_bootstrap": true,
+            "historical_candidate_usage": [],
+            "classification": "COMPANY_NOT_OPERATIONAL",
+            "root_cause": "E_INCOMPLETE_ONBOARDING_BOOTSTRAP",
+            "current_code_risk": false,
+            "before": {
+                "setting_key": "CUSTOMER_ACCOUNT",
+                "account_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "5edf17ee52a857499ae290b3226cace70020835645ef20e76bf2306b5fe402cf",
+            "operational_activity": {
+                "journals": 0,
+                "purchases": 0,
+                "sales": 0,
+                "stock_movements": 0
+            },
+            "repair_bucket": "NO_REPAIR"
+        },
+        {
+            "company_id": 5,
+            "company_name": "شركة صنعاء للمعادن",
+            "mapping_key": "SUPPLIER_ACCOUNT",
+            "expected_purpose": "Accounts payable",
+            "has_chart_of_accounts": true,
+            "candidate_accounts": [],
+            "bootstrap_account_code": "2100",
+            "normally_created_by_bootstrap": true,
+            "historical_candidate_usage": [],
+            "classification": "COMPANY_NOT_OPERATIONAL",
+            "root_cause": "E_INCOMPLETE_ONBOARDING_BOOTSTRAP",
+            "current_code_risk": false,
+            "before": {
+                "setting_key": "SUPPLIER_ACCOUNT",
+                "account_id": null
+            },
+            "proposed_after": null,
+            "before_checksum": "dd49508597436a723d2ff6f1351ad1518eacaf2bee2fe2096b692c8e0075a7c4",
+            "operational_activity": {
+                "journals": 0,
+                "purchases": 0,
+                "sales": 0,
+                "stock_movements": 0
+            },
+            "repair_bucket": "NO_REPAIR"
+        }
+    ],
+    "repair_design": {
+        "AUTO_SAFE": "Apply only manifest rows with deterministic proposed_after values, one defect family per transaction.",
+        "MANUAL_REVIEW": "Require signed accounting/operations decision before generating an executable manifest.",
+        "NO_REPAIR": "Retain valid legacy behavior and document an explicit exception.",
+        "backup": "Timestamped immutable JSON containing before, proposed_after, record IDs, and SHA-256 before_checksum.",
+        "rollback": "Compare current value to proposed_after, restore exact before value transactionally, then rerun all invariants."
+    },
+    "post_repair_invariants": {
+        "invalid_journal_financial_years": 0,
+        "inventory_lot_movement_mismatches": 0,
+        "cross_company_branch_references": 0,
+        "defective_shipment_card_states": 0,
+        "required_account_mapping_gaps": 0,
+        "unbalanced_journals": 0,
+        "duplicate_source_journals": 0,
+        "orphan_journal_lines": 0,
+        "foreign_company_journal_accounts": 0,
+        "negative_inventory_lots": 0,
+        "duplicate_purchase_invoice_numbers": 0,
+        "duplicate_sales_invoice_numbers": 0,
+        "posted_purchases_without_journals": 0,
+        "posted_sales_without_journals": 0
+    }
+}

@@ -1,0 +1,464 @@
+{
+    "execution_id": "wave6-20260825-075830-fadd7659",
+    "timestamp": "2026-08-25T07:58:30+00:00",
+    "source_manifest_sha256": "fb8b822052cbc195718316328595035d55202a9309c23095998669c2b83e7f0b",
+    "execution_gates": {
+        "manifest_sha256": "PASS",
+        "exact_target_set": "PASS",
+        "before_state": "PASS",
+        "dependencies": "PASS",
+        "accounting_invariants": "PASS",
+        "gl_debit": "583667.000",
+        "gl_credit": "583667.000"
+    },
+    "actions": {
+        "branch_repairs": [
+            {
+                "family": "branch_references",
+                "table": "purchase_invoices",
+                "record_id": 3,
+                "company_id": 4,
+                "before": {
+                    "branch_id": 1
+                },
+                "after": {
+                    "branch_id": 6
+                },
+                "rollback": {
+                    "branch_id": 1,
+                    "only_if_current_branch_id": 6
+                }
+            },
+            {
+                "family": "branch_references",
+                "table": "purchase_invoices",
+                "record_id": 4,
+                "company_id": 4,
+                "before": {
+                    "branch_id": 1
+                },
+                "after": {
+                    "branch_id": 6
+                },
+                "rollback": {
+                    "branch_id": 1,
+                    "only_if_current_branch_id": 6
+                }
+            },
+            {
+                "family": "branch_references",
+                "table": "inventory_lots",
+                "record_id": 3,
+                "company_id": 4,
+                "before": {
+                    "branch_id": 1
+                },
+                "after": {
+                    "branch_id": 6
+                },
+                "rollback": {
+                    "branch_id": 1,
+                    "only_if_current_branch_id": 6
+                }
+            },
+            {
+                "family": "branch_references",
+                "table": "inventory_lots",
+                "record_id": 4,
+                "company_id": 4,
+                "before": {
+                    "branch_id": 1
+                },
+                "after": {
+                    "branch_id": 6
+                },
+                "rollback": {
+                    "branch_id": 1,
+                    "only_if_current_branch_id": 6
+                }
+            }
+        ],
+        "lot_movement_repairs": [
+            {
+                "family": "opening_lot_movements",
+                "table": "inventory_lot_movements",
+                "inventory_lot_id": 1,
+                "item_id": 3,
+                "company_id": 1,
+                "branch_id": 1,
+                "qty_remaining_kg": 1000,
+                "movement_type": "IN",
+                "source_type": "LEGACY_OPENING",
+                "source_id": null,
+                "qty_kg": 1000,
+                "unit_cost_per_kg": 0.02,
+                "total_cost": 20,
+                "movement_at": "2026-06-13 00:00:00",
+                "repair_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:1",
+                "before": {
+                    "movement_count": 0,
+                    "movement_balance": 0,
+                    "qty_remaining_kg": 1000
+                },
+                "after": {
+                    "movement_count": 1,
+                    "movement_balance": 1000,
+                    "qty_remaining_kg": 1000
+                },
+                "rollback": {
+                    "only_created_movement_id": null,
+                    "required_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:1",
+                    "requires_no_consumption_or_fifo": true
+                }
+            },
+            {
+                "family": "opening_lot_movements",
+                "table": "inventory_lot_movements",
+                "inventory_lot_id": 2,
+                "item_id": 5,
+                "company_id": 1,
+                "branch_id": 1,
+                "qty_remaining_kg": 1000000,
+                "movement_type": "IN",
+                "source_type": "LEGACY_OPENING",
+                "source_id": null,
+                "qty_kg": 1000000,
+                "unit_cost_per_kg": 0.03,
+                "total_cost": 30000,
+                "movement_at": "2026-06-13 00:00:00",
+                "repair_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:2",
+                "before": {
+                    "movement_count": 0,
+                    "movement_balance": 0,
+                    "qty_remaining_kg": 1000000
+                },
+                "after": {
+                    "movement_count": 1,
+                    "movement_balance": 1000000,
+                    "qty_remaining_kg": 1000000
+                },
+                "rollback": {
+                    "only_created_movement_id": null,
+                    "required_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:2",
+                    "requires_no_consumption_or_fifo": true
+                }
+            },
+            {
+                "family": "opening_lot_movements",
+                "table": "inventory_lot_movements",
+                "inventory_lot_id": 3,
+                "item_id": 7,
+                "company_id": 4,
+                "branch_id": 6,
+                "qty_remaining_kg": 12000000,
+                "movement_type": "IN",
+                "source_type": "LEGACY_OPENING",
+                "source_id": null,
+                "qty_kg": 12000000,
+                "unit_cost_per_kg": 0.031,
+                "total_cost": 372000,
+                "movement_at": "2026-06-18 00:00:00",
+                "repair_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:3",
+                "before": {
+                    "movement_count": 0,
+                    "movement_balance": 0,
+                    "qty_remaining_kg": 12000000
+                },
+                "after": {
+                    "movement_count": 1,
+                    "movement_balance": 12000000,
+                    "qty_remaining_kg": 12000000
+                },
+                "rollback": {
+                    "only_created_movement_id": null,
+                    "required_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:3",
+                    "requires_no_consumption_or_fifo": true
+                }
+            },
+            {
+                "family": "opening_lot_movements",
+                "table": "inventory_lot_movements",
+                "inventory_lot_id": 4,
+                "item_id": 8,
+                "company_id": 4,
+                "branch_id": 6,
+                "qty_remaining_kg": 250080000,
+                "movement_type": "IN",
+                "source_type": "LEGACY_OPENING",
+                "source_id": null,
+                "qty_kg": 250080000,
+                "unit_cost_per_kg": 1.25,
+                "total_cost": 312600000,
+                "movement_at": "2026-06-19 00:00:00",
+                "repair_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:4",
+                "before": {
+                    "movement_count": 0,
+                    "movement_balance": 0,
+                    "qty_remaining_kg": 250080000
+                },
+                "after": {
+                    "movement_count": 1,
+                    "movement_balance": 250080000,
+                    "qty_remaining_kg": 250080000
+                },
+                "rollback": {
+                    "only_created_movement_id": null,
+                    "required_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:4",
+                    "requires_no_consumption_or_fifo": true
+                }
+            },
+            {
+                "family": "opening_lot_movements",
+                "table": "inventory_lot_movements",
+                "inventory_lot_id": 5,
+                "item_id": 7,
+                "company_id": 4,
+                "branch_id": 6,
+                "qty_remaining_kg": 4000000,
+                "movement_type": "IN",
+                "source_type": "LEGACY_OPENING",
+                "source_id": null,
+                "qty_kg": 4000000,
+                "unit_cost_per_kg": 0,
+                "total_cost": 0,
+                "movement_at": "2026-06-20 00:00:00",
+                "repair_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:5",
+                "before": {
+                    "movement_count": 0,
+                    "movement_balance": 0,
+                    "qty_remaining_kg": 4000000
+                },
+                "after": {
+                    "movement_count": 1,
+                    "movement_balance": 4000000,
+                    "qty_remaining_kg": 4000000
+                },
+                "rollback": {
+                    "only_created_movement_id": null,
+                    "required_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:5",
+                    "requires_no_consumption_or_fifo": true
+                }
+            },
+            {
+                "family": "opening_lot_movements",
+                "table": "inventory_lot_movements",
+                "inventory_lot_id": 6,
+                "item_id": 8,
+                "company_id": 4,
+                "branch_id": 6,
+                "qty_remaining_kg": 11784000,
+                "movement_type": "IN",
+                "source_type": "LEGACY_OPENING",
+                "source_id": null,
+                "qty_kg": 11784000,
+                "unit_cost_per_kg": 0.004984,
+                "total_cost": 58735.006,
+                "movement_at": "2026-06-20 00:00:00",
+                "repair_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:6",
+                "before": {
+                    "movement_count": 0,
+                    "movement_balance": 0,
+                    "qty_remaining_kg": 11784000
+                },
+                "after": {
+                    "movement_count": 1,
+                    "movement_balance": 11784000,
+                    "qty_remaining_kg": 11784000
+                },
+                "rollback": {
+                    "only_created_movement_id": null,
+                    "required_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:6",
+                    "requires_no_consumption_or_fifo": true
+                }
+            },
+            {
+                "family": "opening_lot_movements",
+                "table": "inventory_lot_movements",
+                "inventory_lot_id": 7,
+                "item_id": 8,
+                "company_id": 4,
+                "branch_id": 6,
+                "qty_remaining_kg": 6000000,
+                "movement_type": "IN",
+                "source_type": "LEGACY_OPENING",
+                "source_id": null,
+                "qty_kg": 6000000,
+                "unit_cost_per_kg": 0,
+                "total_cost": 0,
+                "movement_at": "2026-06-20 00:00:00",
+                "repair_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:7",
+                "before": {
+                    "movement_count": 0,
+                    "movement_balance": 0,
+                    "qty_remaining_kg": 6000000
+                },
+                "after": {
+                    "movement_count": 1,
+                    "movement_balance": 6000000,
+                    "qty_remaining_kg": 6000000
+                },
+                "rollback": {
+                    "only_created_movement_id": null,
+                    "required_marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:7",
+                    "requires_no_consumption_or_fifo": true
+                }
+            }
+        ]
+    },
+    "baseline": {
+        "lots": [
+            {
+                "id": 1,
+                "qty_received_kg": "1000.000",
+                "qty_remaining_kg": "1000.000",
+                "qty_sold_kg": "0.000",
+                "total_cost": "20.000",
+                "unit_cost_per_kg": "0.020000"
+            },
+            {
+                "id": 2,
+                "qty_received_kg": "1000000.000",
+                "qty_remaining_kg": "1000000.000",
+                "qty_sold_kg": "0.000",
+                "total_cost": "30000.000",
+                "unit_cost_per_kg": "0.030000"
+            },
+            {
+                "id": 3,
+                "qty_received_kg": "12000000.000",
+                "qty_remaining_kg": "12000000.000",
+                "qty_sold_kg": "0.000",
+                "total_cost": "372000.000",
+                "unit_cost_per_kg": "0.031000"
+            },
+            {
+                "id": 4,
+                "qty_received_kg": "250080000.000",
+                "qty_remaining_kg": "250080000.000",
+                "qty_sold_kg": "0.000",
+                "total_cost": "312600000.000",
+                "unit_cost_per_kg": "1.250000"
+            },
+            {
+                "id": 5,
+                "qty_received_kg": "4000000.000",
+                "qty_remaining_kg": "4000000.000",
+                "qty_sold_kg": "0.000",
+                "total_cost": "0.000",
+                "unit_cost_per_kg": "0.000000"
+            },
+            {
+                "id": 6,
+                "qty_received_kg": "11784000.000",
+                "qty_remaining_kg": "11784000.000",
+                "qty_sold_kg": "0.000",
+                "total_cost": "58735.006",
+                "unit_cost_per_kg": "0.004984"
+            },
+            {
+                "id": 7,
+                "qty_received_kg": "6000000.000",
+                "qty_remaining_kg": "6000000.000",
+                "qty_sold_kg": "0.000",
+                "total_cost": "0.000",
+                "unit_cost_per_kg": "0.000000"
+            }
+        ],
+        "purchase_invoices": [
+            {
+                "id": 3,
+                "company_id": 4,
+                "invoice_number": "5",
+                "document_status": "DRAFT",
+                "total_amount": "373400.000",
+                "vat_amount": "0.000",
+                "journal_entry_id": null
+            },
+            {
+                "id": 4,
+                "company_id": 4,
+                "invoice_number": null,
+                "document_status": "DRAFT",
+                "total_amount": "312600000.000",
+                "vat_amount": "0.000",
+                "journal_entry_id": null
+            }
+        ],
+        "fifo_sources": [],
+        "stock_movements": {
+            "record_count": 20,
+            "quantity": "303289900.000",
+            "valuation": "313762450.910"
+        },
+        "general_ledger": {
+            "line_count": 48,
+            "debit": "583667.000",
+            "credit": "583667.000"
+        },
+        "vat": {
+            "purchases": "13465.368",
+            "sales": "888.641"
+        },
+        "zero_error_checks": {
+            "negative_lots": 0,
+            "orphan_stock_movements": 0,
+            "unbalanced_journals": 0,
+            "duplicate_source_journals": 0,
+            "posted_purchases_without_journals": 0,
+            "posted_sales_without_journals": 0
+        }
+    },
+    "families": {
+        "branch_references": "COMMITTED",
+        "opening_lot_movements": "COMMITTED"
+    },
+    "created_movement_ids": [
+        {
+            "inventory_lot_id": 1,
+            "movement_id": 9,
+            "marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:1"
+        },
+        {
+            "inventory_lot_id": 2,
+            "movement_id": 10,
+            "marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:2"
+        },
+        {
+            "inventory_lot_id": 3,
+            "movement_id": 11,
+            "marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:3"
+        },
+        {
+            "inventory_lot_id": 4,
+            "movement_id": 12,
+            "marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:4"
+        },
+        {
+            "inventory_lot_id": 5,
+            "movement_id": 13,
+            "marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:5"
+        },
+        {
+            "inventory_lot_id": 6,
+            "movement_id": 14,
+            "marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:6"
+        },
+        {
+            "inventory_lot_id": 7,
+            "movement_id": 15,
+            "marker": "WAVE6_LEGACY_OPENING_RECONCILIATION:LOT:7"
+        }
+    ],
+    "invariants": {
+        "approved_branch_reference_count": 4,
+        "protected_snapshot_unchanged": true,
+        "zero_error_checks": {
+            "negative_lots": 0,
+            "orphan_stock_movements": 0,
+            "unbalanced_journals": 0,
+            "duplicate_source_journals": 0,
+            "posted_purchases_without_journals": 0,
+            "posted_sales_without_journals": 0
+        }
+    }
+}
