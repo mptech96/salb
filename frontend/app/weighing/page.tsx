@@ -19,6 +19,8 @@ export default function WeighingPage(){
   const [cards,setCards]=useState<any[]>([]),[shipments,setShipments]=useState<any[]>([]),[cars,setCars]=useState<any[]>([]),[drivers,setDrivers]=useState<any[]>([]),[meta,setMeta]=useState<any>({});
   const [detail,setDetail]=useState<any>(null),[openForm,setOpenForm]=useState(false),[loading,setLoading]=useState(false),[filter,setFilter]=useState("ALL"),[materialFix,setMaterialFix]=useState(""),[linkPicker,setLinkPicker]=useState<any>(null);
   const [dialog,setDialog]=useState<any>({open:false,type:"info",title:"",message:"",action:null});
+  const [reasonValue,setReasonValue]=useState("");
+  const [reasonError,setReasonError]=useState("");
   const [form,setForm]=useState<any>({shipment_id:"",branch_id:"",flow_type:"PURCHASE_INBOUND",item_id:"",transport_mode:"VEHICLE",transport_label:"",car_id:"",driver_id:"",entry_at:nowLocal(),scale_name:"",external_ticket_number:"",notes:"",unassigned_reason:""});
   const [read,setRead]=useState<any>({event_type:"LOADED",effective_weight_type:"LOADED",weight_kg:"",recorded_at:nowLocal(),scale_name:"",ticket_number:"",notes:""});
   const [exitAt,setExitAt]=useState(nowLocal());
@@ -84,8 +86,11 @@ export default function WeighingPage(){
 
   async function saveMaterial(){
     if(!detail?.card?.id||!materialFix)return msg("warning","الصنف مطلوب","اختر المادة التي يمثلها هذا الكرت.");
-    let reason="";
-    if(detail.card.item_id&&Number(detail.card.item_id)!==Number(materialFix)){reason=window.prompt("سبب تصحيح الصنف:","")||"";if(reason.trim().length<3)return;}
+    if(loading)return;
+    if(detail.card.item_id&&Number(detail.card.item_id)!==Number(materialFix)){setReasonValue("");setReasonError("");setDialog({open:true,type:"confirm",title:"تأكيد تصحيح الصنف",message:"أدخل سبب تصحيح الصنف للحفاظ على سجل التدقيق.",action:null,reasonAction:"material"});return;}
+    await submitMaterial("");
+  }
+  async function submitMaterial(reason:string){
     setLoading(true);try{const r=await api.put(`/weighbridge/cards/${detail.card.id}/material`,{item_id:Number(materialFix),reason});setDetail(r.data.data);setMaterialFix(String(r.data.data?.card?.item_id||""));await load();msg("success","تم تثبيت المادة","تم تثبيت المادة على الكرت. إذا كان الكرت مرتبطًا بشحنة فسيظهر هناك للمتابعة فقط، ولن يفتح التسعير حتى إغلاق الكرت واعتماد الوزن النهائي.")}catch(e:any){msg("error","تعذر تثبيت الصنف",e?.response?.data?.message||"تعذر التنفيذ.")}finally{setLoading(false)}
   }
 
@@ -98,7 +103,8 @@ export default function WeighingPage(){
   }
 
   async function closeCard(){setLoading(true);try{const r=await api.post(`/weighbridge/cards/${detail.card.id}/close`,{exit_at:exitAt||null});setDetail(r.data.data);await load();msg("success","تم إغلاق كرت الميزان",r.data.data?.card?.shipment_id?"تم تثبيت الصنف وصافي الوزن داخل الشحنة. الخصم والتسعير يبقيان لموظف تجهيز الشحنة، ولا يوجد أثر مخزني أو محاسبي حتى ترحيل الفاتورة.":"أُغلق الكرت بنجاح. اربطه بشحنة لاحقًا وسيُنقل الصنف وصافي الوزن إلى تجهيزها تلقائيًا.")}catch(e:any){msg("error","تعذر إغلاق الكرت",e?.response?.data?.message||"أكمل وزني المحمل والفارغ/بعد التفريغ.")}finally{setLoading(false)}}
-  async function cancelReading(x:any){const reason=window.prompt("سبب إلغاء القراءة (لن تُحذف من السجل):","");if(!reason)return;setLoading(true);try{const r=await api.post(`/weighbridge/weights/${x.id}/cancel`,{reason});setDetail(r.data.data);await load()}catch(e:any){msg("error","تعذر إلغاء القراءة",e?.response?.data?.message||"تعذر التنفيذ.")}finally{setLoading(false)}}
+  function cancelReading(x:any){if(loading)return;setReasonValue("");setReasonError("");setDialog({open:true,type:"confirm",title:"تأكيد إلغاء القراءة",message:"لن تُحذف القراءة من السجل. أدخل سبب الإلغاء للمتابعة.",action:null,reasonAction:"cancel",readingId:x.id})}
+  async function submitReasonAction(){if(loading)return;const reason=reasonValue;if(!reason.trim()){setReasonError("السبب مطلوب.");return}if(dialog.reasonAction==="material"&&reason.trim().length<3){setReasonError("يجب أن يتكون السبب من ثلاثة أحرف على الأقل.");return}if(dialog.reasonAction==="material"){await submitMaterial(reason);return}if(dialog.reasonAction!=="cancel"||!dialog.readingId)return;setLoading(true);try{const r=await api.post(`/weighbridge/weights/${dialog.readingId}/cancel`,{reason});setDetail(r.data.data);setDialog((current:any)=>({...current,open:false}));await load()}catch(e:any){msg("error","تعذر إلغاء القراءة",e?.response?.data?.message||"تعذر التنفيذ.")}finally{setLoading(false)}}
 
   const movementText=(c:any)=>c.transport_mode==="VEHICLE"?`لوحة ${cleanPlate(c.plate_snapshot||c.plate_number)||"—"}`:c.transport_label||transportLabel[c.transport_mode]||"بدون سيارة";
 
@@ -149,6 +155,6 @@ export default function WeighingPage(){
       <div className="mt-4 flex justify-end"><a href={`/print/weighbridge/${detail.card.id}`} target="_blank" className="rounded-xl border bg-white px-4 py-2.5 text-sm font-black">طباعة / حفظ PDF</a></div>
     </Modal>}
     {linkPicker&&detail&&<Modal title="ربط كرت الميزان بشحنة" onClose={()=>setLinkPicker(null)} footer={<div className="flex justify-end gap-2"><Btn kind="light" onClick={()=>setLinkPicker(null)}>إلغاء</Btn><Btn onClick={saveShipmentLink} disabled={loading}>ربط بالشحنة</Btn></div>}><Field label="الشحنة المناسبة"><SearchSelect value={linkPicker.shipment_id} onChange={v=>setLinkPicker({...linkPicker,shipment_id:v})} placeholder="اختر الشحنة" searchPlaceholder="ابحث برقم الشحنة أو الطرف..." options={(linkPicker.candidates||[]).map((x:any)=>({value:x.id,label:`${x.shipment_number} — ${x.supplier_name||x.customer_name||"بدون طرف"}`,search:`${x.shipment_number} ${x.supplier_name||""} ${x.customer_name||""}`}))}/></Field></Modal>}
-    <SystemDialog open={dialog.open} type={dialog.type} title={dialog.title} message={dialog.message} loading={loading} onClose={()=>setDialog({...dialog,open:false})} onConfirm={async()=>{setDialog({...dialog,open:false});if(dialog.action)await dialog.action()}}/>
+    <SystemDialog open={dialog.open} type={dialog.type} title={dialog.title} message={dialog.message} loading={loading} showCancel={dialog.type==="confirm"} confirmText={dialog.type==="confirm"?"تأكيد":"حسنًا"} onClose={()=>setDialog({...dialog,open:false})} onConfirm={async()=>{if(dialog.reasonAction){await submitReasonAction();return}setDialog({...dialog,open:false});if(dialog.action)await dialog.action()}}>{dialog.reasonAction?<label className="block text-sm font-bold text-slate-700">سبب الإجراء *<textarea className={`${inputCls} mt-2`} rows={3} value={reasonValue} onChange={event=>{setReasonValue(event.target.value);setReasonError("")}} disabled={loading}/>{reasonError?<span role="alert" className="mt-2 block text-sm text-rose-600">{reasonError}</span>:null}</label>:null}</SystemDialog>
   </section>
 }

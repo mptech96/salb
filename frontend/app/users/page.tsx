@@ -3,6 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import SystemDialog from "../../components/common/SystemDialog";
 import api from "../api";
+import {
+  DataTableShell,
+  EmptyState,
+  FilterBar,
+  FormField,
+  FormSection,
+  LoadingState,
+  PageHeader,
+  StatusBadge,
+  fieldClassName,
+  primaryButtonClassName,
+} from "@/components/ui/enterprise";
 
 type StoredUser = {
   id?: number | string | null;
@@ -484,45 +496,33 @@ export default function UsersPage() {
 
   return (
     <section dir="rtl" className="space-y-5">
-      <div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm text-blue-100">إدارة النظام</p>
-            <h1 className="mt-2 text-3xl font-bold">المستخدمون</h1>
-            <p className="mt-2 text-sm text-blue-100">
-              {isSuper
-                ? "إدارة مستخدمي جميع الشركات والفروع."
-                : isBranchManager
-                  ? `إدارة مستخدمي ${currentBranchName} فقط.`
-                  : `إدارة مستخدمي ${currentCompanyName}.`}
-            </p>
-          </div>
+      <PageHeader
+        title="المستخدمون"
+        description={isSuper
+          ? "إدارة مستخدمي جميع الشركات والفروع."
+          : isBranchManager
+            ? `إدارة مستخدمي ${currentBranchName} فقط.`
+            : `إدارة مستخدمي ${currentCompanyName}.`}
+        breadcrumbs={[{ label: "الرئيسية", href: "/" }, { label: "إدارة المستخدمين" }]}
+        actions={canManageUsers ? (
+          <button type="button" onClick={openCreateForm} className={primaryButtonClassName}>
+            + إضافة مستخدم
+          </button>
+        ) : undefined}
+      />
 
-          {canManageUsers && (
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="rounded-2xl bg-white px-5 py-3 font-bold text-[#0B2A4A] transition hover:bg-blue-50"
-            >
-              + إضافة مستخدم
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <FilterBar>
         <input
-          className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 outline-none transition focus:border-[#0B2A4A]"
+          className={fieldClassName}
           placeholder="بحث بالاسم، الشركة، الفرع، الدور، الجوال..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-      </div>
+      </FilterBar>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-right">
-            <thead className="bg-slate-100 text-slate-700">
+      <DataTableShell title="دليل المستخدمين" description={`${filtered.length} مستخدم`}>
+          <table className="sulb-table min-w-[1100px]">
+            <thead>
               <tr>
                 <th className="p-4">الاسم</th>
                 <th className="p-4">اسم المستخدم</th>
@@ -538,15 +538,11 @@ export default function UsersPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center font-bold text-slate-500">
-                    جاري تحميل المستخدمين...
-                  </td>
+                  <td colSpan={8}><LoadingState label="جاري تحميل المستخدمين..." /></td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-500">
-                    لا يوجد مستخدمون مطابقون.
-                  </td>
+                  <td colSpan={8}><EmptyState title="لا يوجد مستخدمون مطابقون." /></td>
                 </tr>
               ) : (
                 filtered.map((user) => (
@@ -559,13 +555,9 @@ export default function UsersPage() {
                     <td className="p-4">{user.phone || "-"}</td>
                     <td className="p-4">
                       {Number(user.is_active) === 1 ? (
-                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                          نشط
-                        </span>
+                        <StatusBadge tone="success">نشط</StatusBadge>
                       ) : (
-                        <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">
-                          متوقف
-                        </span>
+                        <StatusBadge tone="danger">متوقف</StatusBadge>
                       )}
                     </td>
                     <td className="p-4">
@@ -596,8 +588,7 @@ export default function UsersPage() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
+      </DataTableShell>
 
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
@@ -620,7 +611,8 @@ export default function UsersPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <FormSection title="بيانات المستخدم وصلاحيات الوصول" description="ترتبط الشركة والفرع والدور بقواعد الوصول الحالية دون تغيير.">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="الشركة" required>
                 {isSuper ? (
                   <select
@@ -793,7 +785,7 @@ export default function UsersPage() {
                 type="button"
                 onClick={() => void saveUser()}
                 disabled={saving}
-                className="rounded-2xl bg-[#0B2A4A] px-5 py-4 font-bold text-white transition hover:bg-[#123D68] disabled:cursor-not-allowed disabled:opacity-60"
+                className={`${primaryButtonClassName} self-end`}
               >
                 {saving
                   ? "جاري الحفظ..."
@@ -802,6 +794,7 @@ export default function UsersPage() {
                     : "حفظ المستخدم"}
               </button>
             </div>
+            </FormSection>
           </div>
         </div>
       )}
@@ -819,29 +812,6 @@ export default function UsersPage() {
         onConfirm={dialog.onConfirm || closeDialog}
       />
     </section>
-  );
-}
-
-function FormField({
-  label,
-  required = false,
-  hint,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-bold text-slate-700">
-        {label}
-        {required && <span className="mr-1 text-rose-600">*</span>}
-      </span>
-      {children}
-      {hint && <span className="mt-2 block text-xs text-slate-500">{hint}</span>}
-    </label>
   );
 }
 

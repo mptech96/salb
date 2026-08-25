@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f7fa;
+  --foreground: #17212f;
+  --sulb-primary: #123b5d;
+  --sulb-primary-strong: #0b2a4a;
+  --sulb-surface: #ffffff;
+  --sulb-border: #e2e8f0;
 }
 
 @theme inline {
@@ -12,19 +16,61 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+.sulb-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.875rem;
+}
+
+.sulb-table thead {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.sulb-table th,
+.sulb-table td {
+  padding: 0.75rem 1rem;
+  white-space: nowrap;
+}
+
+.sulb-table tbody tr {
+  border-top: 1px solid #f1f5f9;
+}
+
+.sulb-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.sulb-numeric {
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.input {
+  width: 100%;
+  min-height: 2.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px #e0f2fe;
+}
 
 /* =========================================================
    SULB ERP - Professional print mode

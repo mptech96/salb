@@ -122,6 +122,9 @@ export default function SystemCenterPage() {
   const [error, setError] = useState("");
   const [supportCompany, setSupportCompany] = useState<{ id: number; name: string } | null>(null);
   const [supportLoading, setSupportLoading] = useState(false);
+  const [supportReason, setSupportReason] = useState("");
+  const [supportTicketReference, setSupportTicketReference] = useState("");
+  const [supportFormError, setSupportFormError] = useState("");
   const [supportDialog, setSupportDialog] = useState({
     open: false,
     type: "confirm" as "confirm" | "error",
@@ -176,6 +179,9 @@ export default function SystemCenterPage() {
 
   function supportAccess(companyId: number, companyName = "الشركة") {
     setSupportCompany({ id: companyId, name: companyName });
+    setSupportReason("");
+    setSupportTicketReference("");
+    setSupportFormError("");
     setSupportDialog({
       open: true,
       type: "confirm",
@@ -185,12 +191,25 @@ export default function SystemCenterPage() {
   }
 
   async function confirmSupportAccess() {
-    if (!supportCompany) return;
-    const reason = window.prompt("سبب الدخول إلى وضع الدعم:")?.trim();
-    if (!reason) return;
-    const ticketReference = window.prompt("رقم التذكرة / المرجع:")?.trim();
-    if (!ticketReference) return;
+    if (supportLoading) return;
+    if (!supportCompany) {
+      setSupportFormError("اختر الشركة المطلوب الدخول إليها.");
+      return;
+    }
 
+    const reason = supportReason.trim();
+    if (!reason) {
+      setSupportFormError("سبب الدخول إلى وضع الدعم مطلوب.");
+      return;
+    }
+
+    const ticketReference = supportTicketReference.trim();
+    if (!ticketReference) {
+      setSupportFormError("رقم التذكرة أو المرجع مطلوب.");
+      return;
+    }
+
+    setSupportFormError("");
     setSupportLoading(true);
 
     try {
@@ -208,6 +227,7 @@ export default function SystemCenterPage() {
         permissions: response.data.user?.permissions ?? [],
       });
 
+      setSupportDialog((current) => ({ ...current, open: false }));
       window.location.assign("/");
     } catch (requestError: any) {
       setSupportDialog({
@@ -663,9 +683,40 @@ export default function SystemCenterPage() {
           if (!supportLoading) {
             setSupportDialog((current) => ({ ...current, open: false }));
             setSupportCompany(null);
+            setSupportFormError("");
           }
         }}
-      />
+      >
+        {supportDialog.type === "confirm" ? (
+          <div className="space-y-3">
+            {supportFormError ? (
+              <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                {supportFormError}
+              </div>
+            ) : null}
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-semibold text-slate-700">الشركة المستهدفة</span>
+              <input readOnly value={supportCompany?.name || ""} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700" />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-semibold text-slate-700">سبب الدخول <span className="text-rose-600">*</span></span>
+              <textarea rows={2} value={supportReason} disabled={supportLoading} onChange={(event) => { setSupportReason(event.target.value); setSupportFormError(""); }} placeholder="وضّح سبب فتح جلسة الدعم" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-600 disabled:bg-slate-50" />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-semibold text-slate-700">رقم التذكرة / المرجع <span className="text-rose-600">*</span></span>
+              <input value={supportTicketReference} disabled={supportLoading} onChange={(event) => { setSupportTicketReference(event.target.value); setSupportFormError(""); }} placeholder="مثال: SUPPORT-1042" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-600 disabled:bg-slate-50" />
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block"><span className="mb-1.5 block text-sm font-semibold text-slate-700">مستوى الوصول</span><input readOnly value="قراءة فقط" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700" /></label>
+              <label className="block"><span className="mb-1.5 block text-sm font-semibold text-slate-700">مدة الجلسة</span><input readOnly value="ساعتان" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700" /></label>
+            </div>
+          </div>
+        ) : null}
+      </SystemDialog>
     </section>
   );
 }

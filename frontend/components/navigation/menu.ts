@@ -95,8 +95,8 @@ export const companyNavigation: NavigationGroup[] = [
     ],
   },
   {
-    id: "weighing-movement",
-    label: "الميزان والحركة",
+    id: "operations",
+    label: "العمليات",
     icon: "⚖",
     items: [
       {
@@ -118,24 +118,24 @@ export const companyNavigation: NavigationGroup[] = [
         icon: "⚖",
         permission: "weighbridge.view",
       },
+      {
+        href: "/drivers",
+        label: "السائقون",
+        icon: "🚘",
+        permission: "drivers.view",
+      },
     ],
   },
   {
-    id: "trade",
-    label: "المشتريات والمبيعات",
-    icon: "↔",
+    id: "purchases",
+    label: "المشتريات",
+    icon: "🛒",
     items: [
       {
         href: "/purchases",
         label: "فواتير المشتريات",
         icon: "🛒",
         permission: "purchases.view",
-      },
-      {
-        href: "/sales",
-        label: "فواتير المبيعات",
-        icon: "🧾",
-        permission: "sales.view",
       },
       {
         href: "/commercial-returns",
@@ -149,6 +149,19 @@ export const companyNavigation: NavigationGroup[] = [
         icon: "📦",
         permission: "suppliers.view",
       },
+    ],
+  },
+  {
+    id: "sales",
+    label: "المبيعات",
+    icon: "🧾",
+    items: [
+      {
+        href: "/sales",
+        label: "فواتير المبيعات",
+        icon: "🧾",
+        permission: "sales.view",
+      },
       {
         href: "/customers",
         label: "العملاء",
@@ -159,7 +172,7 @@ export const companyNavigation: NavigationGroup[] = [
   },
   {
     id: "inventory-processing",
-    label: "المخزون والمعالجة",
+    label: "المخزون",
     icon: "▤",
     items: [
       {
@@ -185,16 +198,10 @@ export const companyNavigation: NavigationGroup[] = [
     ],
   },
   {
-    id: "transport-workforce",
-    label: "النقل والعمالة",
-    icon: "🚘",
+    id: "human-resources",
+    label: "الموارد البشرية",
+    icon: "👥",
     items: [
-      {
-        href: "/drivers",
-        label: "السائقون",
-        icon: "🚘",
-        permission: "drivers.view",
-      },
       {
         href: "/workers",
         label: "العمال والموظفون",
@@ -212,7 +219,7 @@ export const companyNavigation: NavigationGroup[] = [
   },
   {
     id: "finance",
-    label: "المالية والمحاسبة",
+    label: "المحاسبة",
     icon: "◫",
     items: [
       {
@@ -307,7 +314,7 @@ export const companyNavigation: NavigationGroup[] = [
   },
   {
     id: "reports",
-    label: "التقارير والتحليل",
+    label: "التقارير",
     icon: "📊",
     items: [
       {
@@ -326,7 +333,7 @@ export const companyNavigation: NavigationGroup[] = [
   },
   {
     id: "company-management",
-    label: "إدارة الشركة",
+    label: "الإعدادات",
     icon: "⚙",
     items: [
       {

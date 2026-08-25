@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../api";
+import useSystemFeedback from "@/components/common/useSystemFeedback";
 
 type OfficialDoc = {
   id: number;
@@ -40,6 +41,7 @@ export default function OfficialDocumentsPage() {
   const [floatingItems, setFloatingItems] = useState<FloatingItem[]>([]);
   const [activeDrag, setActiveDrag] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const { notify, requestConfirmation, feedbackDialog } = useSystemFeedback();
 
   const [form, setForm] = useState({
     doc_title: "",
@@ -143,7 +145,8 @@ export default function OfficialDocumentsPage() {
   };
 
   const saveDoc = async () => {
-    if (!form.doc_title.trim()) return alert("اكتب عنوان الورقة");
+    if (loading) return;
+    if (!form.doc_title.trim()) return notify("اكتب عنوان الورقة", "warning");
 
     setLoading(true);
 
@@ -171,21 +174,22 @@ export default function OfficialDocumentsPage() {
         });
       }
 
-      alert("تم حفظ الورقة");
+      notify("تم حفظ الورقة", "success");
       setShowEditor(false);
       loadDocs();
     } catch (e: any) {
-      alert(e?.response?.data?.message || "حدث خطأ أثناء الحفظ");
+      notify(e?.response?.data?.message || "حدث خطأ أثناء الحفظ", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteDoc = async (id: number) => {
-    if (!confirm("هل تريد حذف هذه الورقة؟")) return;
-    await api.delete(`/official-documents/${id}`);
-    alert("تم حذف الورقة");
-    loadDocs();
+  const deleteDoc = (id: number) => {
+    requestConfirmation("هل تريد حذف هذه الورقة؟", async () => {
+      await api.delete(`/official-documents/${id}`);
+      notify("تم حذف الورقة", "success");
+      await loadDocs();
+    }, "تأكيد حذف الورقة الرسمية");
   };
 
   const downloadAttachment = async (attachment: any) => {
@@ -228,7 +232,7 @@ export default function OfficialDocumentsPage() {
         ? fileUrl(settings?.stamp_path)
         : fileUrl(settings?.signature_path);
 
-    if (!src) return alert(type === "stamp" ? "ارفع الختم من الإعدادات أولًا" : "ارفع التوقيع من الإعدادات أولًا");
+    if (!src) return notify(type === "stamp" ? "ارفع الختم من الإعدادات أولًا" : "ارفع التوقيع من الإعدادات أولًا", "warning");
 
     setFloatingItems((old) => [
       ...old,
@@ -576,6 +580,7 @@ export default function OfficialDocumentsPage() {
           </div>
         </div>
       )}
+      {feedbackDialog}
     </section>
   );
 }

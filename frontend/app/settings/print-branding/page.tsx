@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api";
+import { AccessState, FormSection, LoadingState, PageHeader, primaryButtonClassName, secondaryButtonClassName } from "@/components/ui/enterprise";
 
 const DEFAULT_INVOICE_FOOTER =
   "شكراً لتعاملكم معنا • هذه الفاتورة صادرة إلكترونياً من نظام صلب ERP. يرجى الاحتفاظ بها للرجوع إليها.";
@@ -180,25 +181,18 @@ export default function PrintBrandingPage() {
     [form]
   );
 
-  if (loading) return <div dir="rtl" className="p-8">جاري تحميل إعدادات الطباعة...</div>;
+  if (loading) return <LoadingState label="جاري تحميل إعدادات الطباعة..." />;
 
   return (
-    <section dir="rtl" className="space-y-5 p-5 pb-16">
-      <div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-sm">
-        <p className="text-sm text-blue-100">إعدادات الشركة / الطباعة</p>
-        <h1 className="mt-1 text-2xl font-black">هوية الطباعة والفواتير</h1>
-        <p className="mt-2 text-sm text-blue-100">
-          ارفع الشعار والتوقيع والختم، واضبط بيانات الفاتورة والتذييلات، ثم عاين الشكل قبل اختبار الطباعة.
-        </p>
-      </div>
+    <section dir="rtl" className="space-y-5 pb-12">
+      <PageHeader title="هوية الطباعة والفواتير" description="إدارة شعار الشركة والتوقيع والختم وبيانات المستندات ومعاينة شكل الفاتورة." breadcrumbs={[{label:"الرئيسية",href:"/"},{label:"إعدادات الشركة",href:"/settings"},{label:"هوية الطباعة"}]} />
 
-      {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 font-bold text-rose-700">{error}</div>}
+      {error && <AccessState title="تعذر إكمال العملية" description={error} tone="danger"/>}
       {message && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-700">{message}</div>}
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
         <div className="space-y-5">
-          <div className="rounded-3xl border bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-black text-[#0B2A4A]">بيانات رأس الفاتورة</h2>
+          <FormSection title="بيانات رأس الفاتورة">
             <div className="grid gap-3 md:grid-cols-2">
               <Field label="اسم المنشأة في الطباعة" value={form.print_company_name} onChange={(v)=>setForm({...form,print_company_name:v})}/>
               <Field label="الهاتف" value={form.print_phone} onChange={(v)=>setForm({...form,print_phone:v})}/>
@@ -211,23 +205,25 @@ export default function PrintBrandingPage() {
                 <textarea rows={3} className="w-full rounded-xl border p-3 outline-none focus:border-[#0B2A4A]" value={form.print_address||""} onChange={(e)=>setForm({...form,print_address:e.target.value})}/>
               </label>
             </div>
-          </div>
+          </FormSection>
 
-          <div className="rounded-3xl border bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-black text-[#0B2A4A]">شعار / توقيع / ختم</h2>
+          <FormSection title="الأصول والعلامة التجارية" description="يتم رفع الملف مباشرةً باستخدام عقد الرفع الحالي.">
             <div className="grid gap-4 md:grid-cols-3">
               <UploadCard title="شعار الشركة" src={imageSrc("logo")} busy={uploading==="logo"} onFile={(f)=>uploadAsset("logo",f)}/>
               <UploadCard title="التوقيع" src={imageSrc("signature")} busy={uploading==="signature"} onFile={(f)=>uploadAsset("signature",f)}/>
               <UploadCard title="الختم" src={imageSrc("stamp")} busy={uploading==="stamp"} onFile={(f)=>uploadAsset("stamp",f)}/>
             </div>
             <p className="mt-3 text-xs text-slate-500">PNG / JPG / WEBP — حد الواجهة 5 MB. لا تضف Content-Type يدويًا؛ النظام يرسله كـ multipart/form-data تلقائيًا.</p>
-          </div>
+          </FormSection>
 
-          <div className="rounded-3xl border bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-black text-[#0B2A4A]">تذييل المستندات</h2>
-              <button type="button" onClick={setDefaults} className="rounded-xl border border-[#0B2A4A] px-4 py-2 text-sm font-black text-[#0B2A4A]">إرجاع التذييل الافتراضي</button>
+          <FormSection title="ألوان هوية الطباعة" description="تستخدم هذه الألوان الحالية في معاينة المستندات دون تغيير عقد الحفظ.">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-sm font-medium text-slate-700"><span>اللون الرئيسي</span><input type="color" value={form.primary_color||"#0B2A4A"} onChange={event=>setForm({...form,primary_color:event.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white p-1"/></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700"><span>اللون الثانوي</span><input type="color" value={form.secondary_color||"#123D68"} onChange={event=>setForm({...form,secondary_color:event.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white p-1"/></label>
             </div>
+          </FormSection>
+
+          <FormSection title="تذييل المستندات" actions={<button type="button" onClick={setDefaults} className={secondaryButtonClassName}>إرجاع التذييل الافتراضي</button>}>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1 text-sm font-bold text-slate-700">
                 <span>تذييل الفواتير</span>
@@ -238,11 +234,11 @@ export default function PrintBrandingPage() {
                 <textarea rows={5} className="w-full rounded-xl border p-3 outline-none focus:border-[#0B2A4A]" value={form.report_footer||""} onChange={(e)=>setForm({...form,report_footer:e.target.value})}/>
               </label>
             </div>
-          </div>
+          </FormSection>
 
           <div className="flex flex-wrap gap-2">
-            <button disabled={saving||!!uploading} onClick={save} className="rounded-xl bg-[#0B2A4A] px-6 py-3 font-black text-white disabled:opacity-50">{saving?"جاري الحفظ...":"حفظ هوية الطباعة"}</button>
-            <button type="button" onClick={()=>window.open("/print/purchases/1","_blank")} className="rounded-xl border px-5 py-3 font-bold">فتح صفحة الطباعة للاختبار</button>
+            <button disabled={saving||!!uploading} onClick={save} className={primaryButtonClassName}>{saving?"جاري الحفظ...":"حفظ هوية الطباعة"}</button>
+            <button type="button" onClick={()=>window.open("/print/purchases/1","_blank")} className={secondaryButtonClassName}>فتح صفحة الطباعة للاختبار</button>
           </div>
         </div>
 

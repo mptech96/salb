@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../../api";
+import useSystemFeedback from "@/components/common/useSystemFeedback";
 
 type Plan = {
   id: number;
@@ -52,6 +53,7 @@ export default function PlansPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const { notify, requestConfirmation, feedbackDialog } = useSystemFeedback();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -74,11 +76,11 @@ export default function PlansPage() {
         }
       );
     } catch (error: any) {
-      alert(error?.response?.data?.message || "تعذر تحميل الباقات");
+      notify(error?.response?.data?.message || "تعذر تحميل الباقات", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     loadData();
@@ -140,11 +142,12 @@ export default function PlansPage() {
   }
 
   async function savePlan() {
-    if (!form.plan_name.trim()) return alert("أدخل اسم الباقة");
-    if (!form.plan_code.trim()) return alert("أدخل كود الباقة");
-    if (Number(form.monthly_price) < 0) return alert("السعر الشهري غير صحيح");
+    if (saving) return;
+    if (!form.plan_name.trim()) return notify("أدخل اسم الباقة", "warning");
+    if (!form.plan_code.trim()) return notify("أدخل كود الباقة", "warning");
+    if (Number(form.monthly_price) < 0) return notify("السعر الشهري غير صحيح", "warning");
     if (form.yearly_price !== "" && Number(form.yearly_price) < 0) {
-      return alert("السعر السنوي غير صحيح");
+      return notify("السعر السنوي غير صحيح", "warning");
     }
 
     setSaving(true);
@@ -152,10 +155,10 @@ export default function PlansPage() {
     try {
       if (editing) {
         await api.put(`/system-admin/plans/${editing.id}`, payload());
-        alert("تم تحديث الباقة");
+        notify("تم تحديث الباقة", "success");
       } else {
         await api.post("/system-admin/plans", payload());
-        alert("تم إنشاء الباقة");
+        notify("تم إنشاء الباقة", "success");
       }
 
       setShowDialog(false);
@@ -167,37 +170,37 @@ export default function PlansPage() {
 
       if (validationErrors) {
         const firstError = Object.values(validationErrors).flat().at(0);
-        alert(String(firstError || "تحقق من البيانات"));
+        notify(String(firstError || "تحقق من البيانات"), "error");
       } else {
-        alert(error?.response?.data?.message || "تعذر حفظ الباقة");
+        notify(error?.response?.data?.message || "تعذر حفظ الباقة", "error");
       }
     } finally {
       setSaving(false);
     }
   }
 
-  async function togglePlan(plan: Plan) {
+  function togglePlan(plan: Plan) {
     const action = Number(plan.is_active) === 1 ? "إيقاف" : "تفعيل";
-    if (!confirm(`هل تريد ${action} باقة "${plan.plan_name}"؟`)) return;
-
-    try {
-      await api.put(`/system-admin/plans/${plan.id}/toggle`);
-      await loadData();
-    } catch (error: any) {
-      alert(error?.response?.data?.message || "تعذر تغيير حالة الباقة");
-    }
+    requestConfirmation(`هل تريد ${action} باقة "${plan.plan_name}"؟`, async () => {
+      try {
+        await api.put(`/system-admin/plans/${plan.id}/toggle`);
+        await loadData();
+      } catch (error: any) {
+        notify(error?.response?.data?.message || "تعذر تغيير حالة الباقة", "error");
+      }
+    }, "تأكيد تغيير حالة الباقة");
   }
 
-  async function deletePlan(plan: Plan) {
-    if (!confirm(`هل تريد حذف باقة "${plan.plan_name}" نهائيًا؟`)) return;
-
-    try {
-      await api.delete(`/system-admin/plans/${plan.id}`);
-      alert("تم حذف الباقة");
-      await loadData();
-    } catch (error: any) {
-      alert(error?.response?.data?.message || "تعذر حذف الباقة");
-    }
+  function deletePlan(plan: Plan) {
+    requestConfirmation(`هل تريد حذف باقة "${plan.plan_name}" نهائيًا؟`, async () => {
+      try {
+        await api.delete(`/system-admin/plans/${plan.id}`);
+        notify("تم حذف الباقة", "success");
+        await loadData();
+      } catch (error: any) {
+        notify(error?.response?.data?.message || "تعذر حذف الباقة", "error");
+      }
+    }, "تأكيد حذف الباقة");
   }
 
   return (
@@ -481,6 +484,7 @@ export default function PlansPage() {
           </div>
         </div>
       ) : null}
+      {feedbackDialog}
     </section>
   );
 }

@@ -10,7 +10,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className="min-h-screen bg-slate-100 text-slate-900">
+      <body className="min-h-screen bg-[#f5f7fa] text-slate-900">
         <AppShell>{children}</AppShell>
       </body>
     </html>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import useSystemFeedback from "@/components/common/useSystemFeedback";
 
 export default function WorkersPage() {
   const [workers, setWorkers] = useState<any[]>([]);
@@ -15,6 +16,8 @@ export default function WorkersPage() {
   const [loan, setLoan] = useState({ loan_date: today(), amount: "", payment_method: "CASH", notes: "" });
   const [commission, setCommission] = useState({ commission_date: today(), amount: "", status: "PENDING", notes: "" });
   const [attendance, setAttendance] = useState({ attendance_date: today(), check_in: "", check_out: "", work_hours: "", overtime_hours: "", status: "PRESENT", notes: "" });
+  const [saving, setSaving] = useState(false);
+  const { notify, requestConfirmation, feedbackDialog } = useSystemFeedback();
 
   useEffect(() => {
     loadWorkers();
@@ -25,7 +28,7 @@ export default function WorkersPage() {
     const res = await api.get("/workers");
     setWorkers(Array.isArray(res.data.data) ? res.data.data : []);
   } catch (e: any) {
-    alert(e?.response?.data?.message || "فشل تحميل العمال");
+    notify(e?.response?.data?.message || "فشل تحميل العمال", "error");
     setWorkers([]);
   }
 }
@@ -48,49 +51,65 @@ export default function WorkersPage() {
   }
 
   async function saveWorker() {
-    if (!form.worker_name) return alert("اكتب اسم العامل");
+    if (saving) return;
+    if (!form.worker_name) return notify("اكتب اسم العامل", "warning");
 
     const payload = {
       ...form,
       salary_rate: Number(form.salary_rate || 0),
     };
 
-    if (selected) {
-      await api.put(`/workers/${selected.id}`, payload);
-      alert("تم تعديل العامل");
-    } else {
-      await api.post("/workers", payload);
-      alert("تم إنشاء العامل");
-    }
+    setSaving(true);
+    try {
+      if (selected) {
+        await api.put(`/workers/${selected.id}`, payload);
+        notify("تم تعديل العامل", "success");
+      } else {
+        await api.post("/workers", payload);
+        notify("تم إنشاء العامل", "success");
+      }
 
-    setShowForm(false);
-    loadWorkers();
+      setShowForm(false);
+      await loadWorkers();
+    } catch (e: any) {
+      notify(e?.response?.data?.message || "فشل حفظ العامل", "error");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  async function deleteWorker(id: number) {
-    if (!confirm("حذف العامل؟")) return;
-    await api.delete(`/workers/${id}`);
-    loadWorkers();
+  function deleteWorker(id: number) {
+    requestConfirmation("حذف العامل؟", async () => {
+      await api.delete(`/workers/${id}`);
+      await loadWorkers();
+    }, "تأكيد حذف العامل");
   }
 
   async function saveLoan() {
-    if (!selected) return;
-    if (!loan.amount) return alert("أدخل مبلغ السلفة");
+    if (!selected || saving) return;
+    if (!loan.amount) return notify("أدخل مبلغ السلفة", "warning");
 
-    await api.post(`/workers/${selected.id}/loans`, {
-      ...loan,
-      amount: Number(loan.amount),
-    });
+    setSaving(true);
+    try {
+      await api.post(`/workers/${selected.id}/loans`, {
+        ...loan,
+        amount: Number(loan.amount),
+      });
 
-    alert("تم حفظ السلفة");
-    setLoan({ loan_date: today(), amount: "", payment_method: "CASH", notes: "" });
-    openWorker(selected.id);
+      notify("تم حفظ السلفة", "success");
+      setLoan({ loan_date: today(), amount: "", payment_method: "CASH", notes: "" });
+      await openWorker(selected.id);
+    } catch (e: any) {
+      notify(e?.response?.data?.message || "فشل حفظ السلفة", "error");
+    } finally {
+      setSaving(false);
+    }
   }
 
  async function saveCommission() {
-  if (!selected) return;
+  if (!selected || saving) return;
   if (!commission.amount || Number(commission.amount) <= 0) {
-    return alert("أدخل مبلغ العمولة");
+    return notify("أدخل مبلغ العمولة", "warning");
   }
 
   const payload = {
@@ -102,9 +121,10 @@ export default function WorkersPage() {
 
   console.log("COMMISSION PAYLOAD", payload);
 
+  setSaving(true);
   try {
     await api.post(`/workers/${selected.id}/commissions`, payload);
-    alert("تم حفظ العمولة");
+    notify("تم حفظ العمولة", "success");
 
     setCommission({
       commission_date: today(),
@@ -113,48 +133,57 @@ export default function WorkersPage() {
       notes: "",
     });
 
-    openWorker(selected.id);
+    await openWorker(selected.id);
   } catch (e: any) {
     console.error(e?.response?.data || e);
-    alert(e?.response?.data?.message || "فشل حفظ العمولة");
+    notify(e?.response?.data?.message || "فشل حفظ العمولة", "error");
+  } finally {
+    setSaving(false);
   }
 }
-async function approveCommission(id: number) {
-  if (!confirm("اعتماد العمولة وإنشاء قيد استحقاق؟")) return;
-
-  try {
-    await api.post(`/workers/commissions/${id}/approve`);
-    alert("تم اعتماد العمولة وإنشاء القيد");
-    openWorker(selected.id);
-  } catch (e: any) {
-    alert(e?.response?.data?.message || "فشل اعتماد العمولة");
-  }
+function approveCommission(id: number) {
+  requestConfirmation("اعتماد العمولة وإنشاء قيد استحقاق؟", async () => {
+    try {
+      await api.post(`/workers/commissions/${id}/approve`);
+      notify("تم اعتماد العمولة وإنشاء القيد", "success");
+      await openWorker(selected.id);
+    } catch (e: any) {
+      notify(e?.response?.data?.message || "فشل اعتماد العمولة", "error");
+    }
+  }, "تأكيد اعتماد العمولة");
 }
 
-async function payCommission(id: number) {
-  if (!confirm("دفع العمولة وإنشاء سند صرف وقيد دفع؟")) return;
-
-  try {
-    await api.post(`/workers/commissions/${id}/pay`);
-    alert("تم دفع العمولة");
-    openWorker(selected.id);
-  } catch (e: any) {
-    alert(e?.response?.data?.message || "فشل دفع العمولة");
-  }
+function payCommission(id: number) {
+  requestConfirmation("دفع العمولة وإنشاء سند صرف وقيد دفع؟", async () => {
+    try {
+      await api.post(`/workers/commissions/${id}/pay`);
+      notify("تم دفع العمولة", "success");
+      await openWorker(selected.id);
+    } catch (e: any) {
+      notify(e?.response?.data?.message || "فشل دفع العمولة", "error");
+    }
+  }, "تأكيد دفع العمولة");
 }
 
   async function saveAttendance() {
-    if (!selected) return;
+    if (!selected || saving) return;
 
-    await api.post(`/workers/${selected.id}/attendance`, {
-      ...attendance,
-      work_hours: Number(attendance.work_hours || 0),
-      overtime_hours: Number(attendance.overtime_hours || 0),
-    });
+    setSaving(true);
+    try {
+      await api.post(`/workers/${selected.id}/attendance`, {
+        ...attendance,
+        work_hours: Number(attendance.work_hours || 0),
+        overtime_hours: Number(attendance.overtime_hours || 0),
+      });
 
-    alert("تم حفظ الحضور");
-    setAttendance({ attendance_date: today(), check_in: "", check_out: "", work_hours: "", overtime_hours: "", status: "PRESENT", notes: "" });
-    openWorker(selected.id);
+      notify("تم حفظ الحضور", "success");
+      setAttendance({ attendance_date: today(), check_in: "", check_out: "", work_hours: "", overtime_hours: "", status: "PRESENT", notes: "" });
+      await openWorker(selected.id);
+    } catch (e: any) {
+      notify(e?.response?.data?.message || "فشل حفظ الحضور", "error");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -541,6 +570,7 @@ async function payCommission(id: number) {
           </div>
         </div>
       )}
+      {feedbackDialog}
     </section>
   );
 }

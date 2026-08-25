@@ -39,11 +39,11 @@ export default function AppSidebar({
   onExitSupport,
 }: Props) {
   return (
-    <div className="flex h-full flex-col bg-[#071D33] text-white">
-      <div className="border-b border-white/10 px-4 py-4 sm:px-5">
+    <div className="flex h-full flex-col bg-[#102c44] text-white">
+      <div className="border-b border-white/10 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1">
               <img
                 src="/sulb-logo.png"
                 alt="شعار صلب ERP"
@@ -52,7 +52,7 @@ export default function AppSidebar({
             </div>
 
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-black">صلب ERP</h1>
+              <h1 className="truncate text-base font-semibold">صلب ERP</h1>
               <p className="mt-0.5 truncate text-[10px] font-bold tracking-[0.22em] text-cyan-200">
                 SULB ERP
               </p>
@@ -74,7 +74,7 @@ export default function AppSidebar({
           ) : null}
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.07] p-3.5">
+        <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.05] p-3">
           <div className="truncate text-sm font-black">
             {user.name || "-"}
           </div>
@@ -100,8 +100,8 @@ export default function AppSidebar({
         ) : null}
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-        <div className="space-y-2">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+        <div className="space-y-1">
           {groups.map((group) => {
             const expanded = openGroups.has(group.id);
             const hasActiveItem = group.items.some((item) =>
@@ -111,7 +111,7 @@ export default function AppSidebar({
             return (
               <section
                 key={group.id}
-                className={`overflow-hidden rounded-2xl border transition ${
+                className={`overflow-hidden rounded-lg border transition ${
                   hasActiveItem
                     ? "border-cyan-300/20 bg-white/[0.07]"
                     : "border-transparent"
@@ -120,13 +120,13 @@ export default function AppSidebar({
                 <button
                   type="button"
                   onClick={() => onToggleGroup(group.id)}
-                  className="flex w-full items-center gap-3 px-3.5 py-3 text-right transition hover:bg-white/[0.07]"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-right transition hover:bg-white/[0.07]"
                   aria-expanded={expanded}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sm">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-sm">
                     {group.icon}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-black">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {group.label}
                   </span>
                   <span
@@ -169,9 +169,9 @@ export default function AppSidebar({
                           key={item.href}
                           href={item.href}
                           onClick={onNavigate}
-                          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition ${
+                          className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition ${
                             active
-                              ? "bg-white text-[#0B2A4A] shadow-lg"
+                              ? "bg-white text-[#0B2A4A]"
                               : "text-blue-50 hover:bg-white/10"
                           }`}
                         >
@@ -196,7 +196,7 @@ export default function AppSidebar({
         <button
           type="button"
           onClick={onLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-black text-white transition hover:bg-rose-700"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
         >
           <span>⇥</span>
           تسجيل الخروج

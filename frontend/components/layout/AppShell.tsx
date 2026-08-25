@@ -12,6 +12,7 @@ import {
 import api from "@/app/api";
 import SystemDialog from "@/components/common/SystemDialog";
 import AppSidebar from "@/components/navigation/AppSaidbar";
+import { AppTopbar } from "@/components/ui/enterprise";
 import {
   companyNavigation,
   platformNavigation,
@@ -447,7 +448,7 @@ export default function AppShell({
 
   return (
     <>
-      <div className="min-h-screen bg-slate-100 text-slate-900 lg:pr-[304px]">
+      <div className="min-h-screen bg-[#f5f7fa] text-slate-900 lg:pr-[304px]">
           <aside className="fixed inset-y-0 right-0 z-40 hidden w-[304px] lg:block">
             <AppSidebar {...sidebarProps} />
           </aside>
@@ -471,71 +472,23 @@ export default function AppShell({
           ) : null}
 
           <div className="min-w-0">
-            {isSupportMode ? <div className={`sticky top-0 z-[60] border-b px-4 py-3 text-center text-sm font-black ${user.support_access_level === "WRITE" ? "border-red-300 bg-red-100 text-red-900" : "border-amber-300 bg-amber-100 text-amber-950"}`}>
-              وضع الدعم · {user.company_name} · {user.support_access_level === "WRITE" ? "WRITE" : "READ ONLY"} · التذكرة: {user.support_ticket_reference || "-"} · الانتهاء: {user.support_expires_at || "-"}
-              <button type="button" onClick={requestExitSupport} className="mr-4 rounded-xl bg-slate-900 px-3 py-1.5 text-white">خروج من وضع الدعم</button>
-            </div> : null}
-            <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 lg:px-8">
-              <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setMobileMenuOpen(true)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0B2A4A] text-xl font-black text-white shadow lg:hidden"
-                    aria-label="فتح القائمة"
-                  >
-                    ☰
-                  </button>
+            <AppTopbar
+              title={currentPageTitle}
+              companyName={user.company_name}
+              branchName={user.branch_name}
+              userName={user.name}
+              isPlatformAdmin={isPlatformAdmin}
+              onOpenMenu={() => setMobileMenuOpen(true)}
+              support={isSupportMode ? {
+                companyName: user.company_name || "الشركة الحالية",
+                accessMode: user.support_access_level === "WRITE" ? "WRITE" : "READ_ONLY",
+                ticket: user.support_ticket_reference,
+                expiry: user.support_expires_at,
+                onExit: requestExitSupport,
+              } : undefined}
+            />
 
-                  <div className="min-w-0">
-                    <p className="truncate text-[11px] font-bold text-slate-500">
-                      {portalLabel}
-                    </p>
-                    <h2 className="truncate text-lg font-black text-[#0B2A4A] sm:text-xl">
-                      {currentPageTitle}
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="hidden min-w-0 items-center gap-3 sm:flex">
-                  <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-left">
-                    <div className="max-w-56 truncate text-xs font-black text-[#0B2A4A]">
-                      {user.company_name || "إدارة منصة صلب"}
-                    </div>
-                    <div className="max-w-56 truncate text-[11px] text-slate-500">
-                      {user.branch_name || "مركز التحكم"}
-                    </div>
-                  </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0B2A4A] font-black text-white">
-                    {(user.name || "م").trim().charAt(0)}
-                  </div>
-                </div>
-              </div>
-            </header>
-
-            {isSupportMode ? (
-              <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 sm:px-6 lg:px-8">
-                <div className="mx-auto flex max-w-[1600px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <div className="text-sm font-black text-amber-900">
-                      أنت الآن داخل {user.company_name} بوضع الدعم الفني
-                    </div>
-                    <div className="mt-1 text-xs text-amber-700">
-                      جميع العمليات مسجلة باسم مدير المنصة، والجلسة محصورة داخل هذه الشركة.
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={requestExitSupport}
-                    className="rounded-2xl bg-amber-600 px-5 py-3 text-sm font-black text-white transition hover:bg-amber-700"
-                  >
-                    العودة إلى لوحة المنصة
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            <main className="mx-auto min-w-0 max-w-[1600px] p-4 sm:p-6 lg:p-8">
+            <main className="mx-auto min-w-0 max-w-[1600px] p-4 sm:p-5 lg:p-6">
               {children}
             </main>
           </div>

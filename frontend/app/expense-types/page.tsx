@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import useSystemFeedback from "@/components/common/useSystemFeedback";
 
 export default function ExpenseTypesPage() {
   const [types, setTypes] = useState<any[]>([]);
@@ -12,6 +13,7 @@ export default function ExpenseTypesPage() {
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState(defaultForm());
+  const { notify, requestConfirmation, feedbackDialog } = useSystemFeedback();
 
   useEffect(() => {
     loadAll();
@@ -48,7 +50,8 @@ export default function ExpenseTypesPage() {
   }
 
   async function saveType() {
-    if (!form.type_name.trim()) return alert("اكتب اسم نوع المصروف");
+    if (saving) return;
+    if (!form.type_name.trim()) return notify("اكتب اسم نوع المصروف", "warning");
 
     try {
       setSaving(true);
@@ -62,25 +65,26 @@ export default function ExpenseTypesPage() {
 
       if (selected) {
         await api.put(`/expense-types/${selected.id}`, payload);
-        alert("تم تعديل نوع المصروف");
+        notify("تم تعديل نوع المصروف", "success");
       } else {
         await api.post("/expense-types", payload);
-        alert("تم إنشاء نوع المصروف");
+        notify("تم إنشاء نوع المصروف", "success");
       }
 
       setShowForm(false);
       await loadAll();
     } catch (e: any) {
-      alert(e?.response?.data?.message || "فشل حفظ نوع المصروف");
+      notify(e?.response?.data?.message || "فشل حفظ نوع المصروف", "error");
     } finally {
       setSaving(false);
     }
   }
 
-  async function stopType(id: number) {
-    if (!confirm("إيقاف نوع المصروف؟ لن يظهر كمصروف نشط.")) return;
-    await api.delete(`/expense-types/${id}`);
-    await loadAll();
+  function stopType(id: number) {
+    requestConfirmation("إيقاف نوع المصروف؟ لن يظهر كمصروف نشط.", async () => {
+      await api.delete(`/expense-types/${id}`);
+      await loadAll();
+    }, "تأكيد إيقاف نوع المصروف");
   }
 
   const filtered = useMemo(() => {
@@ -324,6 +328,7 @@ export default function ExpenseTypesPage() {
           </div>
         </div>
       )}
+      {feedbackDialog}
     </section>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 type DialogType = "success" | "error" | "warning" | "info" | "confirm";
 
@@ -13,6 +13,7 @@ type Props = {
   cancelText?: string;
   showCancel?: boolean;
   loading?: boolean;
+  children?: ReactNode;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
 };
@@ -61,6 +62,7 @@ export default function SystemDialog({
   cancelText = "إلغاء",
   showCancel = false,
   loading = false,
+  children,
   onConfirm,
   onClose,
 }: Props) {
@@ -111,6 +113,8 @@ export default function SystemDialog({
           >
             {message}
           </p>
+
+          {children ? <div className="mt-5 w-full text-right">{children}</div> : null}
         </div>
 
         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">

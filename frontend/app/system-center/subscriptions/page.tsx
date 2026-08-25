@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../../api";
+import SystemDialog from "@/components/common/SystemDialog";
 
 type Status = "ACTIVE" | "TRIAL" | "SUSPENDED" | "EXPIRED" | "CANCELLED";
 
@@ -81,6 +82,25 @@ export default function SubscriptionsPage() {
 
   const [selected, setSelected] = useState<Subscription | null>(null);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
+  const [systemDialog, setSystemDialog] = useState<{
+    open: boolean;
+    type: "success" | "error" | "warning" | "confirm";
+    title: string;
+    message: string;
+    action: "STATUS" | "QUICK_EXTEND" | null;
+    subscription: Subscription | null;
+  }>({ open: false, type: "success", title: "", message: "", action: null, subscription: null });
+
+  function notify(type: "success" | "error" | "warning", message: string) {
+    setSystemDialog({
+      open: true,
+      type,
+      title: type === "success" ? "تمت العملية بنجاح" : type === "warning" ? "تحقق من البيانات" : "تعذر تنفيذ العملية",
+      message,
+      action: null,
+      subscription: null,
+    });
+  }
 
   const [renewForm, setRenewForm] = useState({
     start_date: today(),
@@ -198,13 +218,13 @@ export default function SubscriptionsPage() {
   }
 
   async function renewSubscription() {
-    if (!selected) return;
+    if (!selected || saving) return;
     if (!renewForm.start_date || !renewForm.end_date) {
-      alert("حدد تاريخ بداية ونهاية الاشتراك");
+      notify("warning", "حدد تاريخ بداية ونهاية الاشتراك");
       return;
     }
     if (new Date(renewForm.end_date) < new Date(renewForm.start_date)) {
-      alert("تاريخ النهاية يجب أن يكون بعد تاريخ البداية");
+      notify("warning", "تاريخ النهاية يجب أن يكون بعد تاريخ البداية");
       return;
     }
 
@@ -216,21 +236,21 @@ export default function SubscriptionsPage() {
         plan_id: renewForm.plan_id ? Number(renewForm.plan_id) : undefined,
         notes: renewForm.notes || null,
       });
-      alert("تم تجديد الاشتراك بنجاح");
+      notify("success", "تم تجديد الاشتراك بنجاح");
       setDialogMode(null);
       setSelected(null);
       await loadData(true);
     } catch (e: any) {
-      alert(e?.response?.data?.message || "تعذر تجديد الاشتراك");
+      notify("error", e?.response?.data?.message || "تعذر تجديد الاشتراك");
     } finally {
       setSaving(false);
     }
   }
 
   async function changePlan() {
-    if (!selected) return;
+    if (!selected || saving) return;
     if (!planForm.plan_id) {
-      alert("اختر الباقة الجديدة");
+      notify("warning", "اختر الباقة الجديدة");
       return;
     }
 
@@ -240,22 +260,22 @@ export default function SubscriptionsPage() {
         plan_id: Number(planForm.plan_id),
         notes: planForm.notes || null,
       });
-      alert("تم تغيير الباقة بنجاح");
+      notify("success", "تم تغيير الباقة بنجاح");
       setDialogMode(null);
       setSelected(null);
       await loadData(true);
     } catch (e: any) {
-      alert(e?.response?.data?.message || "تعذر تغيير الباقة");
+      notify("error", e?.response?.data?.message || "تعذر تغيير الباقة");
     } finally {
       setSaving(false);
     }
   }
 
   async function extendSubscription() {
-    if (!selected) return;
+    if (!selected || saving) return;
     const days = Number(extendForm.days);
     if (!Number.isFinite(days) || days < 1) {
-      alert("أدخل عدد أيام صحيح");
+      notify("warning", "أدخل عدد أيام صحيح");
       return;
     }
 
@@ -265,60 +285,74 @@ export default function SubscriptionsPage() {
         days,
         notes: extendForm.notes || null,
       });
-      alert("تم تمديد الاشتراك بنجاح");
+      notify("success", "تم تمديد الاشتراك بنجاح");
       setDialogMode(null);
       setSelected(null);
       await loadData(true);
     } catch (e: any) {
-      alert(e?.response?.data?.message || "تعذر تمديد الاشتراك");
+      notify("error", e?.response?.data?.message || "تعذر تمديد الاشتراك");
     } finally {
       setSaving(false);
     }
   }
 
-  async function updateStatus() {
-    if (!selected) return;
-    if (
-      !window.confirm(
-        `سيتم تغيير حالة اشتراك ${selected.company_name} إلى ${statusLabel(
-          statusForm.status
-        )}. هل تريد المتابعة؟`
-      )
-    ) {
-      return;
-    }
+  function requestStatusUpdate() {
+    if (!selected || saving) return;
+    setSystemDialog({
+      open: true,
+      type: "confirm",
+      title: "تأكيد تغيير حالة الاشتراك",
+      message: `سيتم تغيير حالة اشتراك ${selected.company_name} إلى ${statusLabel(statusForm.status)}. هل تريد المتابعة؟`,
+      action: "STATUS",
+      subscription: selected,
+    });
+  }
 
+  async function updateStatus() {
+    if (!selected || saving) return;
     setSaving(true);
     try {
       await api.put(`/system-admin/subscriptions/${selected.id}/status`, {
         status: statusForm.status,
         notes: statusForm.notes || null,
       });
-      alert("تم تحديث حالة الاشتراك");
+      notify("success", "تم تحديث حالة الاشتراك");
       setDialogMode(null);
       setSelected(null);
       await loadData(true);
     } catch (e: any) {
-      alert(e?.response?.data?.message || "تعذر تحديث حالة الاشتراك");
+      notify("error", e?.response?.data?.message || "تعذر تحديث حالة الاشتراك");
     } finally {
       setSaving(false);
     }
   }
 
-  async function quickExtend(item: Subscription) {
-    if (!window.confirm(`تمديد اشتراك ${item.company_name} لمدة 30 يوم؟`)) {
-      return;
-    }
+  function requestQuickExtend(item: Subscription) {
+    if (saving) return;
+    setSystemDialog({
+      open: true,
+      type: "confirm",
+      title: "تأكيد تمديد الاشتراك",
+      message: `تمديد اشتراك ${item.company_name} لمدة 30 يوم؟`,
+      action: "QUICK_EXTEND",
+      subscription: item,
+    });
+  }
 
+  async function quickExtend(item: Subscription) {
+    if (saving) return;
+    setSaving(true);
     try {
       await api.post(`/system-admin/subscriptions/${item.id}/extend`, {
         days: 30,
         notes: "تمديد سريع لمدة 30 يوم",
       });
-      alert("تم تمديد الاشتراك");
+      notify("success", "تم تمديد الاشتراك");
       await loadData(true);
     } catch (e: any) {
-      alert(e?.response?.data?.message || "تعذر تمديد الاشتراك");
+      notify("error", e?.response?.data?.message || "تعذر تمديد الاشتراك");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -494,7 +528,7 @@ export default function SubscriptionsPage() {
                       <div className="flex min-w-[340px] flex-wrap gap-2">
                         <ActionButton label="تجديد" onClick={() => openDialog("RENEW", item)} className="bg-[#0B2A4A] text-white" />
                         <ActionButton label="تغيير الباقة" onClick={() => openDialog("PLAN", item)} className="bg-blue-100 text-blue-700" />
-                        <ActionButton label="تمديد 30 يوم" onClick={() => quickExtend(item)} className="bg-emerald-100 text-emerald-700" />
+                        <ActionButton label="تمديد 30 يوم" onClick={() => requestQuickExtend(item)} className="bg-emerald-100 text-emerald-700" />
                         <ActionButton label="تمديد مخصص" onClick={() => openDialog("EXTEND", item)} className="bg-violet-100 text-violet-700" />
                         <ActionButton
                           label={item.status === "ACTIVE" ? "تعليق" : "تغيير الحالة"}
@@ -593,11 +627,30 @@ export default function SubscriptionsPage() {
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-800">
                 الحالات المعلقة والمنتهية والملغاة توقف الشركة، والحالتان النشطة والتجريبية تعيدان تفعيلها.
               </div>
-              <DialogActions saving={saving} onCancel={closeDialog} onSave={updateStatus} saveLabel="تحديث الحالة" />
+              <DialogActions saving={saving} onCancel={closeDialog} onSave={requestStatusUpdate} saveLabel="تحديث الحالة" />
             </div>
           ) : null}
         </Dialog>
       ) : null}
+      <SystemDialog
+        open={systemDialog.open}
+        type={systemDialog.type}
+        title={systemDialog.title}
+        message={systemDialog.message}
+        loading={saving && systemDialog.type === "confirm"}
+        showCancel={systemDialog.type === "confirm"}
+        confirmText={systemDialog.type === "confirm" ? "تأكيد" : "حسنًا"}
+        onClose={() => setSystemDialog((current) => ({ ...current, open: false }))}
+        onConfirm={async () => {
+          if (systemDialog.action === "STATUS") {
+            await updateStatus();
+          } else if (systemDialog.action === "QUICK_EXTEND" && systemDialog.subscription) {
+            await quickExtend(systemDialog.subscription);
+          } else {
+            setSystemDialog((current) => ({ ...current, open: false }));
+          }
+        }}
+      />
     </section>
   );
 }

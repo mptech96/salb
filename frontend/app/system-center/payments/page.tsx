@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import api from "../../api";
+import SystemDialog from "@/components/common/SystemDialog";
 
 type Dashboard = {
   companies: number;
@@ -229,6 +230,23 @@ export default function PaymentsPage() {
   const [saving, setSaving] = useState(false);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [systemDialog, setSystemDialog] = useState<{
+    open: boolean;
+    type: "success" | "error" | "warning" | "confirm";
+    title: string;
+    message: string;
+    invoice: Invoice | null;
+  }>({ open: false, type: "success", title: "", message: "", invoice: null });
+
+  function notify(type: "success" | "error" | "warning", message: string) {
+    setSystemDialog({
+      open: true,
+      type,
+      title: type === "success" ? "تمت العملية بنجاح" : type === "warning" ? "تحقق من البيانات" : "تعذر تنفيذ العملية",
+      message,
+      invoice: null,
+    });
+  }
 
   const loadData = useCallback(async (manual = false) => {
     manual ? setRefreshing(true) : setLoading(true);
@@ -420,22 +438,23 @@ export default function PaymentsPage() {
 
   async function createInvoice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
 
     if (!invoiceForm.company_id) {
-      alert("اختر الاشتراك والشركة");
+      notify("warning", "اختر الاشتراك والشركة");
       return;
     }
 
     if (!invoiceForm.plan_id) {
-      alert("اختر الباقة");
+      notify("warning", "اختر الباقة");
       return;
     }
 
     if (!invoiceForm.subtotal || Number(invoiceForm.subtotal) < 0) {
       if (invoiceForm.billing_period === "YEARLY") {
-        alert("السعر السنوي غير محدد لهذه الباقة. حدده من شاشة الباقات أولًا.");
+        notify("warning", "السعر السنوي غير محدد لهذه الباقة. حدده من شاشة الباقات أولًا.");
       } else {
-        alert("أدخل قيمة الفاتورة");
+        notify("warning", "أدخل قيمة الفاتورة");
       }
       return;
     }
@@ -463,14 +482,14 @@ export default function PaymentsPage() {
         notes: invoiceForm.notes || null,
       });
 
-      alert("تم إنشاء فاتورة الاشتراك بنجاح");
+      notify("success", "تم إنشاء فاتورة الاشتراك بنجاح");
 
       setDialogMode(null);
       setInvoiceForm(initialInvoiceForm());
 
       await loadData(true);
     } catch (requestError: any) {
-      alert(
+      notify("error",
         requestError?.response?.data?.message ||
           firstValidationError(requestError?.response?.data?.errors) ||
           "تعذر إنشاء الفاتورة"
@@ -482,14 +501,15 @@ export default function PaymentsPage() {
 
   async function createPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
 
     if (!paymentForm.invoice_id) {
-      alert("اختر الفاتورة");
+      notify("warning", "اختر الفاتورة");
       return;
     }
 
     if (!paymentForm.amount || Number(paymentForm.amount) <= 0) {
-      alert("أدخل مبلغ دفعة صحيح");
+      notify("warning", "أدخل مبلغ دفعة صحيح");
       return;
     }
 
@@ -497,7 +517,7 @@ export default function PaymentsPage() {
       selectedInvoice &&
       Number(paymentForm.amount) > Number(selectedInvoice.remaining_amount)
     ) {
-      alert("مبلغ الدفعة أكبر من المبلغ المتبقي");
+      notify("warning", "مبلغ الدفعة أكبر من المبلغ المتبقي");
       return;
     }
 
@@ -521,7 +541,7 @@ export default function PaymentsPage() {
         notes: paymentForm.notes || null,
       });
 
-      alert("تم تسجيل الدفعة وتحديث الفاتورة بنجاح");
+      notify("success", "تم تسجيل الدفعة وتحديث الفاتورة بنجاح");
 
       setDialogMode(null);
       setSelectedInvoice(null);
@@ -529,7 +549,7 @@ export default function PaymentsPage() {
 
       await loadData(true);
     } catch (requestError: any) {
-      alert(
+      notify("error",
         requestError?.response?.data?.message ||
           firstValidationError(requestError?.response?.data?.errors) ||
           "تعذر تسجيل الدفعة"
@@ -539,35 +559,39 @@ export default function PaymentsPage() {
     }
   }
 
-  async function cancelInvoice(invoice: Invoice) {
+  function requestInvoiceCancellation(invoice: Invoice) {
+    if (cancellingId !== null) return;
     if (invoice.status === "PAID") {
-      alert("لا يمكن إلغاء فاتورة مدفوعة بالكامل");
+      notify("warning", "لا يمكن إلغاء فاتورة مدفوعة بالكامل");
       return;
     }
 
     if (Number(invoice.paid_amount) > 0) {
-      alert("لا يمكن إلغاء فاتورة تحتوي على دفعات");
+      notify("warning", "لا يمكن إلغاء فاتورة تحتوي على دفعات");
       return;
     }
 
-    const confirmed = window.confirm(
-      `هل تريد إلغاء الفاتورة ${invoice.invoice_number}؟`
-    );
+    setSystemDialog({
+      open: true,
+      type: "confirm",
+      title: "تأكيد إلغاء الفاتورة",
+      message: `هل تريد إلغاء الفاتورة ${invoice.invoice_number}؟`,
+      invoice,
+    });
+  }
 
-    if (!confirmed) {
-      return;
-    }
-
+  async function cancelInvoice(invoice: Invoice) {
+    if (cancellingId !== null) return;
     setCancellingId(invoice.id);
 
     try {
       await api.put(`/system-admin/invoices/${invoice.id}/cancel`);
 
-      alert("تم إلغاء الفاتورة بنجاح");
+      notify("success", "تم إلغاء الفاتورة بنجاح");
 
       await loadData(true);
     } catch (requestError: any) {
-      alert(
+      notify("error",
         requestError?.response?.data?.message ||
           "تعذر إلغاء الفاتورة"
       );
@@ -746,7 +770,7 @@ export default function PaymentsPage() {
           rows={filteredInvoices}
           cancellingId={cancellingId}
           onPayment={openPaymentDialog}
-          onCancel={cancelInvoice}
+          onCancel={requestInvoiceCancellation}
         />
       ) : (
         <PaymentsTable loading={loading} rows={filteredPayments} />
@@ -1201,6 +1225,23 @@ export default function PaymentsPage() {
           </form>
         </Dialog>
       ) : null}
+      <SystemDialog
+        open={systemDialog.open}
+        type={systemDialog.type}
+        title={systemDialog.title}
+        message={systemDialog.message}
+        loading={cancellingId !== null && systemDialog.type === "confirm"}
+        showCancel={systemDialog.type === "confirm"}
+        confirmText={systemDialog.type === "confirm" ? "تأكيد الإلغاء" : "حسنًا"}
+        onClose={() => setSystemDialog((current) => ({ ...current, open: false }))}
+        onConfirm={async () => {
+          if (systemDialog.type === "confirm" && systemDialog.invoice) {
+            await cancelInvoice(systemDialog.invoice);
+          } else {
+            setSystemDialog((current) => ({ ...current, open: false }));
+          }
+        }}
+      />
     </section>
   );
 }

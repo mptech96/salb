@@ -1,13 +1,14 @@
 "use client";
 
 import {ReactNode} from "react";
+import { formatNumber, formatPercentage } from "@/lib/formatters";
 
 export const latinDigits=(v:any)=>String(v??"")
   .replace(/[٠-٩]/g,(d)=>String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
   .replace(/[۰-۹]/g,(d)=>String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
-export const fmt=(v:any,max=3)=>{const n=Number(v??0);return Number.isFinite(n)?new Intl.NumberFormat("en-US",{useGrouping:true,minimumFractionDigits:0,maximumFractionDigits:max}).format(n):"0"};
-export const money=(v:any)=>{const n=Number(v??0);return Number.isFinite(n)?new Intl.NumberFormat("en-US",{useGrouping:true,minimumFractionDigits:2,maximumFractionDigits:3}).format(n):"0.00"};
-export const percent=(v:any,max=3)=>`${fmt(v,max)}%`;
+export const fmt=(v:any,max=3)=>formatNumber(v,{maximumFractionDigits:max});
+export const money=(v:any)=>formatNumber(v,{minimumFractionDigits:2,maximumFractionDigits:3});
+export const percent=(v:any,max=3)=>formatPercentage(v,max);
 export const nowLocal=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
 export const today=()=>new Date().toISOString().slice(0,10);
 
