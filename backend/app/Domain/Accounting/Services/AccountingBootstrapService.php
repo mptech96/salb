@@ -341,7 +341,9 @@ class AccountingBootstrapService
         $base = strtoupper((string) (DB::table('company_settings')->where('company_id',$companyId)->value('base_currency_code')
             ?: DB::table('company_settings')->where('company_id',$companyId)->value('currency_code') ?: 'USD'));
         if (\Illuminate\Support\Facades\Schema::hasTable('currencies')) {
-            DB::table('currencies')->updateOrInsert(['currency_code'=>$base],['currency_name'=>$base,'decimal_places'=>3,'is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+            if (!DB::table('currencies')->where('currency_code',$base)->where('is_active',1)->exists()) {
+                throw new \RuntimeException('The required active company currency is not configured: '.$base);
+            }
             DB::table('company_currencies')->updateOrInsert(['company_id'=>$companyId,'currency_code'=>$base],['is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
         }
         $code='CASH-BR-'.$branchId;

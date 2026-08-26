@@ -91,6 +91,14 @@ final class CompanyProvisioningService
         ]);
         DB::table('user_roles')->insert(['company_id'=>$companyId,'user_id'=>$ownerId,'role_id'=>$role->id,'is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
 
+        $currencyCode = strtoupper(trim((string) ($input['currency_code'] ?? 'SAR')));
+        DB::table('company_settings')->updateOrInsert(['company_id'=>$companyId],[
+            'print_company_name'=>$input['company_name'],'print_phone'=>$input['phone'],'print_email'=>$input['email']??null,
+            'print_city'=>$input['city']??null,'print_address'=>$input['address']??null,'currency_name'=>'ريال',
+            'currency_code'=>$currencyCode,'primary_color'=>'#0B2A4A','secondary_color'=>'#123D68',
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+
         $accounting = $this->accounting->bootstrapCompany($companyId, $branchId, $input['start_date'], $input['end_date']);
         $status = ($input['subscription_mode'] ?? 'PAID') === 'TRIAL' && ($input['trial_allowed'] ?? false) ? 'TRIAL' : 'PENDING';
         $subscriptionId = DB::table('subscriptions')->insertGetId([
@@ -102,12 +110,6 @@ final class CompanyProvisioningService
         $invoiceId = null;
         if ($status === 'PENDING') $invoiceId = $this->createInvoice($companyId, $subscriptionId, $ownerId, $plan, $input);
         $invoice = $invoiceId ? DB::table('subscription_invoices')->where('id', $invoiceId)->first() : null;
-        DB::table('company_settings')->updateOrInsert(['company_id'=>$companyId],[
-            'print_company_name'=>$input['company_name'],'print_phone'=>$input['phone'],'print_email'=>$input['email']??null,
-            'print_city'=>$input['city']??null,'print_address'=>$input['address']??null,'currency_name'=>'ريال',
-            'currency_code'=>strtoupper((string)($input['currency_code']??'SAR')),'primary_color'=>'#0B2A4A','secondary_color'=>'#123D68',
-            'created_at'=>now(),'updated_at'=>now(),
-        ]);
 
         $result = ['company_id'=>$companyId,'branch_id'=>$branchId,'owner_id'=>$ownerId,'username'=>$username,
             'subscription_id'=>$subscriptionId,'subscription_status'=>$status,'invoice_id'=>$invoiceId,

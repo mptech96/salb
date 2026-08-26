@@ -19,9 +19,10 @@ class BranchController extends Controller
     private function branchId(): ?int { $v=request()->header('X-Branch-ID'); return is_numeric($v)?(int)$v:null; }
     private function roleCode(): string { return strtoupper(trim((string)request()->header('X-Role-Code',''))); }
     private function isSuper(): bool { return $this->roleCode()==='SUPER_ADMIN'; }
+    private function isSupport(): bool { return (bool)request()->attributes->get('is_support_mode',false)&&$this->roleCode()==='SUPPORT'; }
     private function isCompanyManager(): bool { return in_array($this->roleCode(),self::COMPANY_MANAGER_ROLES,true); }
     private function isBranchManager(): bool { return $this->roleCode()==='BRANCH_MANAGER'; }
-    private function canViewBranches(): bool { return $this->isSuper()||$this->isCompanyManager()||$this->isBranchManager(); }
+    private function canViewBranches(): bool { return $this->isSuper()||$this->isCompanyManager()||$this->isBranchManager()||$this->isSupport(); }
     private function canManageBranches(): bool { return $this->isSuper()||$this->isCompanyManager(); }
 
     private function rules(int $companyId,?int $ignoreId=null): array
@@ -51,7 +52,7 @@ class BranchController extends Controller
         if(!$this->canViewBranches()) return response()->json(['status'=>false,'message'=>'لا تملك صلاحية عرض الفروع.','data'=>[]],403);
         $cid=$this->companyId();$bid=$this->branchId();
         $q=DB::table('branches as b')->leftJoin('companies as c','c.id','=','b.company_id')->leftJoin('branch_financial_settings as bfs',function($j){$j->on('bfs.company_id','=','b.company_id')->on('bfs.branch_id','=','b.id');})->leftJoin('cost_centers as cc','cc.id','=','bfs.default_cost_center_id')->leftJoin('financial_accounts as fa','fa.id','=','bfs.default_cash_financial_account_id');
-        if(!$this->isSuper()){if(!$cid)return response()->json(['status'=>false,'message'=>'تعذر تحديد الشركة الحالية.','data'=>[]],403);$q->where('b.company_id',$cid);} if($this->isBranchManager()){if(!$bid)return response()->json(['status'=>false,'message'=>'تعذر تحديد الفرع الحالي.','data'=>[]],403);$q->where('b.id',$bid);}
+        if(!$this->isSuper()){if(!$cid)return response()->json(['status'=>false,'message'=>'تعذر تحديد الشركة الحالية.','data'=>[]],403);$q->where('b.company_id',$cid);} if($this->isBranchManager()||($this->isSupport()&&$bid)){if(!$bid)return response()->json(['status'=>false,'message'=>'تعذر تحديد الفرع الحالي.','data'=>[]],403);$q->where('b.id',$bid);}
         $rows=$q->select('b.*','c.company_name','cc.id as cost_center_id','cc.cost_center_code','cc.cost_center_name','fa.id as default_cash_financial_account_id','fa.account_name as default_cash_name',DB::raw('(SELECT COUNT(*) FROM users u WHERE u.branch_id=b.id AND u.is_active=1) as users_count'))->orderByDesc('b.id')->get();
         foreach($rows as $row)$row->address_details=$addresses->getDefault((int)$row->company_id,'BRANCH',(int)$row->id);
         return response()->json(['status'=>true,'data'=>$rows]);
@@ -76,7 +77,7 @@ class BranchController extends Controller
     {
         if(!$this->canViewBranches())return response()->json(['status'=>false,'message'=>'لا تملك صلاحية عرض الفرع.'],403);
         $q=DB::table('branches as b')->leftJoin('companies as c','c.id','=','b.company_id')->leftJoin('branch_financial_settings as bfs',function($j){$j->on('bfs.company_id','=','b.company_id')->on('bfs.branch_id','=','b.id');})->leftJoin('cost_centers as cc','cc.id','=','bfs.default_cost_center_id')->leftJoin('financial_accounts as fa','fa.id','=','bfs.default_cash_financial_account_id')->select('b.*','c.company_name','cc.id as cost_center_id','cc.cost_center_code','cc.cost_center_name','fa.id as default_cash_financial_account_id','fa.account_name as default_cash_name')->where('b.id',$id);
-        if(!$this->isSuper())$q->where('b.company_id',$this->companyId());if($this->isBranchManager())$q->where('b.id',$this->branchId());$row=$q->first();if(!$row)return response()->json(['status'=>false,'message'=>'الفرع غير موجود أو غير مسموح بعرضه.'],404);
+        if(!$this->isSuper())$q->where('b.company_id',$this->companyId());if($this->isBranchManager()||($this->isSupport()&&$this->branchId()))$q->where('b.id',$this->branchId());$row=$q->first();if(!$row)return response()->json(['status'=>false,'message'=>'الفرع غير موجود أو غير مسموح بعرضه.'],404);
         $row->address_details=$addresses->getDefault((int)$row->company_id,'BRANCH',(int)$row->id);return response()->json(['status'=>true,'data'=>$row]);
     }
 

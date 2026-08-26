@@ -11,6 +11,7 @@ import {
 
 import api from "@/app/api";
 import SystemDialog from "@/components/common/SystemDialog";
+import SupportReadOnlyGuard from "@/components/layout/SupportReadOnlyGuard";
 import AppSidebar from "@/components/navigation/AppSaidbar";
 import { AppTopbar } from "@/components/ui/enterprise";
 import {
@@ -80,6 +81,13 @@ export default function AppShell({
   const isSupportMode = user?.is_support_mode === true;
   const isPlatformAdmin =
     roleCode === "SUPER_ADMIN" && !user?.company_id && !isSupportMode;
+  const isReadOnlySupport =
+    isSupportMode && user?.support_access_level !== "WRITE";
+  const isPlatformDestination =
+    PLATFORM_PATHS.some((path) => pathMatches(pathname, path)) ||
+    platformNavigation.some((group) =>
+      group.items.some((item) => pathMatches(pathname, item.href))
+    );
   const effectiveFeatures = ((session?.subscription as { effective_entitlements?: { features?: Record<string, boolean> } } | null)?.effective_entitlements?.features) ?? {};
 
   const syncLocalSession = useCallback(() => {
@@ -214,7 +222,7 @@ export default function AppShell({
       return;
     }
 
-    if (pathname === "/" && isPlatformAdmin) {
+    if (isPlatformAdmin && !isPlatformDestination) {
       router.replace("/system-center");
       return;
     }
@@ -230,6 +238,7 @@ export default function AppShell({
     companyLandingPath,
     effectiveFeatures,
     isPlatformAdmin,
+    isPlatformDestination,
     isPublicPath,
     pathname,
     ready,
@@ -427,6 +436,10 @@ export default function AppShell({
     );
   }
 
+  if (isPlatformAdmin && !isPlatformDestination) {
+    return null;
+  }
+
   const portalLabel = isPlatformAdmin
     ? "بوابة إدارة المنصة"
     : isSupportMode
@@ -489,7 +502,9 @@ export default function AppShell({
             />
 
             <main className="mx-auto min-w-0 max-w-[1600px] p-4 sm:p-5 lg:p-6">
-              {children}
+              <SupportReadOnlyGuard active={isReadOnlySupport}>
+                {children}
+              </SupportReadOnlyGuard>
             </main>
           </div>
         </div>

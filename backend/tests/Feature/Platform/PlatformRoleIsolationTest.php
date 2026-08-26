@@ -23,6 +23,19 @@ class PlatformRoleIsolationTest extends Wave1SubscriptionTestCase
         self::assertSame(['company.read'],app(SessionContextService::class)->permissionsForUser($x['userId'],$x['companyId'])->all());
     }
 
+    public function test_company_owner_cannot_switch_to_another_company_using_request_headers():void
+    {
+        $owner=$this->tenantUser('COMPANY_OWNER');
+        $foreign=$this->tenantUser('MANAGER');
+
+        Sanctum::actingAs(User::findOrFail($owner['userId']),['session']);
+        $response=$this->withHeader('X-Company-ID',(string)$foreign['companyId'])->getJson('/api/me')->assertOk();
+
+        self::assertSame($owner['userId'],(int)$response->json('user.id'));
+        self::assertSame($owner['companyId'],(int)$response->json('user.company_id'));
+        self::assertNotSame($foreign['companyId'],(int)$response->json('user.company_id'));
+    }
+
     public function test_genuine_platform_admin_is_allowed():void
     {
         $user=$this->platformUser();Sanctum::actingAs($user,['session','platform-admin']);$this->getJson('/api/system-admin/features')->assertOk();

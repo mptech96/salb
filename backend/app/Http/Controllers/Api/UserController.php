@@ -17,6 +17,7 @@ class UserController extends Controller
     private const COMPANY_MANAGER_ROLES = [
         'COMPANY_MANAGER',
         'COMPANY_ADMIN',
+        'COMPANY_OWNER',
         'MANAGER',
     ];
 

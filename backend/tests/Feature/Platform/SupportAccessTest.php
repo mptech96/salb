@@ -3,8 +3,10 @@
 namespace Tests\Feature\Platform;
 
 use App\Models\User;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\Wave1SubscriptionTestCase;
 
@@ -39,6 +41,32 @@ class SupportAccessTest extends Wave1SubscriptionTestCase
     public function test_read_only_blocks_post_put_patch_and_delete():void
     {
         $created=$this->createSupport();foreach([['postJson','/api/workers'],['putJson','/api/workers/999'],['patchJson','/api/workers/999'],['deleteJson','/api/workers/999']]as[$method,$uri]){$response=$this->withToken($created['token'])->{$method}($uri,[]);$response->assertForbidden()->assertJsonPath('code','SUPPORT_WRITE_DENIED');}
+    }
+
+    public function test_read_only_support_can_read_only_its_durable_target_branch():void
+    {
+        Schema::create('branch_financial_settings',fn(Blueprint $table)=>[$table->id(),$table->unsignedBigInteger('company_id'),$table->unsignedBigInteger('branch_id'),$table->unsignedBigInteger('default_cost_center_id')->nullable(),$table->unsignedBigInteger('default_cash_financial_account_id')->nullable()]);
+        Schema::create('cost_centers',fn(Blueprint $table)=>[$table->id(),$table->string('cost_center_code')->nullable(),$table->string('cost_center_name')->nullable()]);
+        Schema::create('financial_accounts',fn(Blueprint $table)=>[$table->id(),$table->string('account_name')->nullable()]);
+        Schema::create('entity_addresses',fn(Blueprint $table)=>[$table->id(),$table->unsignedBigInteger('company_id'),$table->string('entity_type'),$table->unsignedBigInteger('entity_id'),$table->boolean('is_active')->default(true),$table->boolean('is_default')->default(true)]);
+
+        [$admin,$company]=$this->platformAndCompany();
+        $target=DB::table('branches')->insertGetId(['company_id'=>$company,'branch_name'=>'AUTHORIZED_TEST_BRANCH','is_active'=>1]);
+        $other=DB::table('branches')->insertGetId(['company_id'=>$company,'branch_name'=>'OTHER_TEST_BRANCH','is_active'=>1]);
+        $foreignCompany=DB::table('companies')->insertGetId(['company_name'=>'FOREIGN_TEST_COMPANY','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+        $foreign=DB::table('branches')->insertGetId(['company_id'=>$foreignCompany,'branch_name'=>'FOREIGN_TEST_BRANCH','is_active'=>1]);
+
+        Sanctum::actingAs($admin,['session','platform-admin']);
+        $created=$this->postJson("/api/companies/$company/support-access",['reason'=>'Scoped read-only branch UAT','ticket_reference'=>'UAT-BRANCH-READ','branch_id'=>$target,'expires_at'=>now()->addHour()->toISOString()])->assertOk()->json();
+        $this->app['auth']->forgetGuards();
+
+        $this->withToken($created['token'])->getJson('/api/branches')->assertOk()->assertJsonCount(1,'data')->assertJsonPath('data.0.id',$target);
+        $this->withToken($created['token'])->getJson("/api/branches/$target")->assertOk()->assertJsonPath('data.id',$target);
+        $this->withToken($created['token'])->getJson("/api/branches/$other")->assertNotFound();
+        $this->withToken($created['token'])->getJson("/api/branches/$foreign")->assertNotFound();
+        $this->withToken($created['token'])->postJson('/api/branches',['branch_name'=>'SHOULD_NOT_EXIST'])->assertForbidden()->assertJsonPath('code','SUPPORT_WRITE_DENIED');
+        self::assertDatabaseMissing('branches',['branch_name'=>'SHOULD_NOT_EXIST']);
+        self::assertDatabaseHas('audit_logs',['support_session_id'=>$created['support_session_id'],'action_type'=>'SUPPORT_WRITE','result'=>'DENIED']);
     }
 
     public function test_write_requires_capability_and_authorized_attempt_is_audited():void
