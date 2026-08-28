@@ -1,12 +1,15 @@
 "use client";
 
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useState,type ReactNode} from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
 import useSystemFeedback from "@/components/common/useSystemFeedback";
 import SearchSelect from "@/components/sulb/SearchSelect";
 import {ListToolbar,Pager,TableScroll,usePagedSearch,stickyActionCell,stickyActionHead} from "@/components/sulb/ListUX";
-import {Badge,Btn,Empty,Field,Modal,PageHero,Panel,Stat,fmt,money,inputCls,today} from "@/components/sulb/EnterpriseUI";
+import {Badge,Btn,Empty,Field,Modal as LegacyModal,Panel,Stat,fmt,money,inputCls,today} from "@/components/sulb/EnterpriseUI";
+import { PageHeader, primaryButtonClassName, secondaryButtonClassName } from "@/components/ui/enterprise";
+import { EnterpriseDrawer } from "@/components/design-system/EnterpriseWorkspace";
+import { OperationalStatusBar } from "@/components/design-system/OperationalWorkspace";
 
 const emptyLine=()=>({item_id:"",gross_qty_kg:"",deduction_qty_kg:"0",deduction_reason:"",price_unit:"KG",unit_price:"",discount_amount:"0",tax_code_id:"",vat_percent:"",notes:"",_manual:true});
 const typeLabel:any={PURCHASE:"شراء / وارد",SALE:"بيع / صادر",TRANSFER:"تحويل",INTERNAL:"داخلي"};
@@ -18,13 +21,13 @@ const companyCar=(c:any)=>["COMPANY","OTHER","CARRIER"].includes(String(c.owner_
 const carText=(c:any)=>`لوحة ${cleanPlate(c.plate_number)||"—"}${c.car_number&&String(c.car_number)!==cleanPlate(c.plate_number)?` — رقم ${c.car_number}`:""}`;
 
 export default function ShipmentsPage(){
-  const [rows,setRows]=useState<any[]>([]),[meta,setMeta]=useState<any>({}),[detail,setDetail]=useState<any>(null),[loading,setLoading]=useState(false),[filter,setFilter]=useState("ALL");
+  const [rows,setRows]=useState<any[]>([]),[meta,setMeta]=useState<any>({}),[detail,setDetail]=useState<any>(null),[loading,setLoading]=useState(false),[filter,setFilter]=useState("ALL"),[statusFilter,setStatusFilter]=useState("ALL");
   const [editor,setEditor]=useState<any>(null),[costForm,setCostForm]=useState<any>(null),[allocationEditor,setAllocationEditor]=useState<any>(null),[dialog,setDialog]=useState<any>({open:false,type:"info",title:"",message:"",action:null});
   const {requestConfirmation,feedbackDialog}=useSystemFeedback();
   const msg=(type:any,title:string,message:string,action:any=null)=>setDialog({open:true,type,title,message,action});
   async function load(){try{const [a,b]=await Promise.all([api.get("/shipments"),api.get("/shipments/meta")]);setRows(a.data.data||[]);setMeta(b.data.data||{})}catch(e:any){msg("error","تعذر تحميل الشحنات",e?.response?.data?.message||"تعذر تحميل البيانات.")}}
   useEffect(()=>{void load()},[]);
-  const filteredByType=useMemo(()=>filter==="ALL"?rows:rows.filter((x:any)=>x.shipment_type===filter),[rows,filter]);
+  const filteredByType=useMemo(()=>rows.filter((x:any)=>(filter==="ALL"||x.shipment_type===filter)&&(statusFilter==="ALL"||x.commercial_status===statusFilter)),[rows,filter,statusFilter]);
   const list=usePagedSearch(filteredByType,(x:any)=>`${x.shipment_number||""} ${x.shipment_date||""} ${x.branch_name||""} ${x.supplier_name||""} ${x.customer_name||""} ${cleanPlate(x.plate_number)} ${x.car_number||""} ${statusLabel[x.commercial_status]||x.commercial_status||""}`,25);
   const visible=list.paged;
   const shipmentCars=useMemo(()=>{const all=(meta.cars||[]).filter((c:any)=>!editor?.branch_id||!c.branch_id||Number(c.branch_id)===Number(editor.branch_id));if(!editor)return [];const rank=(c:any)=>editor.shipment_type==="PURCHASE"&&editor.supplier_id&&supplierCar(c,editor.supplier_id)?0:editor.shipment_type==="SALE"&&editor.customer_id&&(customerCar(c,editor.customer_id)||companyCar(c))?0:1;return [...all].sort((a:any,b:any)=>rank(a)-rank(b)||carText(a).localeCompare(carText(b),"ar"))},[meta.cars,editor?.shipment_type,editor?.supplier_id,editor?.customer_id,editor?.branch_id]);
@@ -47,8 +50,8 @@ export default function ShipmentsPage(){
   function deleteCost(id:number){requestConfirmation("حذف تكلفة الشحنة المسودة؟",async()=>{try{await api.delete(`/shipment-costs/${id}`);await openShipment(detail.shipment.id)}catch(e:any){msg("error","تعذر الحذف",e?.response?.data?.message||"التكلفة قد تكون مرحلة.")}},"تأكيد حذف تكلفة الشحنة")}
 
   return <section dir="rtl" className="space-y-5">
-    <PageHero eyebrow="الحركة التشغيلية" title="الشحنات والحمولات" description="الشحنة تجمع كروت الميزان. كل كرت جديد يأتي بصنفه وصافي وزنه من محطة الميزان تلقائيًا، وهنا يتم الخصم والجودة والتسعير والتكاليف. جعلها READY لا يغيّر المخزون أو الحسابات؛ الأثر الحقيقي يبدأ عند ترحيل الفاتورة." actions={<><Btn onClick={()=>newShipment("PURCHASE")}>+ شحنة شراء</Btn><Btn kind="success" onClick={()=>newShipment("SALE")}>+ شحنة بيع</Btn></>}/>
-    <div className="grid gap-3 md:grid-cols-4"><Stat label="تحت التجهيز" value={rows.filter((x:any)=>x.commercial_status==="DRAFT").length}/><Stat label="جاهزة للفوترة" value={rows.filter((x:any)=>x.commercial_status==="READY").length}/><Stat label="مفوترة" value={rows.filter((x:any)=>x.commercial_status==="INVOICED").length}/><Stat label="قاعدة المخزون" value="الفاتورة المرحلة" sub="لا الشحنة ولا الميزان"/></div>
+    <PageHeader title="الشحنات والحمولات" description="مسار تشغيلي موحد من تجميع كروت الميزان حتى الجاهزية للفوترة، دون تغيير دورة المستند الحالية." breadcrumbs={[{label:"الرئيسية",href:"/"},{label:"الشحنات"}]} actions={<div className="flex flex-wrap gap-2"><button type="button" className={secondaryButtonClassName} onClick={()=>newShipment("PURCHASE")}>+ شحنة شراء</button><button type="button" className={primaryButtonClassName} onClick={()=>newShipment("SALE")}>+ شحنة بيع</button></div>}/>
+    <OperationalStatusBar active={statusFilter} onChange={setStatusFilter} statuses={[{id:"ALL",label:"كل الشحنات",count:rows.length},{id:"DRAFT",label:"تحت التجهيز",count:rows.filter((x:any)=>x.commercial_status==="DRAFT").length,tone:"warning"},{id:"READY",label:"جاهزة للفوترة",count:rows.filter((x:any)=>x.commercial_status==="READY").length,tone:"success"},{id:"INVOICED",label:"مفوترة",count:rows.filter((x:any)=>x.commercial_status==="INVOICED").length,tone:"info"}]}/>
     <Panel><ListToolbar query={list.query} setQuery={list.setQuery} total={list.total} page={list.page} pageSize={list.pageSize} setPageSize={list.setPageSize} placeholder="ابحث برقم الشحنة، المورد/العميل، الفرع، اللوحة أو الحالة..." extra={<div className="flex flex-wrap gap-2">{[["ALL","الكل"],["PURCHASE","شراء"],["SALE","بيع"],["TRANSFER","تحويل"]].map((x:any)=><button key={x[0]} onClick={()=>setFilter(x[0])} className={`rounded-xl px-4 py-2 text-sm font-black ${filter===x[0]?"bg-[#0B2A4A] text-white":"bg-white border"}`}>{x[1]}</button>)}</div>}/></Panel>
     <Panel title="سجل الشحنات"><TableScroll><table className="w-full min-w-[1250px] text-right text-sm"><thead className="bg-slate-100"><tr>{["الشحنة","النوع","التاريخ","الفرع","المورد / العميل","السيارة الافتراضية","الكروت","وزن فعلي كجم","مقبول كجم","تكاليف","الحالة"].map((x:string)=><th key={x} className="p-3">{x}</th>)}<th className={stickyActionHead}>إجراء</th></tr></thead><tbody>{visible.length===0?<tr><td colSpan={12}><Empty text="لا توجد شحنات مطابقة."/></td></tr>:visible.map((x:any)=><tr key={x.id} className="group border-t hover:bg-slate-50"><td className="p-3 font-black text-[#0B2A4A]">{x.shipment_number}</td><td className="p-3">{typeLabel[x.shipment_type]||x.shipment_type}</td><td className="p-3">{x.shipment_date}</td><td className="p-3">{x.branch_name}</td><td className="p-3">{x.supplier_name||x.customer_name||"—"}</td><td className="p-3">{cleanPlate(x.plate_number)||x.car_number||"اختياري"}</td><td className="p-3">{x.weighbridge_cards_count||0}{Number(x.open_cards_count)>0?<span className="mr-1 text-amber-600">({x.open_cards_count} مفتوح)</span>:""}</td><td className="p-3">{fmt(x.physical_net_weight_kg)}</td><td className="p-3">{fmt(x.accepted_weight_kg)}</td><td className="p-3">{money(x.shipment_cost_total)}</td><td className="p-3"><Badge tone={x.commercial_status==="INVOICED"?"purple":x.commercial_status==="READY"?"green":"amber"}>{statusLabel[x.commercial_status]||x.commercial_status}</Badge></td><td className={stickyActionCell}><Btn kind="light" onClick={()=>openShipment(x.id)}>فتح</Btn></td></tr>)}</tbody></table></TableScroll><Pager page={list.page} totalPages={list.totalPages} setPage={list.setPage}/></Panel>
 
@@ -92,3 +95,5 @@ export default function ShipmentsPage(){
     {feedbackDialog}
   </section>
 }
+
+function Modal({title,children,onClose,wide=false,footer}:{title:string;children:ReactNode;onClose:()=>void;wide?:boolean;footer?:ReactNode}){if(!wide)return <LegacyModal title={title} onClose={onClose} footer={footer}>{children}</LegacyModal>;return <EnterpriseDrawer open title={title} description="مساحة تفاصيل وتشغيل الشحنة حسب حالتها الحالية." onClose={onClose} footer={footer}>{children}</EnterpriseDrawer>}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
 import {ListToolbar,Pager,TableScroll,usePagedSearch,stickyActionCell,stickyActionHead} from "@/components/sulb/ListUX";
+import {PageHeader,StatCard,primaryButtonClassName} from "@/components/ui/enterprise";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (v: any) => Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 3 });
@@ -156,23 +157,15 @@ export default function InventoryOperationsPage() {
   }
 
   return (
-    <section dir="rtl" className="space-y-5">
-      <div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-sm text-blue-100">المخزون والمعالجة</div>
-            <h1 className="mt-1 text-3xl font-black">الفرز والتحويل والتخزين</h1>
-            <p className="mt-2 max-w-4xl text-sm leading-7 text-blue-100">تحويل بين الفروع مع حفظ مصدر وتكلفة الدفعات، أو تحويل صنف إلى عدة مخرجات مع فاقد/زيادة مبررة وتوزيع تكلفة.</p>
-          </div>
-          <button onClick={() => { reset(); setShowForm(true); }} className="rounded-2xl bg-white px-5 py-3 font-black text-[#0B2A4A]">+ عملية مخزنية</button>
-        </div>
-      </div>
+    <section dir="rtl" className="space-y-4">
+      <PageHeader title="عمليات المخزون والتحويل" description="مسودات تشغيلية للفرز والمعالجة والتحويل بين الفروع مع مراجعة مستقلة قبل الترحيل." breadcrumbs={[{label:"المخزون"},{label:"العمليات"}]} actions={<button onClick={() => { reset(); setShowForm(true); }} className={primaryButtonClassName}>+ عملية مخزنية</button>}/>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4"><StatCard label="إجمالي العمليات" value={rows.length}/><StatCard label="مسودات" value={rows.filter((r:any)=>r.status==="DRAFT").length} tone="accent"/><StatCard label="مرحلة" value={rows.filter((r:any)=>r.status==="POSTED").length} tone="positive"/><StatCard label="تحويلات الفروع" value={rows.filter((r:any)=>r.operation_type==="TRANSFER").length}/></div>
 
       <div className="rounded-3xl border bg-white p-4 shadow-sm"><ListToolbar query={list.query} setQuery={list.setQuery} total={list.total} page={list.page} pageSize={list.pageSize} setPageSize={list.setPageSize} placeholder="ابحث برقم العملية، النوع، الفرع أو الحالة..."/><TableScroll><table className="w-full min-w-[1200px] text-right text-sm"><thead className="bg-slate-100"><tr><th className="p-3">العملية</th><th>التاريخ</th><th>النوع</th><th>من فرع</th><th>إلى فرع</th><th>مدخل كجم</th><th>مخرج كجم</th><th>فاقد</th><th>تكلفة المدخل</th><th>الحالة</th><th className={stickyActionHead}>إجراء</th></tr></thead><tbody>{loading?<tr><td colSpan={11} className="p-8 text-center text-slate-500">جاري التحميل...</td></tr>:list.paged.length===0?<tr><td colSpan={11} className="p-8 text-center text-slate-500">لا توجد عمليات مطابقة.</td></tr>:list.paged.map((r:any)=><tr key={r.id} className="group border-t hover:bg-slate-50"><td className="p-3 font-black text-[#0B2A4A]">{r.operation_number}</td><td>{r.operation_date}</td><td>{typeMap[r.operation_type]||r.operation_type}</td><td>{r.from_branch_name||"—"}</td><td>{r.to_branch_name||"—"}</td><td>{fmt(r.input_weight_kg)}</td><td>{fmt(r.output_weight_kg)}</td><td>{fmt(r.loss_qty_kg)}</td><td>{fmt(r.input_cost)}</td><td><span className={`rounded-full px-3 py-1 text-xs font-black ${r.status==="POSTED"?"bg-emerald-100 text-emerald-700":"bg-amber-100 text-amber-700"}`}>{r.status==="POSTED"?"مرحلة":"مسودة"}</span></td><td className={stickyActionCell}><div className="flex flex-wrap gap-2 whitespace-nowrap"><button onClick={()=>void openDetail(r.id)} className="rounded-lg border px-3 py-1.5 font-bold">عرض</button><a href={`/print/inventory-operation/${r.id}`} className="rounded-lg border px-3 py-1.5 font-bold text-[#0B2A4A]">طباعة</a>{r.status==="DRAFT"&&<button onClick={()=>void approve(r.id)} disabled={saving} className="rounded-lg bg-emerald-700 px-3 py-1.5 font-bold text-white disabled:opacity-50">ترحيل</button>}</div></td></tr>)}</tbody></table></TableScroll><Pager page={list.page} totalPages={list.totalPages} setPage={list.setPage}/></div>
 
       {showForm && (
         <div className="fixed inset-0 z-[230] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[94vh] w-full max-w-7xl overflow-auto rounded-3xl bg-white p-5 shadow-2xl">
+          <div className="max-h-[94vh] w-full max-w-7xl overflow-auto rounded-xl bg-white p-4 shadow-2xl sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div><h2 className="text-2xl font-black text-[#0B2A4A]">عملية مخزنية جديدة</h2><p className="text-sm text-slate-500">الوحدة الأساسية كجم. الترحيل الفعلي يتم بعد حفظ المسودة ومراجعتها.</p></div>
               <button onClick={() => setShowForm(false)} className="rounded-xl border px-4 py-2">إغلاق</button>
@@ -189,7 +182,7 @@ export default function InventoryOperationsPage() {
             <div className="mt-6 grid gap-5 xl:grid-cols-2">
               <Lines title="المدخلات / المصدر" kind="from_lines" lines={form.from_lines} items={items} setLine={setLine} setForm={setForm} form={form} showAllocation={false} availableFor={availableKg} />
               {!isTransfer && !isScrap ? <Lines title="المخرجات / الناتج" kind="to_lines" lines={form.to_lines} items={items} setLine={setLine} setForm={setForm} form={form} showAllocation allocationMethod={form.allocation_method} /> : (
-                <div className="rounded-3xl border border-dashed p-6 text-sm text-slate-500">{isTransfer ? "في التحويل بين الفروع لا تدخل مخرجات يدويًا؛ النظام ينشئ نفس الكميات في الفرع المستلم مع نفس تكلفة ومصدر الدفعات." : "الهالك يخرج المخزون ويولد أثرًا محاسبيًا على حساب تسوية/هالك المخزون."}</div>
+                <div className="rounded-xl border border-dashed p-6 text-sm leading-7 text-slate-600">{isTransfer ? <><b className="block text-slate-900">تكوين الطرف المستلم تلقائي</b>في التحويل بين الفروع لا تدخل مخرجات أو دفعات يدويًا؛ النظام ينشئ نفس الكميات في الفرع المستلم مع نفس تكلفة ومصدر الدفعات.<span className="mt-2 block rounded-lg bg-sky-50 p-3 font-semibold text-sky-900">يتم اختيار الدفعات تلقائيًا حسب FIFO</span></> : "الهالك يخرج المخزون ويولد أثرًا محاسبيًا على حساب تسوية/هالك المخزون."}</div>
               )}
             </div>
 

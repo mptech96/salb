@@ -12,8 +12,9 @@ import {
 import api from "@/app/api";
 import SystemDialog from "@/components/common/SystemDialog";
 import SupportReadOnlyGuard from "@/components/layout/SupportReadOnlyGuard";
-import AppSidebar from "@/components/navigation/AppSaidbar";
-import { AppTopbar } from "@/components/ui/enterprise";
+import EnterpriseSidebar from "@/components/layout/EnterpriseSidebar";
+import EnterpriseTopbar from "@/components/layout/EnterpriseTopbar";
+import EnterpriseExperience, { OPEN_HELP_EVENT } from "@/components/experience/EnterpriseExperience";
 import {
   companyNavigation,
   platformNavigation,
@@ -36,6 +37,7 @@ import {
 
 const PUBLIC_PATHS = ["/login", "/register"];
 const PLATFORM_PATHS = ["/system-center", "/companies"];
+const UTILITY_PATHS = ["/help", "/legal"];
 type DialogState = {
   open: boolean;
   type: "success" | "error" | "warning" | "info" | "confirm";
@@ -71,6 +73,7 @@ export default function AppShell({
   const [sessionRetryKey, setSessionRetryKey] = useState(0);
   const [session, setSession] = useState<StoredSession | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<DialogState>(emptyDialog);
   const [dialogLoading, setDialogLoading] = useState(false);
@@ -84,6 +87,7 @@ export default function AppShell({
   const isReadOnlySupport =
     isSupportMode && user?.support_access_level !== "WRITE";
   const isPlatformDestination =
+    UTILITY_PATHS.some((path) => pathMatches(pathname, path)) ||
     PLATFORM_PATHS.some((path) => pathMatches(pathname, path)) ||
     platformNavigation.some((group) =>
       group.items.some((item) => pathMatches(pathname, item.href))
@@ -257,6 +261,10 @@ export default function AppShell({
       document.body.style.overflow = "";
     };
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    setSidebarCollapsed(localStorage.getItem("sulb-enterprise-sidebar-collapsed") === "1");
+  }, []);
 
   const storageGroupKey = isPlatformAdmin
     ? "sulb-open-platform-group"
@@ -459,11 +467,19 @@ export default function AppShell({
     onExitSupport: requestExitSupport,
   };
 
+  function toggleSidebar() {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      localStorage.setItem("sulb-enterprise-sidebar-collapsed", next ? "1" : "0");
+      return next;
+    });
+  }
+
   return (
     <>
-      <div className="min-h-screen bg-[#f5f7fa] text-slate-900 lg:pr-[304px]">
-          <aside className="fixed inset-y-0 right-0 z-40 hidden w-[304px] lg:block">
-            <AppSidebar {...sidebarProps} />
+      <div className={`min-h-screen bg-[var(--background)] text-slate-900 transition-[padding] duration-200 ${sidebarCollapsed ? "lg:pr-[72px]" : "lg:pr-[248px]"}`}>
+          <aside className={`fixed inset-y-0 right-0 z-40 hidden transition-[width] duration-200 lg:block ${sidebarCollapsed ? "w-[72px]" : "w-[248px]"}`}>
+            <EnterpriseSidebar {...sidebarProps} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
           </aside>
 
           {mobileMenuOpen ? (
@@ -475,7 +491,7 @@ export default function AppShell({
                 className="absolute inset-0 bg-slate-950/65 backdrop-blur-sm"
               />
               <aside className="absolute inset-y-0 right-0 w-[88%] max-w-[340px] shadow-2xl">
-                <AppSidebar
+                <EnterpriseSidebar
                   {...sidebarProps}
                   isMobile
                   onClose={() => setMobileMenuOpen(false)}
@@ -485,13 +501,16 @@ export default function AppShell({
           ) : null}
 
           <div className="min-w-0">
-            <AppTopbar
+            <EnterpriseTopbar
               title={currentPageTitle}
               companyName={user.company_name}
               branchName={user.branch_name}
               userName={user.name}
+              roleName={user.role?.role_name}
               isPlatformAdmin={isPlatformAdmin}
+              groups={navigationGroups}
               onOpenMenu={() => setMobileMenuOpen(true)}
+              onHelp={() => window.dispatchEvent(new Event(OPEN_HELP_EVENT))}
               support={isSupportMode ? {
                 companyName: user.company_name || "الشركة الحالية",
                 accessMode: user.support_access_level === "WRITE" ? "WRITE" : "READ_ONLY",
@@ -501,13 +520,18 @@ export default function AppShell({
               } : undefined}
             />
 
-            <main className="mx-auto min-w-0 max-w-[1600px] p-4 sm:p-5 lg:p-6">
+            <main className="mx-auto min-w-0 max-w-[1680px] p-3 sm:p-4 lg:p-5">
               <SupportReadOnlyGuard active={isReadOnlySupport}>
                 {children}
               </SupportReadOnlyGuard>
             </main>
+            <footer className="mx-auto flex max-w-[1680px] flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 pb-4 text-[10px] text-slate-500">
+              <a href="/help" className="hover:text-sky-700">مركز المساعدة</a><a href="/legal#terms" className="hover:text-sky-700">الشروط والأحكام</a><a href="/legal#privacy" className="hover:text-sky-700">الخصوصية</a><a href="/legal" className="hover:text-sky-700">السياسات</a>
+            </footer>
           </div>
         </div>
+
+      <EnterpriseExperience pathname={pathname} user={user} groups={navigationGroups} isPlatformAdmin={isPlatformAdmin} isSupportMode={isSupportMode} />
 
       <SystemDialog
         open={dialog.open}

@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { useRouter } from "next/navigation";
+import { LifecycleStrip, WorkspaceNotice } from "@/components/design-system/LifecycleWorkspace";
 
 import ActionMenu from "./components/ActionMenu";
 import DepreciationDialog from "./components/DepreciationDialog";
@@ -526,6 +527,9 @@ function closeDisposeDialog() {
             </div>
           </div>
         </header>
+
+        <LifecycleStrip title="دورة الأصل التشغيلية والمالية" steps={[{label:"سجل الأصل"},{label:"القيمة الدفترية"},{label:"الإهلاك"},{label:"الصيانة / النقل"},{label:"البيع / الشطب"},{label:"القيد والتاريخ"}]}/>
+        <WorkspaceNotice tone="warning">القيم الدفترية ومجمع الإهلاك ونتائج الحركات مصدرها الخادم. استخدم المراجعة قبل الإهلاك أو البيع أو الشطب، ولا تعتمد على تقدير واجهة المستخدم كقيد محاسبي.</WorkspaceNotice>
 
         {/*
         |--------------------------------------------------------------------------

@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
 import PrintHeader from "@/components/reports/PrintHeader";
+import { PageHeader, fieldClassName, primaryButtonClassName, secondaryButtonClassName } from "@/components/ui/enterprise";
+import { EnterpriseFilterBar } from "@/components/design-system/EnterpriseWorkspace";
+import { ReportExportBar } from "@/components/design-system/AccountingWorkspace";
 
 const fmt = (v: any) =>
   Number(v || 0).toLocaleString("ar", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
@@ -123,18 +126,7 @@ export default function ReportsPage() {
 
   return (
     <section dir="rtl" className="space-y-5">
-      <div className="no-print rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-sm text-blue-100">صلب ERP • مركز التقارير</div>
-            <h1 className="mt-1 text-3xl font-black">التقارير والتحليلات الشاملة</h1>
-            <p className="mt-2 max-w-4xl text-sm leading-7 text-blue-100">
-              التشغيل، المخزون، الشحنات، الميزان، الربحية، المالية والأرصدة من مصدر واحد مع طباعة وPDF وExcel وCSV.
-            </p>
-          </div>
-          <a href="/imports" className="rounded-2xl bg-white px-5 py-3 font-black text-[#0B2A4A]">استيراد البيانات</a>
-        </div>
-      </div>
+      <div className="no-print"><PageHeader title="مركز التقارير والتحليلات" description="التقارير المتاحة حاليًا مرتبة حسب غرض العمل مع الحفاظ على الفلاتر والتصدير من المصادر الحالية." breadcrumbs={[{ label: "الرئيسية", href: "/" }, { label: "التقارير" }]} actions={<a href="/imports" className={secondaryButtonClassName}>استيراد البيانات</a>} /></div>
 
       <div className="no-print grid gap-4 xl:grid-cols-[290px_1fr]">
         <aside className="space-y-4 rounded-3xl border bg-white p-4 shadow-sm">
@@ -153,24 +145,19 @@ export default function ReportsPage() {
         </aside>
 
         <div className="space-y-4">
-          <div className="grid gap-3 rounded-3xl border bg-white p-4 shadow-sm md:grid-cols-5">
-            <input type="date" value={filters.from_date} onChange={(e) => setFilters({ ...filters, from_date: e.target.value })} className="rounded-xl border p-3" />
-            <input type="date" value={filters.to_date} onChange={(e) => setFilters({ ...filters, to_date: e.target.value })} className="rounded-xl border p-3" />
-            <select value={filters.branch_id} onChange={(e) => setFilters({ ...filters, branch_id: e.target.value })} className="rounded-xl border p-3">
+          <EnterpriseFilterBar>
+            <input type="date" value={filters.from_date} onChange={(e) => setFilters({ ...filters, from_date: e.target.value })} className={fieldClassName} />
+            <input type="date" value={filters.to_date} onChange={(e) => setFilters({ ...filters, to_date: e.target.value })} className={fieldClassName} />
+            <select value={filters.branch_id} onChange={(e) => setFilters({ ...filters, branch_id: e.target.value })} className={fieldClassName}>
               <option value="">كل الفروع / نطاقي</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{b.branch_name}</option>)}
             </select>
-            <input value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} placeholder="بحث داخل التقرير..." className="rounded-xl border p-3" />
-            <button onClick={() => void run()} className="rounded-xl bg-[#0B2A4A] p-3 font-black text-white">{loading ? "جاري التحميل..." : "تطبيق"}</button>
-          </div>
+            <input value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} placeholder="بحث داخل التقرير..." className={fieldClassName} />
+            <button onClick={() => void run()} className={primaryButtonClassName}>{loading ? "جاري التحميل..." : "تطبيق"}</button>
+          </EnterpriseFilterBar>
 
           {data && (
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => window.print()} className="rounded-xl border bg-white px-4 py-2 font-bold">طباعة</button>
-              <button onClick={() => void download("pdf")} disabled={!!downloading} className="rounded-xl border bg-white px-4 py-2 font-bold">{downloading === "pdf" ? "PDF..." : "PDF"}</button>
-              <button onClick={() => void download("xls")} disabled={!!downloading} className="rounded-xl border bg-white px-4 py-2 font-bold">{downloading === "xls" ? "Excel..." : "Excel"}</button>
-              <button onClick={() => void download("csv")} disabled={!!downloading} className="rounded-xl border bg-white px-4 py-2 font-bold">{downloading === "csv" ? "CSV..." : "CSV"}</button>
-            </div>
+            <ReportExportBar><button onClick={() => window.print()} className={secondaryButtonClassName}>طباعة</button><button onClick={() => void download("pdf")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "pdf" ? "PDF..." : "PDF"}</button><button onClick={() => void download("xls")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "xls" ? "Excel..." : "Excel"}</button><button onClick={() => void download("csv")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "csv" ? "CSV..." : "CSV"}</button></ReportExportBar>
           )}
         </div>
       </div>

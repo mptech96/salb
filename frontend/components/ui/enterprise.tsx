@@ -218,10 +218,16 @@ export function EmptyState({
   description?: string;
   action?: ReactNode;
 }) {
+  const contextualDescription = description || ({
+    "لا توجد بيانات": "ابدأ بتعديل معايير العرض أو انتقل إلى الإجراء المتاح لك من رأس الشاشة.",
+    "لا توجد فروع مطابقة": "غيّر معايير البحث، أو استخدم إجراء إضافة فرع إذا كانت صلاحيتك ووضع الجلسة يسمحان بذلك.",
+    "لا يوجد مستخدمون مطابقون.": "غيّر معايير البحث، أو استخدم إجراء إضافة مستخدم حسب صلاحيتك.",
+    "لا توجد حركات حديثة": "ستظهر هنا أحدث المستندات والحركات عندما تصبح متاحة ضمن نطاقك.",
+  } as Record<string, string>)[title];
   return (
     <div className="flex min-h-32 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
       <p className="text-sm font-medium text-slate-700">{title}</p>
-      {description && <p className="max-w-md text-xs leading-5 text-slate-500">{description}</p>}
+      {contextualDescription && <p className="max-w-md text-xs leading-5 text-slate-500">{contextualDescription}</p>}
       {action}
     </div>
   );

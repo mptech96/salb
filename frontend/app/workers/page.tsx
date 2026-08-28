@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import useSystemFeedback from "@/components/common/useSystemFeedback";
+import { PageHeader, primaryButtonClassName, fieldClassName } from "@/components/ui/enterprise";
+import { EnterpriseFilterBar, EnterpriseTable } from "@/components/design-system/EnterpriseWorkspace";
+import { LifecycleStrip, ModuleLinks, WorkspaceNotice } from "@/components/design-system/LifecycleWorkspace";
 
 export default function WorkersPage() {
   const [workers, setWorkers] = useState<any[]>([]);
@@ -11,6 +14,8 @@ export default function WorkersPage() {
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState("INFO");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [jobFilter, setJobFilter] = useState("");
 
   const [form, setForm] = useState(defaultWorker());
   const [loan, setLoan] = useState({ loan_date: today(), amount: "", payment_method: "CASH", notes: "" });
@@ -119,8 +124,6 @@ export default function WorkersPage() {
     notes: commission.notes || "",
   };
 
-  console.log("COMMISSION PAYLOAD", payload);
-
   setSaving(true);
   try {
     await api.post(`/workers/${selected.id}/commissions`, payload);
@@ -135,7 +138,6 @@ export default function WorkersPage() {
 
     await openWorker(selected.id);
   } catch (e: any) {
-    console.error(e?.response?.data || e);
     notify(e?.response?.data?.message || "فشل حفظ العمولة", "error");
   } finally {
     setSaving(false);
@@ -187,30 +189,20 @@ function payCommission(id: number) {
   }
 
   const filtered = useMemo(() => {
-    return workers.filter((w) =>
+    return workers.filter((w) => (!statusFilter || w.worker_status === statusFilter) && (!jobFilter || w.job_title === jobFilter) &&
       `${w.worker_name || ""} ${w.phone || ""} ${w.employee_no || ""} ${w.job_title || ""}`
         .toLowerCase()
         .includes(search.toLowerCase())
     );
-  }, [workers, search]);
+  }, [workers, search, statusFilter, jobFilter]);
 
   return (
     <section dir="rtl" className="space-y-5">
-      <div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm text-blue-100">الموارد البشرية HR</p>
-            <h1 className="mt-2 text-3xl font-black">مركز العمال والموظفين</h1>
-            <p className="mt-2 text-sm text-blue-100">
-              ملف العامل، الراتب، السلف، العمولات، الحضور، وكشف الحساب في شاشة واحدة.
-            </p>
-          </div>
+      <PageHeader title="مركز العمال والموظفين" description="ملف العامل والراتب والسلف والعمولات والحضور من مساحة عمل موحدة." breadcrumbs={[{label:"الرئيسية",href:"/"},{label:"الموارد البشرية"}]} actions={<button type="button" onClick={openNew} className={primaryButtonClassName}>+ عامل جديد</button>} />
 
-          <button onClick={openNew} className="rounded-2xl bg-white px-5 py-3 font-bold text-[#0B2A4A]">
-            + عامل جديد
-          </button>
-        </div>
-      </div>
+      <LifecycleStrip title="دورة الموظف والراتب" steps={[{label:"ملف الموظف"},{label:"الوظيفة والفرع"},{label:"الحضور"},{label:"السلف والعمولات"},{label:"مسير الرواتب"},{label:"الاعتماد والصرف"}]}/>
+      <ModuleLinks links={[{href:"/payroll",label:"مسيرات الرواتب",description:"مراجعة المسيرات والأسطر والاعتماد والصرف."},{href:"/workers",label:"ملفات الموظفين",description:"البيانات الوظيفية والحضور والسلف والعمولات."}]}/>
+      <WorkspaceNotice>القيم المالية الظاهرة في ملف الموظف ومسير الرواتب مصدرها الخادم. لا تعيد الواجهة احتساب الرواتب أو الاستقطاعات.</WorkspaceNotice>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Stat title="عدد العمال" value={workers.length} />
@@ -219,22 +211,23 @@ function payCommission(id: number) {
         <Stat title="رواتب يومية/ساعة" value={workers.filter((x) => ["DAILY", "HOURLY"].includes(String(x.salary_type || ""))).length} />
       </div>
 
-      <div className="rounded-3xl border bg-white p-4 shadow-sm">
+      <EnterpriseFilterBar>
         <input
-          className="w-full rounded-2xl border bg-slate-50 p-4 outline-none"
+          className={fieldClassName}
           placeholder="بحث بالاسم أو رقم العامل أو الجوال أو الوظيفة..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-      </div>
+        <select className={fieldClassName} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">كل الحالات</option><option value="ACTIVE">نشط</option><option value="INACTIVE">غير نشط</option><option value="ENDED">منتهي</option></select>
+        <select className={fieldClassName} value={jobFilter} onChange={(e) => setJobFilter(e.target.value)}><option value="">كل الوظائف</option>{Array.from(new Set(workers.map((worker) => String(worker.job_title || "")).filter(Boolean))).map((job) => <option key={job} value={job}>{job}</option>)}</select>
+      </EnterpriseFilterBar>
 
       <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
         <div className="border-b p-4">
           <h2 className="text-xl font-black text-[#0B2A4A]">قائمة العمال</h2>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-[1100px] w-full text-right">
+        <EnterpriseTable minWidth={1100}>
             <thead className="bg-slate-100 text-slate-700">
               <tr>
                 <th className="p-4">رقم العامل</th>
@@ -277,13 +270,12 @@ function payCommission(id: number) {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+        </EnterpriseTable>
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="mx-auto max-w-7xl rounded-3xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-label={selected ? `مركز العامل: ${selected.worker_name}` : "عامل جديد"} className="absolute inset-y-0 left-0 w-full max-w-[900px] overflow-y-auto bg-white shadow-2xl">
             <div className="sticky top-0 z-10 rounded-t-3xl border-b bg-white p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -609,9 +601,9 @@ function today() {
 
 function Stat({ title, value }: any) {
   return (
-    <div className="rounded-3xl border bg-white p-5 shadow-sm">
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-2 text-2xl font-black text-[#0B2A4A]">{value}</div>
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+      <div className="text-[10px] font-semibold text-slate-500">{title}</div>
+      <div className="mt-1 text-xl font-black tabular-nums text-[#0B2A4A]">{value}</div>
     </div>
   );
 }

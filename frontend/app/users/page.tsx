@@ -6,15 +6,20 @@ import api from "../api";
 import {
   DataTableShell,
   EmptyState,
-  FilterBar,
-  FormField,
-  FormSection,
   LoadingState,
   PageHeader,
   StatusBadge,
   fieldClassName,
   primaryButtonClassName,
+  secondaryButtonClassName,
 } from "@/components/ui/enterprise";
+import {
+  EnterpriseDrawer,
+  EnterpriseField,
+  EnterpriseFilterBar,
+  EnterpriseFormSection,
+  EnterpriseTable,
+} from "@/components/design-system/EnterpriseWorkspace";
 
 type StoredUser = {
   id?: number | string | null;
@@ -60,7 +65,7 @@ type UserForm = {
   is_active: number;
 };
 
-const COMPANY_MANAGER_ROLES = ["COMPANY_MANAGER", "COMPANY_ADMIN", "MANAGER"];
+const COMPANY_MANAGER_ROLES = ["COMPANY_OWNER", "COMPANY_MANAGER", "COMPANY_ADMIN", "MANAGER"];
 const BRANCH_MANAGER_ROLE = "BRANCH_MANAGER";
 const SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 
@@ -511,17 +516,24 @@ export default function UsersPage() {
         ) : undefined}
       />
 
-      <FilterBar>
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <Summary label="إجمالي المستخدمين" value={users.length} />
+        <Summary label="المستخدمون النشطون" value={users.filter((user) => Number(user.is_active) === 1).length} tone="success" />
+        <Summary label="الفروع المشمولة" value={new Set(users.map((user) => user.branch_id).filter(Boolean)).size} />
+        <Summary label="الأدوار المستخدمة" value={new Set(users.map((user) => user.role_id).filter(Boolean)).size} />
+      </div>
+
+      <EnterpriseFilterBar>
         <input
           className={fieldClassName}
           placeholder="بحث بالاسم، الشركة، الفرع، الدور، الجوال..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-      </FilterBar>
+      </EnterpriseFilterBar>
 
       <DataTableShell title="دليل المستخدمين" description={`${filtered.length} مستخدم`}>
-          <table className="sulb-table min-w-[1100px]">
+        <EnterpriseTable minWidth={1100}>
             <thead>
               <tr>
                 <th className="p-4">الاسم</th>
@@ -587,33 +599,29 @@ export default function UsersPage() {
                 ))
               )}
             </tbody>
-          </table>
+        </EnterpriseTable>
       </DataTableShell>
 
-      {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
-          <div className="absolute left-0 top-0 h-full w-full overflow-y-auto bg-white p-5 shadow-2xl sm:w-[620px]">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-slate-500">إدارة المستخدمين</p>
-                <h2 className="mt-1 text-2xl font-bold text-[#0B2A4A]">
-                  {editId ? "تعديل مستخدم" : "إضافة مستخدم"}
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => !saving && setShowForm(false)}
-                disabled={saving}
-                className="rounded-xl bg-slate-200 px-4 py-2 font-bold disabled:opacity-50"
-              >
-                ✕
-              </button>
-            </div>
-
-            <FormSection title="بيانات المستخدم وصلاحيات الوصول" description="ترتبط الشركة والفرع والدور بقواعد الوصول الحالية دون تغيير.">
+      <EnterpriseDrawer
+        open={showForm}
+        title={editId ? "تعديل مستخدم" : "إضافة مستخدم"}
+        description="تُطبق الشركة والفرع والدور وفق قواعد نطاق الوصول الحالية."
+        onClose={() => { if (!saving) setShowForm(false); }}
+        footer={<div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setShowForm(false)} className={secondaryButtonClassName}>إلغاء</button><button type="button" onClick={() => void saveUser()} disabled={saving} className={primaryButtonClassName}>{saving ? "جاري الحفظ..." : editId ? "حفظ التعديلات" : "حفظ المستخدم"}</button></div>}
+      >
+        <div className="space-y-3">
+          <EnterpriseFormSection title="الهوية" description="بيانات الدخول والتواصل الخاصة بالمستخدم.">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField label="الشركة" required>
+              <EnterpriseField label="الاسم الكامل" required><input className={fieldClassName} placeholder="مثال: محمد أحمد" value={form.name} onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))} /></EnterpriseField>
+              <EnterpriseField label="اسم الدخول" required><input dir="ltr" className={`${fieldClassName} text-left`} placeholder="مثال: mohammed.hod" value={form.username} onChange={(event) => setForm((previous) => ({ ...previous, username: event.target.value.replace(/\s/g, "") }))} /></EnterpriseField>
+              <EnterpriseField label="البريد الإلكتروني"><input type="email" dir="ltr" className={`${fieldClassName} text-left`} placeholder="name@example.com" value={form.email} onChange={(event) => setForm((previous) => ({ ...previous, email: event.target.value }))} /></EnterpriseField>
+              <EnterpriseField label="رقم الجوال"><input type="tel" inputMode="numeric" dir="ltr" className={`${fieldClassName} text-left`} placeholder="0771000000" value={form.phone} onChange={(event) => setForm((previous) => ({ ...previous, phone: event.target.value.replace(/\D/g, "").slice(0, 15) }))} /></EnterpriseField>
+              <EnterpriseField label={editId ? "كلمة مرور جديدة" : "كلمة المرور"} required={!editId} hint={editId ? "اتركها فارغة للإبقاء على كلمة المرور الحالية." : undefined}><input type="password" dir="ltr" className={`${fieldClassName} text-left`} placeholder={editId ? "اختياري" : "6 خانات على الأقل"} value={form.password} onChange={(event) => setForm((previous) => ({ ...previous, password: event.target.value }))} /></EnterpriseField>
+            </div>
+          </EnterpriseFormSection>
+          <EnterpriseFormSection title="الدور ونطاق الوصول" description="لا يمكن إسناد إلا الأدوار والفروع التي تسمح بها صلاحيات المستخدم الحالي.">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <EnterpriseField label="الشركة" required>
                 {isSuper ? (
                   <select
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4"
@@ -636,9 +644,9 @@ export default function UsersPage() {
                 ) : (
                   <ReadOnlyValue value={currentCompanyName} />
                 )}
-              </FormField>
+              </EnterpriseField>
 
-              <FormField label="الفرع" required>
+              <EnterpriseField label="الفرع" required>
                 {isBranchManager ? (
                   <ReadOnlyValue value={currentBranchName} />
                 ) : (
@@ -661,9 +669,9 @@ export default function UsersPage() {
                     ))}
                   </select>
                 )}
-              </FormField>
+              </EnterpriseField>
 
-              <FormField label="الدور" required>
+              <EnterpriseField label="الدور" required>
                 <select
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4"
                   value={form.role_id}
@@ -681,91 +689,9 @@ export default function UsersPage() {
                     </option>
                   ))}
                 </select>
-              </FormField>
+              </EnterpriseField>
 
-              <FormField label="الاسم الكامل" required>
-                <input
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                  placeholder="مثال: محمد أحمد"
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      name: event.target.value,
-                    }))
-                  }
-                />
-              </FormField>
-
-              <FormField label="اسم الدخول" required>
-                <input
-                  dir="ltr"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left"
-                  placeholder="مثال: mohammed.hod"
-                  value={form.username}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      username: event.target.value.replace(/\s/g, ""),
-                    }))
-                  }
-                />
-              </FormField>
-
-              <FormField label="البريد الإلكتروني">
-                <input
-                  type="email"
-                  dir="ltr"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left"
-                  placeholder="name@example.com"
-                  value={form.email}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      email: event.target.value,
-                    }))
-                  }
-                />
-              </FormField>
-
-              <FormField label="رقم الجوال">
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  dir="ltr"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left"
-                  placeholder="0771000000"
-                  value={form.phone}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      phone: event.target.value.replace(/\D/g, "").slice(0, 15),
-                    }))
-                  }
-                />
-              </FormField>
-
-              <FormField
-                label={editId ? "كلمة مرور جديدة" : "كلمة المرور"}
-                required={!editId}
-                hint={editId ? "اتركها فارغة للإبقاء على كلمة المرور الحالية." : undefined}
-              >
-                <input
-                  type="password"
-                  dir="ltr"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left"
-                  placeholder={editId ? "اختياري" : "6 خانات على الأقل"}
-                  value={form.password}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      password: event.target.value,
-                    }))
-                  }
-                />
-              </FormField>
-
-              <FormField label="الحالة" required>
+              <EnterpriseField label="الحالة" required>
                 <select
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4"
                   value={form.is_active}
@@ -779,25 +705,14 @@ export default function UsersPage() {
                   <option value={1}>نشط</option>
                   <option value={0}>متوقف</option>
                 </select>
-              </FormField>
-
-              <button
-                type="button"
-                onClick={() => void saveUser()}
-                disabled={saving}
-                className={`${primaryButtonClassName} self-end`}
-              >
-                {saving
-                  ? "جاري الحفظ..."
-                  : editId
-                    ? "حفظ التعديلات"
-                    : "حفظ المستخدم"}
-              </button>
+              </EnterpriseField>
             </div>
-            </FormSection>
-          </div>
+          </EnterpriseFormSection>
+          <EnterpriseFormSection title="ملخص الصلاحيات الناتجة" description="الصلاحيات الفعلية تُحتسب من الدور والنطاق والقرارات المباشرة في مركز الصلاحيات.">
+            <div className="flex flex-wrap gap-2"><StatusBadge tone="info">{availableRoles.find((role) => String(role.id) === form.role_id)?.role_name || "لم يُحدد الدور"}</StatusBadge><StatusBadge>{companyBranches.find((branch) => String(branch.id) === form.branch_id)?.branch_name || "لم يُحدد الفرع"}</StatusBadge></div>
+          </EnterpriseFormSection>
         </div>
-      )}
+      </EnterpriseDrawer>
 
       <SystemDialog
         open={dialog.open}
@@ -821,4 +736,8 @@ function ReadOnlyValue({ value }: { value: string }) {
       {value}
     </div>
   );
+}
+
+function Summary({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "success" }) {
+  return <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5"><div className="text-[10px] font-semibold text-slate-500">{label}</div><div className={`mt-1 text-xl font-bold ${tone === "success" ? "text-emerald-700" : "text-slate-900"}`}>{value.toLocaleString("ar-IQ")}</div></div>;
 }

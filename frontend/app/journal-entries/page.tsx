@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import {PageHeader,primaryButtonClassName} from "@/components/ui/enterprise";
+import {FinancialNotice} from "@/components/design-system/AccountingWorkspace";
 import SystemDialog from "@/components/common/SystemDialog";
 import { readSession } from "@/lib/session";
 
@@ -414,25 +416,8 @@ export default function JournalEntriesPage() {
 
   return (
     <section dir="rtl" className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-[#0B2A4A] p-6 text-white">
-        <div>
-          <div className="text-sm text-blue-100">المحاسبة العامة</div>
-          <h1 className="text-3xl font-black">دفتر اليومية</h1>
-          <p className="mt-1 text-blue-100">
-            القيود اليدوية للحركات الاستثنائية، بينما عمليات النظام تُرحّل تلقائيًا.
-          </p>
-        </div>
-
-        <button
-          onClick={() => {
-            resetForm();
-            setShowForm(true);
-          }}
-          className="rounded-2xl bg-white px-5 py-3 font-black text-[#0B2A4A]"
-        >
-          + قيد يومي
-        </button>
-      </div>
+      <PageHeader title="دفتر اليومية" description="القيود اليدوية للحركات الاستثنائية، بينما عمليات النظام ترحّل من مساراتها التشغيلية." breadcrumbs={[{label:"المحاسبة",href:"/accounting"},{label:"دفتر اليومية"}]} actions={<button onClick={()=>{resetForm();setShowForm(true)}} className={primaryButtonClassName}>+ قيد يومي</button>}/>
+      <FinancialNotice tone="info">التوازن والسنة المالية وقواعد العكس يتحقق منها الخادم. تعرض الواجهة الفرق بوضوح ولا تصلح القيود تلقائيًا.</FinancialNotice>
 
       <div className="grid gap-3 rounded-3xl border bg-white p-4 shadow-sm md:grid-cols-5">
         <input

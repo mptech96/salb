@@ -1,0 +1,627 @@
+{
+    "generated_at": "2026-08-27T18:54:53+00:00",
+    "mode": "MYSQL_READ_ONLY",
+    "database": "scrap_system",
+    "summary": {
+        "checks": 37,
+        "critical_or_high_findings": 10,
+        "informational_findings": 8,
+        "dispositions": {
+            "ACTION_REQUIRED": 0,
+            "ACCEPTED_LEGACY": 3,
+            "NON_OPERATIONAL_CONFIGURATION": 7,
+            "INFORMATIONAL": 8
+        }
+    },
+    "checks": [
+        {
+            "name": "unbalanced_posted_journals",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "duplicate_journal_sources",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "orphan_journal_lines",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "journal_lines_foreign_company_accounts",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "journals_invalid_financial_year",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "purchase_invoices_duplicate_numbers",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "purchase_invoices_posted_without_journal",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "sales_invoices_duplicate_numbers",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "sales_invoices_posted_without_journal",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "negative_inventory_lots",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "inventory_lot_movement_equation",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "orphan_stock_movement_items",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "orphan_stock_movement_lots",
+            "severity": "HIGH",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "cross_company_invoice_items",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "cross_company_invoice_parties",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "users_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "cars_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "customers_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "suppliers_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "drivers_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "workers_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "shipments_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "weighbridge_cards_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "shipment_weights_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "purchase_invoices_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "sales_invoices_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "vouchers_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "expenses_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "inventory_lots_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "inventory_operations_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "journal_entries_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "commercial_returns_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "official_documents_invalid_branch",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "closed_shipments_without_closed_weight_card",
+            "severity": "HIGH",
+            "disposition": "ACCEPTED_LEGACY",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 3,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 3,
+            "sample": [
+                {
+                    "id": 2,
+                    "company_id": 4,
+                    "branch_id": 6,
+                    "shipment_number": "1",
+                    "status": "APPROVED",
+                    "commercial_status": "DRAFT",
+                    "disposition": "ACCEPTED_LEGACY"
+                },
+                {
+                    "id": 3,
+                    "company_id": 4,
+                    "branch_id": 6,
+                    "shipment_number": "2",
+                    "status": "APPROVED",
+                    "commercial_status": "DRAFT",
+                    "disposition": "ACCEPTED_LEGACY"
+                },
+                {
+                    "id": 4,
+                    "company_id": 4,
+                    "branch_id": 6,
+                    "shipment_number": "SHP-2026-00004",
+                    "status": "APPROVED",
+                    "commercial_status": "DRAFT",
+                    "disposition": "ACCEPTED_LEGACY"
+                }
+            ]
+        },
+        {
+            "name": "invoiced_shipments_without_invoice_link",
+            "severity": "CRITICAL",
+            "disposition": "ACTION_REQUIRED",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 0
+            },
+            "count": 0,
+            "sample": []
+        },
+        {
+            "name": "active_weight_history_multiple_rows",
+            "severity": "INFO",
+            "disposition": "INFORMATIONAL",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 0,
+                "INFORMATIONAL": 8
+            },
+            "count": 8,
+            "sample": [
+                {
+                    "company_id": 7,
+                    "weighbridge_card_id": 1,
+                    "effective_weight_type": "EMPTY",
+                    "active_history_rows": 3,
+                    "disposition": "INFORMATIONAL"
+                },
+                {
+                    "company_id": 7,
+                    "weighbridge_card_id": 1,
+                    "effective_weight_type": "LOADED",
+                    "active_history_rows": 4,
+                    "disposition": "INFORMATIONAL"
+                },
+                {
+                    "company_id": 7,
+                    "weighbridge_card_id": 3,
+                    "effective_weight_type": "EMPTY",
+                    "active_history_rows": 2,
+                    "disposition": "INFORMATIONAL"
+                },
+                {
+                    "company_id": 7,
+                    "weighbridge_card_id": 10,
+                    "effective_weight_type": "EMPTY",
+                    "active_history_rows": 2,
+                    "disposition": "INFORMATIONAL"
+                },
+                {
+                    "company_id": 7,
+                    "weighbridge_card_id": 12,
+                    "effective_weight_type": "EMPTY",
+                    "active_history_rows": 2,
+                    "disposition": "INFORMATIONAL"
+                },
+                {
+                    "company_id": 7,
+                    "weighbridge_card_id": 12,
+                    "effective_weight_type": "LOADED",
+                    "active_history_rows": 2,
+                    "disposition": "INFORMATIONAL"
+                },
+                {
+                    "company_id": 7,
+                    "weighbridge_card_id": 13,
+                    "effective_weight_type": "EMPTY",
+                    "active_history_rows": 2,
+                    "disposition": "INFORMATIONAL"
+                },
+                {
+                    "company_id": 7,
+                    "weighbridge_card_id": 14,
+                    "effective_weight_type": "EMPTY",
+                    "active_history_rows": 2,
+                    "disposition": "INFORMATIONAL"
+                }
+            ]
+        },
+        {
+            "name": "missing_required_account_mappings",
+            "severity": "CRITICAL",
+            "disposition": "NON_OPERATIONAL_CONFIGURATION",
+            "disposition_counts": {
+                "ACTION_REQUIRED": 0,
+                "ACCEPTED_LEGACY": 0,
+                "NON_OPERATIONAL_CONFIGURATION": 7,
+                "INFORMATIONAL": 0
+            },
+            "count": 7,
+            "sample": [
+                {
+                    "company_id": 5,
+                    "company_name": "شركة صنعاء للمعادن",
+                    "setting_key": "VAT_INPUT_ACCOUNT",
+                    "disposition": "NON_OPERATIONAL_CONFIGURATION"
+                },
+                {
+                    "company_id": 5,
+                    "company_name": "شركة صنعاء للمعادن",
+                    "setting_key": "VAT_OUTPUT_ACCOUNT",
+                    "disposition": "NON_OPERATIONAL_CONFIGURATION"
+                },
+                {
+                    "company_id": 5,
+                    "company_name": "شركة صنعاء للمعادن",
+                    "setting_key": "INVENTORY_ACCOUNT",
+                    "disposition": "NON_OPERATIONAL_CONFIGURATION"
+                },
+                {
+                    "company_id": 5,
+                    "company_name": "شركة صنعاء للمعادن",
+                    "setting_key": "COGS_ACCOUNT",
+                    "disposition": "NON_OPERATIONAL_CONFIGURATION"
+                },
+                {
+                    "company_id": 5,
+                    "company_name": "شركة صنعاء للمعادن",
+                    "setting_key": "SALES_ACCOUNT",
+                    "disposition": "NON_OPERATIONAL_CONFIGURATION"
+                },
+                {
+                    "company_id": 5,
+                    "company_name": "شركة صنعاء للمعادن",
+                    "setting_key": "CUSTOMER_ACCOUNT",
+                    "disposition": "NON_OPERATIONAL_CONFIGURATION"
+                },
+                {
+                    "company_id": 5,
+                    "company_name": "شركة صنعاء للمعادن",
+                    "setting_key": "SUPPLIER_ACCOUNT",
+                    "disposition": "NON_OPERATIONAL_CONFIGURATION"
+                }
+            ]
+        }
+    ]
+}

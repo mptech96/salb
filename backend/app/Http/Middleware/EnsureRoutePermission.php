@@ -23,7 +23,7 @@ class EnsureRoutePermission
         $actualRole = strtoupper((string) $request->attributes->get('actual_role_code', ''));
         $role = strtoupper((string) $request->attributes->get('effective_role_code', ''));
         $support = (bool) $request->attributes->get('is_support_mode', false);
-        $uri = (string) optional($request->route())->uri();
+        $uri = $this->normalizeRouteUri((string) optional($request->route())->uri());
         $name = (string) optional($request->route())->getName();
         $method = strtoupper($request->method());
 
@@ -61,7 +61,7 @@ class EnsureRoutePermission
             }
         }
 
-        $required = $this->requiredPermission($request);
+        $required = $this->requiredPermission($request, $uri);
         if (!$required) return $this->deny('PERMISSION_NOT_MAPPED', 'لم يتم تعريف صلاحية آمنة لهذا المسار.');
 
         $permissions = $request->attributes->get('permission_codes', []);
@@ -75,10 +75,9 @@ class EnsureRoutePermission
         return $next($request);
     }
 
-    private function requiredPermission(Request $request): ?string
+    private function requiredPermission(Request $request, string $uri): ?string
     {
         $name = (string) optional($request->route())->getName();
-        $uri = (string) optional($request->route())->uri();
         $method = strtoupper($request->method());
 
         // SULB Stage6: صلاحيات على مستوى الإجراء، وليس الشاشة فقط.
@@ -169,6 +168,15 @@ class EnsureRoutePermission
         if (str_starts_with($uri, 'workers') || str_starts_with($uri, 'payroll')) return 'workers.view';
         if (str_starts_with($uri, 'fixed-asset')) return 'dashboard.view';
         return null;
+    }
+
+    private function normalizeRouteUri(string $uri): string
+    {
+        $normalized = trim($uri, '/');
+
+        return str_starts_with($normalized, 'api/')
+            ? substr($normalized, 4)
+            : $normalized;
     }
 
     private function isCompanyPortalUri(string $uri): bool

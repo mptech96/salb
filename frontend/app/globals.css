@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7fa;
-  --foreground: #17212f;
-  --sulb-primary: #123b5d;
-  --sulb-primary-strong: #0b2a4a;
+  --background: #f4f6f8;
+  --foreground: #17212b;
+  --sulb-primary: #16607a;
+  --sulb-primary-strong: #0f4c63;
+  --sulb-sidebar: #12324a;
   --sulb-surface: #ffffff;
-  --sulb-border: #e2e8f0;
+  --sulb-border: #dce2e7;
 }
 
 @theme inline {
@@ -19,9 +20,75 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid #0284c7;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.enterprise-icon-button {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: 1px solid var(--sulb-border);
+  background: transparent;
+  color: #475569;
+}
+
+.enterprise-button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: 150ms ease;
+}
+
+.enterprise-button-primary { background: var(--sulb-primary); color: white; }
+.enterprise-button-primary:hover { background: var(--sulb-primary-strong); }
+.enterprise-button-secondary { border: 1px solid var(--sulb-border); background: white; color: #334155; }
+.enterprise-button-secondary:hover { background: #f8fafc; }
+
+.enterprise-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+.enterprise-table thead { background: #f7f8fa; color: #64748b; }
+.enterprise-table th { padding: 0.55rem 0.75rem; font-size: 0.625rem; font-weight: 700; }
+.enterprise-table td { padding: 0.62rem 0.75rem; color: #475569; white-space: nowrap; }
+.enterprise-table tbody tr { border-top: 1px solid #eef1f4; }
+.enterprise-table tbody tr:hover { background: #f8fafc; }
+
+@media (max-width: 639px) {
+  .enterprise-dashboard .enterprise-table { min-width: 480px; }
 }
 
 .sulb-table {

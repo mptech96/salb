@@ -1,11 +1,14 @@
 "use client";
 
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useState,type ReactNode} from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
 import SearchSelect from "@/components/sulb/SearchSelect";
 import {ListToolbar,Pager,TableScroll,usePagedSearch,stickyActionCell,stickyActionHead} from "@/components/sulb/ListUX";
-import {Badge,Btn,Empty,Field,Modal,PageHero,Panel,Stat,fmt,inputCls,nowLocal} from "@/components/sulb/EnterpriseUI";
+import {Badge,Btn,Empty,Field,Modal as LegacyModal,Panel,Stat,fmt,inputCls,nowLocal} from "@/components/sulb/EnterpriseUI";
+import { PageHeader, primaryButtonClassName } from "@/components/ui/enterprise";
+import { EnterpriseDrawer } from "@/components/design-system/EnterpriseWorkspace";
+import { OperationalStatusBar } from "@/components/design-system/OperationalWorkspace";
 
 const eventLabel:any={LOADED:"محمل / قبل التفريغ",EMPTY:"فارغ / بعد التفريغ",RECHECK:"إعادة وزن",CORRECTION:"تصحيح"};
 const targetLabel=(v:any)=>v==="LOADED"?"المحمل / قبل التفريغ":"الفارغ / بعد التفريغ";
@@ -17,7 +20,7 @@ const carLabel=(c:any)=>`لوحة ${cleanPlate(c.plate_number)||"—"}${c.car_nu
 
 export default function WeighingPage(){
   const [cards,setCards]=useState<any[]>([]),[shipments,setShipments]=useState<any[]>([]),[cars,setCars]=useState<any[]>([]),[drivers,setDrivers]=useState<any[]>([]),[meta,setMeta]=useState<any>({});
-  const [detail,setDetail]=useState<any>(null),[openForm,setOpenForm]=useState(false),[loading,setLoading]=useState(false),[filter,setFilter]=useState("ALL"),[materialFix,setMaterialFix]=useState(""),[linkPicker,setLinkPicker]=useState<any>(null);
+  const [detail,setDetail]=useState<any>(null),[openForm,setOpenForm]=useState(false),[loading,setLoading]=useState(false),[filter,setFilter]=useState("ALL"),[statusFilter,setStatusFilter]=useState("ALL"),[materialFix,setMaterialFix]=useState(""),[linkPicker,setLinkPicker]=useState<any>(null);
   const [dialog,setDialog]=useState<any>({open:false,type:"info",title:"",message:"",action:null});
   const [reasonValue,setReasonValue]=useState("");
   const [reasonError,setReasonError]=useState("");
@@ -33,7 +36,7 @@ export default function WeighingPage(){
   }
   useEffect(()=>{void load()},[]);
   function msg(type:any,title:string,message:string,action:any=null){setDialog({open:true,type,title,message,action})}
-  const filteredByType=useMemo(()=>filter==="ALL"?cards:cards.filter((x:any)=>x.flow_type===filter),[cards,filter]);
+  const filteredByType=useMemo(()=>cards.filter((x:any)=>(filter==="ALL"||x.flow_type===filter)&&(statusFilter==="ALL"||x.status===statusFilter||(statusFilter==="WAITING"&&x.status==="OPEN"&&(!Number(x.loaded_weight_kg)||!Number(x.empty_weight_kg))))),[cards,filter,statusFilter]);
   const list=usePagedSearch(filteredByType,(c:any)=>`${c.card_number||""} ${c.shipment_number||""} ${c.item_code||c.item_code_snapshot||""} ${c.item_name||c.item_name_snapshot||""} ${c.branch_name||""} ${c.customer_name||c.supplier_name||c.party_snapshot||""} ${cleanPlate(c.plate_snapshot||c.plate_number)} ${c.car_number||""} ${c.driver_snapshot||c.driver_name||""} ${c.status||""}`,25);
   const visible=list.paged;
   const selectedShipment=shipments.find((x:any)=>String(x.id)===String(form.shipment_id));
@@ -109,8 +112,8 @@ export default function WeighingPage(){
   const movementText=(c:any)=>c.transport_mode==="VEHICLE"?`لوحة ${cleanPlate(c.plate_snapshot||c.plate_number)||"—"}`:c.transport_label||transportLabel[c.transport_mode]||"بدون سيارة";
 
   return <section dir="rtl" className="space-y-5">
-    <PageHero eyebrow="الميزان والحركة" title="محطة الميزان" description="كل كرت ميزان يثبت المادة التي تم وزنها وصافي وزنها. الخصومات والجودة والسعر والتكاليف لا تُحسب على الميزان؛ تظهر المادة ووزنها تلقائيًا داخل الشحنة ليكمل المحاسب/موظف التجهيز الحساب." actions={<Btn kind="success" onClick={newCard}>+ كرت ميزان جديد</Btn>}/>
-    <div className="grid gap-3 md:grid-cols-4"><Stat label="الكروت المفتوحة" value={cards.filter((x:any)=>x.status==="OPEN").length}/><Stat label="الكروت المغلقة" value={cards.filter((x:any)=>x.status==="CLOSED").length}/><Stat label="شحنات قابلة للوزن" value={shipments.length}/><Stat label="قاعدة التشغيل" value="الوزن ≠ مخزون" sub="الأثر عند POST الفاتورة"/></div>
+    <PageHeader title="محطة الميزان" description="مساحة تشغيل سريعة لتسجيل القراءات واعتماد صافي الوزن دون أي أثر مخزني أو محاسبي." breadcrumbs={[{label:"الرئيسية",href:"/"},{label:"الميزان"}]} actions={<button type="button" className={primaryButtonClassName} onClick={newCard}>+ كرت ميزان جديد</button>}/>
+    <OperationalStatusBar active={statusFilter} onChange={(id)=>setStatusFilter(id==="SHIPMENTS"?"ALL":id)} statuses={[{id:"ALL",label:"كل الكروت",count:cards.length},{id:"OPEN",label:"الكروت المفتوحة",count:cards.filter((x:any)=>x.status==="OPEN").length,tone:"warning"},{id:"WAITING",label:"بانتظار القراءة الثانية",count:cards.filter((x:any)=>x.status==="OPEN"&&(!Number(x.loaded_weight_kg)||!Number(x.empty_weight_kg))).length,tone:"info"},{id:"CLOSED",label:"الكروت المغلقة",count:cards.filter((x:any)=>x.status==="CLOSED").length,tone:"success"},{id:"SHIPMENTS",label:"شحنات قابلة للوزن",count:shipments.length}]}/>
     <Panel><ListToolbar query={list.query} setQuery={list.setQuery} total={list.total} page={list.page} pageSize={list.pageSize} setPageSize={list.setPageSize} placeholder="ابحث برقم الكرت، الشحنة، الصنف، اللوحة، السائق أو الطرف..." extra={<div className="flex flex-wrap gap-2">{[["ALL","الكل"],["PURCHASE_INBOUND","وارد شراء"],["SALE_OUTBOUND","صادر بيع"],["INTERNAL_TRANSFER","داخلي"]].map((x:any)=><button key={x[0]} onClick={()=>setFilter(x[0])} className={`rounded-xl px-4 py-2 text-sm font-black ${filter===x[0]?"bg-[#0B2A4A] text-white":"bg-white border text-slate-700"}`}>{x[1]}</button>)}</div>}/></Panel>
 
     <Panel title="سجل كروت الميزان" sub="الشحنة قد تحتوي كرتًا واحدًا أو عدة كروت. كل كرت يحدد مادة واحدة ويثبت وزنها الفيزيائي.">
@@ -158,3 +161,5 @@ export default function WeighingPage(){
     <SystemDialog open={dialog.open} type={dialog.type} title={dialog.title} message={dialog.message} loading={loading} showCancel={dialog.type==="confirm"} confirmText={dialog.type==="confirm"?"تأكيد":"حسنًا"} onClose={()=>setDialog({...dialog,open:false})} onConfirm={async()=>{if(dialog.reasonAction){await submitReasonAction();return}setDialog({...dialog,open:false});if(dialog.action)await dialog.action()}}>{dialog.reasonAction?<label className="block text-sm font-bold text-slate-700">سبب الإجراء *<textarea className={`${inputCls} mt-2`} rows={3} value={reasonValue} onChange={event=>{setReasonValue(event.target.value);setReasonError("")}} disabled={loading}/>{reasonError?<span role="alert" className="mt-2 block text-sm text-rose-600">{reasonError}</span>:null}</label>:null}</SystemDialog>
   </section>
 }
+
+function Modal({title,children,onClose,wide=false,footer}:{title:string;children:ReactNode;onClose:()=>void;wide?:boolean;footer?:ReactNode}){if(!wide)return <LegacyModal title={title} onClose={onClose} footer={footer}>{children}</LegacyModal>;return <EnterpriseDrawer open title={title} description="تفاصيل الكرت وقراءاته وفق حالة التشغيل الحالية." onClose={onClose} footer={footer}>{children}</EnterpriseDrawer>}

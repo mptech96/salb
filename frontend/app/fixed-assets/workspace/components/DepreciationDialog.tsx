@@ -42,6 +42,8 @@ export default function DepreciationDialog({
 
   const [loading, setLoading] =
     useState(false);
+  const [reviewing, setReviewing] =
+    useState(false);
 
   const [result, setResult] =
     useState<DepreciationRunResult | null>(
@@ -59,6 +61,7 @@ export default function DepreciationDialog({
     setMonth(currentMonth());
     setBranchId(defaultBranchId || "");
     setLoading(false);
+    setReviewing(false);
     setResult(null);
     setMessage(null);
   }, [open, defaultBranchId]);
@@ -167,11 +170,10 @@ export default function DepreciationDialog({
                   <input
                     type="month"
                     value={month}
-                    onChange={(event) =>
-                      setMonth(
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => {
+                      setMonth(event.target.value);
+                      setReviewing(false);
+                    }}
                     className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 font-semibold text-slate-800 outline-none transition focus:border-[#0B2A4A] focus:ring-4 focus:ring-slate-100"
                   />
                 </FieldWrapper>
@@ -180,11 +182,10 @@ export default function DepreciationDialog({
                   <input
                     type="number"
                     value={branchId}
-                    onChange={(event) =>
-                      setBranchId(
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => {
+                      setBranchId(event.target.value);
+                      setReviewing(false);
+                    }}
                     placeholder="اتركه فارغًا لكل الفروع"
                     className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 font-semibold text-slate-800 outline-none transition focus:border-[#0B2A4A] focus:ring-4 focus:ring-slate-100"
                   />
@@ -198,6 +199,20 @@ export default function DepreciationDialog({
                 التشغيل.
               </div>
             </section>
+
+            {reviewing && !result && (
+              <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4" role="alert">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <span className="inline-flex rounded-full bg-amber-200 px-2.5 py-1 text-[11px] font-black text-amber-950">مراجعة قبل الترحيل</span>
+                    <h3 className="mt-2 font-black text-amber-950">الفترة: {month || "غير محددة"}</h3>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-amber-900">
+                      سيحدد الخادم الأصول المؤهلة ويحتسب الإهلاك وينشئ الأثر المحاسبي. هذه مراجعة للسياق وليست نتيجة PREVIEW محاسبية.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
 
             {result && (
               <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -265,13 +280,15 @@ export default function DepreciationDialog({
         <footer className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-5 sm:flex-row">
           <button
             type="button"
-            onClick={handleRun}
+            onClick={() => reviewing ? void handleRun() : setReviewing(true)}
             disabled={loading}
             className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#0B2A4A] px-6 text-sm font-black text-white transition hover:bg-[#123D68] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading
               ? "جاري تشغيل الإهلاك..."
-              : "تشغيل الإهلاك"}
+              : reviewing
+                ? "تأكيد التشغيل والترحيل"
+                : "مراجعة التشغيل"}
           </button>
 
           <button

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
 import PrintHeader from "@/components/reports/PrintHeader";
+import {PageHeader} from "@/components/ui/enterprise";
 
 const fmt = (x: any) => Number(x || 0).toLocaleString("ar", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
@@ -77,11 +78,7 @@ export default function StatementsPage() {
 
   return (
     <section dir="rtl" className="space-y-5">
-      <div className="no-print rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
-        <div className="text-sm text-blue-100">المالية والمحاسبة</div>
-        <h1 className="mt-1 text-3xl font-black">كشوف الحسابات</h1>
-        <p className="mt-2 text-blue-100">حساب عام، عميل، مورد، سائق أو عامل مع افتتاحي وحركة ورصيد متحرك وختامي.</p>
-      </div>
+      <div className="no-print"><PageHeader title="كشوف الحسابات" description="اختر الحساب أو الطرف والفترة والنطاق لعرض الافتتاحي والحركة والرصيد المتحرك والختامي." breadcrumbs={[{label:"المحاسبة",href:"/accounting"},{label:"كشوف الحسابات"}]}/></div>
 
       <div className="no-print grid gap-3 rounded-3xl border bg-white p-4 shadow-sm md:grid-cols-6">
         <select value={kind} onChange={(e) => setKind(e.target.value as Kind)} className="rounded-xl border p-3">

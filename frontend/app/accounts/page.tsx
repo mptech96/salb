@@ -13,6 +13,7 @@ import ERPButton from "@/components/erp/buttons/ERPButton";
 import ERPMessage from "@/components/erp/dialog/ERPMessage";
 import AccountForm from "./AccountForm";
 import ERPTree from "@/components/erp/tree/ERPTree";
+import {PageHeader,primaryButtonClassName} from "@/components/ui/enterprise";
 
 const emptyForm = {
   account_code: "",
@@ -86,15 +87,7 @@ export default function AccountsPage() {
     <ERPPage>
       <ERPMessage msg={msg} onClose={() => setMsg(null)} />
 
-      <ERPHeader
-        title="شجرة الحسابات"
-        subtitle="إدارة دليل الحسابات وربط الحسابات الافتراضية للنظام"
-        actions={
-          <ERPButton onClick={() => setShowForm(true)}>
-            + حساب جديد
-          </ERPButton>
-        }
-      />
+      <PageHeader title="شجرة الحسابات" description="دليل هرمي للحسابات التجميعية والتحليلية مع المحافظة على بنية الأب والابن الحالية." breadcrumbs={[{label:"المحاسبة",href:"/accounting"},{label:"دليل الحسابات"}]} actions={<button onClick={()=>setShowForm(true)} className={primaryButtonClassName}>+ حساب جديد</button>}/>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <ERPStatCard title="إجمالي الحسابات" value={accounts.length} />

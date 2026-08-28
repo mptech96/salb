@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 
 import ERPPage from "@/components/erp/layout/ERPPage";
-import ERPHeader from "@/components/erp/layout/ERPHeader";
 import ERPToolbar from "@/components/erp/layout/ERPToolbar";
 import ERPCard from "@/components/erp/cards/ERPCard";
 import ERPStatCard from "@/components/erp/cards/ERPStatCard";
@@ -14,6 +13,8 @@ import ERPInput from "@/components/erp/form/ERPInput";
 import ERPSelect from "@/components/erp/form/ERPSelect";
 import ERPMessage from "@/components/erp/dialog/ERPMessage";
 import ERPConfirm from "@/components/erp/dialog/ERPConfirm";
+import { PageHeader } from "@/components/ui/enterprise";
+import { LifecycleStrip, ModuleLinks, WorkspaceNotice } from "@/components/design-system/LifecycleWorkspace";
 
 type PayrollStatus = "DRAFT" | "APPROVED" | "PAID";
 
@@ -387,9 +388,10 @@ export default function PayrollPage() {
         onClose={() => setMsg(null)}
       />
 
-      <ERPHeader
+      <PageHeader
         title="إدارة الرواتب"
-        subtitle="إنشاء واعتماد وصرف مسيرات الموظفين وربطها بالقيود المحاسبية"
+        description="إنشاء ومراجعة واعتماد وصرف مسيرات الموظفين وربطها بالقيود المحاسبية الحالية."
+        breadcrumbs={[{label:"الرئيسية",href:"/"},{label:"الموارد البشرية",href:"/workers"},{label:"الرواتب"}]}
         actions={
           <div className="flex flex-wrap gap-2">
             <ERPButton
@@ -409,6 +411,10 @@ export default function PayrollPage() {
           </div>
         }
       />
+
+      <LifecycleStrip title="دورة مسير الرواتب" steps={[{label:"الفترة"},{label:"إنشاء المسير"},{label:"مراجعة الأسطر"},{label:"الاعتماد"},{label:"الصرف"},{label:"القيد المحاسبي"}]}/>
+      <ModuleLinks links={[{href:"/workers",label:"العمال والموظفون",description:"العودة إلى الملفات والحضور والسلف والعمولات."},{href:"/journal-entries",label:"القيود المحاسبية",description:"مراجعة القيود عبر صلاحيات المحاسبة الحالية."}]}/>
+      <WorkspaceNotice tone="warning">الاعتماد والصرف إجراءان ماليان نهائيان وفق حالة المسير. راجع إجمالي الأسطر والاستقطاعات وصافي الرواتب قبل التأكيد.</WorkspaceNotice>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <ERPStatCard

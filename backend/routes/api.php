@@ -55,12 +55,6 @@ use App\Http\Controllers\Api\{
     WorkerController
 };
 
-use App\Services\Payroll\{
-    PayrollApprover,
-    PayrollPayment,
-    PayrollService
-};
-
 /*
 |--------------------------------------------------------------------------
 | Public API
@@ -187,51 +181,6 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
             [SubscriptionPaymentController::class, 'storePayment']
         );
 
-        /* اختبارات محلية فقط ومحمية بمدير المنصة. */
-        if (app()->environment('local')) {
-            Route::get('/dev/payroll/generate', function (PayrollService $service) {
-                request()->headers->set('X-Company-ID', 4);
-                request()->headers->set('X-Branch-ID', 6);
-                request()->headers->set('X-User-ID', 2);
-
-                return response()->json([
-                    'status' => true,
-                    'data' => $service->generate([
-                        'company_id' => 4,
-                        'branch_id' => 6,
-                        'salary_month' => date('Y-m-01'),
-                    ]),
-                ]);
-            });
-
-            Route::get('/dev/payroll/approve/{id}', function (
-                int $id,
-                PayrollApprover $approver
-            ) {
-                request()->headers->set('X-Company-ID', 4);
-                request()->headers->set('X-Branch-ID', 6);
-                request()->headers->set('X-User-ID', 2);
-
-                return response()->json([
-                    'status' => true,
-                    'data' => $approver->approve($id),
-                ]);
-            });
-
-            Route::get('/dev/payroll/pay/{id}', function (
-                int $id,
-                PayrollPayment $payment
-            ) {
-                request()->headers->set('X-Company-ID', 4);
-                request()->headers->set('X-Branch-ID', 6);
-                request()->headers->set('X-User-ID', 2);
-
-                return response()->json([
-                    'status' => true,
-                    'data' => $payment->pay($id, 'CASH'),
-                ]);
-            });
-        }
     });
 
     /*

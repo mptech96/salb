@@ -7,14 +7,18 @@ use App\Services\Accounting\AccountingContext;
 use App\Services\MigrationCenterService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class DataImportController extends Controller
 {
     public function catalog(Request $r, AccountingContext $ctx, MigrationCenterService $svc)
     {
+        $cid=$ctx->companyId($r);$branch=$ctx->branchFilter($r);
         return response()->json(['status'=>true,'data'=>[
             'entities'=>$svc->prepareCatalog(),
-            'history'=>$svc->history($ctx->companyId($r)),
+            'history'=>$svc->history($cid),
+            'branches'=>DB::table('branches')->where('company_id',$cid)->when($branch!==null,fn($q)=>$q->where('id',$branch))->where('is_active',1)->orderBy('branch_name')->get(['id','branch_code','branch_name']),
+            'limits'=>['max_file_bytes'=>20*1024*1024,'max_rows'=>50000,'formats'=>['csv','txt']],
         ]]);
     }
 
@@ -48,7 +52,7 @@ class DataImportController extends Controller
         try{
             $parsed=$this->parsedFile($r,$svc);
             $mapping=$this->mapping($r);
-            $data=$svc->preview($ctx->companyId($r),$entity,$parsed,$mapping);
+            $data=$svc->preview($ctx->companyId($r),$entity,$parsed,$mapping,$ctx->branchFilter($r));
             return response()->json(['status'=>true,'data'=>$data]);
         }catch(ValidationException $e){throw $e;}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
     }
@@ -62,7 +66,8 @@ class DataImportController extends Controller
             'file_name'=>'nullable|string|max:255',
             'mapping'=>'nullable|string',
             'source_system'=>'nullable|string|max:120',
-            'posting_mode'=>'nullable|in:DRAFT,POST',
+            'posting_mode'=>'nullable|in:DRAFT',
+            'existing_draft_policy'=>'nullable|in:SKIP_EXISTING',
             'auto_create_groups_categories'=>'nullable',
         ]);
         try{
@@ -71,6 +76,7 @@ class DataImportController extends Controller
             $opts=[
                 'source_system'=>$r->input('source_system','Legacy System'),
                 'posting_mode'=>$r->input('posting_mode','DRAFT'),
+                'existing_draft_policy'=>$r->input('existing_draft_policy','SKIP_EXISTING'),
                 'auto_create_groups_categories'=>filter_var($r->input('auto_create_groups_categories',true),FILTER_VALIDATE_BOOLEAN),
             ];
             $data=$svc->import(
@@ -89,7 +95,8 @@ class DataImportController extends Controller
 
     public function export(Request $r, string $entity, AccountingContext $ctx, MigrationCenterService $svc)
     {
-        try{$rows=$svc->exportRows($ctx->companyId($r),$entity);$filename='SULB-'.$entity.'-export-'.date('Ymd-His').'.csv';return response()->streamDownload(function()use($rows){$out=fopen('php://output','w');fwrite($out,"\xEF\xBB\xBF");if(!$rows){fputcsv($out,['no_data']);}else{$headers=array_keys($rows[0]);fputcsv($out,$headers);foreach($rows as$row)fputcsv($out,array_map(fn($h)=>is_scalar($row[$h]??null)||is_null($row[$h]??null)?$row[$h]??'':json_encode($row[$h],JSON_UNESCAPED_UNICODE),$headers));}fclose($out);},$filename,['Content-Type'=>'text/csv; charset=UTF-8']);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        $r->validate(['date_from'=>'nullable|date','date_to'=>'nullable|date|after_or_equal:date_from','branch_id'=>'nullable|integer','format'=>'nullable|in:csv']);
+        try{$rows=$svc->exportRows($ctx->companyId($r),$entity,['branch_id'=>$ctx->branchFilter($r),'date_from'=>$r->query('date_from'),'date_to'=>$r->query('date_to')]);$filename='SULB-'.$entity.'-export-'.date('Ymd-His').'.csv';return response()->streamDownload(function()use($rows){$out=fopen('php://output','w');fwrite($out,"\xEF\xBB\xBF");if(!$rows){fputcsv($out,['no_data']);}else{$headers=array_keys($rows[0]);fputcsv($out,$headers);foreach($rows as$row)fputcsv($out,array_map(fn($h)=>is_scalar($row[$h]??null)||is_null($row[$h]??null)?$row[$h]??'':json_encode($row[$h],JSON_UNESCAPED_UNICODE),$headers));}fclose($out);},$filename,['Content-Type'=>'text/csv; charset=UTF-8']);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
     }
 
     private function parsedFile(Request $r, MigrationCenterService $svc): array
