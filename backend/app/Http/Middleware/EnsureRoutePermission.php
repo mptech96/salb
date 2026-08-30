@@ -85,6 +85,19 @@ class EnsureRoutePermission
         if ($uri === 'tax-reports' || str_starts_with($uri, 'tax-reports/')) return 'tax_reports.view';
         if ($uri === 'accounting-integrity' || str_starts_with($uri, 'accounting-integrity/')) return 'accounting.integrity.view';
         if (str_starts_with($uri,'commercial-returns')) { if (str_contains($uri,'/post')) return 'returns.post'; if (str_contains($uri,'/void')) return 'returns.void'; return in_array($method,['GET','HEAD'],true)?'returns.draft':'returns.draft'; }
+        if (str_starts_with($uri,'quotations')) {
+            if (str_contains($uri,'/convert-to-invoice')) return 'quotations.convert';
+            if (str_contains($uri,'/accept')||str_contains($uri,'/reject')) return 'quotations.accept';
+            if (str_contains($uri,'/send')) return 'quotations.send'; if (str_contains($uri,'/cancel')||$method==='DELETE') return 'quotations.cancel';
+            if (in_array($method,['GET','HEAD'],true)) return str_contains($uri,'/print')?'quotations.print':'quotations.view';
+            return $method==='POST'?'quotations.create':'quotations.update';
+        }
+        if (str_starts_with($uri,'purchase-orders')) {
+            if (str_contains($uri,'/convert-to-invoice')) return 'purchase_orders.convert'; if (str_contains($uri,'/approve')) return 'purchase_orders.approve';
+            if (str_contains($uri,'/send')) return 'purchase_orders.send'; if (str_contains($uri,'/cancel')||$method==='DELETE') return 'purchase_orders.cancel';
+            if (in_array($method,['GET','HEAD'],true)) return str_contains($uri,'/print')?'purchase_orders.print':'purchase_orders.view';
+            return $method==='POST'?'purchase_orders.create':'purchase_orders.update';
+        }
 
         if (str_starts_with($uri, 'weighbridge')) {
             if (in_array($method,['GET','HEAD'],true)) return 'weighbridge.view';
@@ -181,7 +194,7 @@ class EnsureRoutePermission
 
     private function isCompanyPortalUri(string $uri): bool
     {
-        foreach (['items','cars','suppliers','customers','drivers','workers','vouchers','expenses','company-settings','financial-accounts','financial-setup','opening-balances','accounts','journal-entries','trial-balance','accounting','financial-years','inventory','inventory-operations','weighbridge','imports','purchase-invoices','sales-invoices','shipments','shipment-costs','payroll','fixed-assets','fixed-asset','dashboard','reports','statements','official-documents','permission-matrix','tax-reports','commercial-returns','accounting-integrity'] as $prefix) {
+        foreach (['items','cars','suppliers','customers','drivers','workers','vouchers','expenses','company-settings','financial-accounts','financial-setup','opening-balances','accounts','journal-entries','trial-balance','accounting','financial-years','inventory','inventory-operations','weighbridge','imports','purchase-invoices','sales-invoices','quotations','purchase-orders','shipments','shipment-costs','payroll','fixed-assets','fixed-asset','dashboard','reports','statements','official-documents','permission-matrix','tax-reports','commercial-returns','accounting-integrity'] as $prefix) {
             if ($uri === $prefix || str_starts_with($uri, $prefix.'/')) return true;
         }
         return false;

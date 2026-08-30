@@ -16,7 +16,7 @@ export const MANAGER_ROLES = new Set([
 
 const NAVIGATION_FEATURES: Array<[string, string]> = [
   ["/weighing", "weighbridge"], ["/shipments", "shipments"],
-  ["/purchases", "purchases"], ["/sales", "sales"], ["/commercial-returns", "sales"],
+  ["/purchases", "purchases"], ["/purchase-orders", "purchases"], ["/sales", "sales"], ["/quotations", "sales"], ["/commercial-returns", "sales"],
   ["/inventory-operations", "processing"], ["/inventory", "inventory"],
   ["/accounting", "accounting"], ["/journal-entries", "accounting"], ["/financial-years", "accounting"],
   ["/accounts", "accounting"], ["/tax-reports", "tax"], ["/reports", "reports"],

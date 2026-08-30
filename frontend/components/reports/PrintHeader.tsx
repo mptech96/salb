@@ -40,6 +40,12 @@ export default function PrintHeader({ profile, title, filters }: Props) {
           </div>
         )}
       </div>
+      {(profile?.signature_url || profile?.stamp_url) ? (
+        <div className="mt-3 flex items-end justify-end gap-5" aria-label="اعتمادات المستند">
+          {profile?.signature_url ? <img src={profile.signature_url} alt="التوقيع المعتمد" className="h-12 max-w-32 object-contain" /> : null}
+          {profile?.stamp_url ? <img src={profile.stamp_url} alt="ختم الشركة" className="h-14 w-14 object-contain" /> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

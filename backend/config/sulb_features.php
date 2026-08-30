@@ -20,7 +20,7 @@ return [
     'limits' => ['max_users', 'max_branches', 'max_stores', 'max_vehicles', 'max_documents'],
     'route_prefixes' => [
         'weighbridge' => 'weighbridge', 'shipments' => 'shipments', 'shipment-costs' => 'shipments',
-        'purchase-invoices' => 'purchases', 'sales-invoices' => 'sales', 'commercial-returns' => 'sales',
+        'purchase-invoices' => 'purchases', 'purchase-orders' => 'purchases', 'sales-invoices' => 'sales', 'quotations' => 'sales', 'commercial-returns' => 'sales',
         'inventory' => 'inventory', 'inventory-operations' => 'processing',
         'accounts' => 'accounting', 'journal-entries' => 'accounting', 'trial-balance' => 'accounting',
         'accounting' => 'accounting', 'financial-years' => 'accounting', 'opening-balances' => 'accounting',

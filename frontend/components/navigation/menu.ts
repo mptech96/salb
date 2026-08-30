@@ -132,6 +132,12 @@ export const companyNavigation: NavigationGroup[] = [
     icon: "🛒",
     items: [
       {
+        href: "/purchase-orders",
+        label: "أوامر الشراء",
+        icon: "📋",
+        permission: "purchase_orders.view",
+      },
+      {
         href: "/purchases",
         label: "فواتير المشتريات",
         icon: "🛒",
@@ -156,6 +162,12 @@ export const companyNavigation: NavigationGroup[] = [
     label: "المبيعات",
     icon: "🧾",
     items: [
+      {
+        href: "/quotations",
+        label: "عروض الأسعار",
+        icon: "📑",
+        permission: "quotations.view",
+      },
       {
         href: "/sales",
         label: "فواتير المبيعات",

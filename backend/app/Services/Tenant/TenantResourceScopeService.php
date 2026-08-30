@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services\Tenant;
 
+use App\Services\PartyBranchScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 final class TenantResourceScopeService
 {
+    public function __construct(private readonly PartyBranchScopeService $partyScopes) {}
+
     /** @var array<string, bool> */
     private array $tableCache = [];
     /** @var array<string, bool> */
@@ -30,6 +33,10 @@ final class TenantResourceScopeService
         'purchase-invoices/{id}' => ['table' => 'purchase_invoices', 'param' => 'id', 'branch' => true],
         'sales-invoices/{sales_invoice}' => ['table' => 'sales_invoices', 'param' => 'sales_invoice', 'branch' => true],
         'sales-invoices/{id}' => ['table' => 'sales_invoices', 'param' => 'id', 'branch' => true],
+        'quotations/{quotation}' => ['table' => 'sales_quotations', 'param' => 'quotation', 'branch' => true],
+        'quotations/{id}' => ['table' => 'sales_quotations', 'param' => 'id', 'branch' => true],
+        'purchase-orders/{purchase_order}' => ['table' => 'purchase_orders', 'param' => 'purchase_order', 'branch' => true],
+        'purchase-orders/{id}' => ['table' => 'purchase_orders', 'param' => 'id', 'branch' => true],
         'shipments/{shipment}' => ['table' => 'shipments', 'param' => 'shipment', 'branch' => true],
         'shipments/{id}' => ['table' => 'shipments', 'param' => 'id', 'branch' => true],
         'shipments/{shipmentId}' => ['table' => 'shipments', 'param' => 'shipmentId', 'branch' => true],
@@ -124,7 +131,11 @@ final class TenantResourceScopeService
             $value = is_object($value) && isset($value->id) ? $value->id : $value;
 
             if ($value !== null && is_numeric($value)) {
-                $this->assertOwned($definition['table'], (int) $value, $companyId, $branchId, $definition['branch']);
+                if ($branchId !== null && in_array($definition['table'], ['customers', 'suppliers'], true)) {
+                    $this->assertPartyAccessible($definition['table'], (int) $value, $companyId, $branchId);
+                } else {
+                    $this->assertOwned($definition['table'], (int) $value, $companyId, $branchId, $definition['branch']);
+                }
             }
 
             return;
@@ -159,7 +170,25 @@ final class TenantResourceScopeService
         if ($value === null || $value === '') return;
         if (!is_numeric($value) || (int) $value <= 0) $this->deny('FOREIGN_RESOURCE_INVALID', 422);
         $definition = self::FOREIGN_RESOURCES[$key];
+        if ($branchId !== null && in_array($key, ['customer_id', 'supplier_id'], true)) {
+            $this->assertPartyAccessible($definition['table'], (int) $value, $companyId, $branchId);
+            return;
+        }
         $this->assertOwned($definition['table'], (int) $value, $companyId, $branchId, $definition['branch']);
+    }
+
+    private function assertPartyAccessible(string $table, int $id, int $companyId, int $branchId): void
+    {
+        try {
+            $this->partyScopes->assertAccessible(
+                $companyId,
+                $table === 'suppliers' ? 'SUPPLIER' : 'CUSTOMER',
+                $id,
+                $branchId,
+            );
+        } catch (\RuntimeException) {
+            $this->deny('RESOURCE_OUT_OF_SCOPE');
+        }
     }
 
     private function deny(string $code, int $status = 404): never

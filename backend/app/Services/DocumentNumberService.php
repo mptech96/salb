@@ -29,6 +29,13 @@ class DocumentNumberService
         if($q->exists())throw new \RuntimeException('رقم الفاتورة مستخدم مسبقًا داخل الشركة.');
     }
 
+    public function assertDocumentUnique(int $companyId,string $table,string $number,?int $ignoreId=null): void
+    {
+        $number=trim($number);if($number==='')return;
+        $q=DB::table($table)->where('company_id',$companyId)->where('document_number',$number);if($ignoreId)$q->where('id','<>',$ignoreId);
+        if($q->exists())throw new \RuntimeException('رقم المستند مستخدم مسبقًا داخل الشركة.');
+    }
+
     private function clean(string $v): string
     {
         $v=strtoupper(trim($v));$v=preg_replace('/[^A-Z0-9\x{0600}-\x{06FF}]+/u','-',$v)?:'';$v=trim($v,'-');return mb_substr($v?:'DOC',0,30);

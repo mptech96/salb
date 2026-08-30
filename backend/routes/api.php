@@ -37,9 +37,11 @@ use App\Http\Controllers\Api\{
     PlanController,
     PublicRegistrationController,
     PurchaseInvoiceController,
+    PurchaseOrderController,
     ReportController,
     RoleController,
     SalesInvoiceController,
+    SalesQuotationController,
     ShipmentController,
     ShipmentCostController,
     ShipmentWeighbridgeAllocationController,
@@ -287,6 +289,23 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
         Route::post('/sales-invoices/{id}/post', [SalesInvoiceController::class, 'post']);
         Route::post('/sales-invoices/{id}/void', [SalesInvoiceController::class, 'void']);
         Route::apiResource('sales-invoices', SalesInvoiceController::class);
+
+        Route::get('/quotations/meta', [SalesQuotationController::class, 'meta']);
+        Route::get('/quotations/{id}/print', [SalesQuotationController::class, 'show']);
+        Route::post('/quotations/{id}/send', [SalesQuotationController::class, 'send']);
+        Route::post('/quotations/{id}/accept', [SalesQuotationController::class, 'accept']);
+        Route::post('/quotations/{id}/reject', [SalesQuotationController::class, 'reject']);
+        Route::post('/quotations/{id}/cancel', [SalesQuotationController::class, 'cancel']);
+        Route::post('/quotations/{id}/convert-to-invoice', [SalesQuotationController::class, 'convert']);
+        Route::apiResource('quotations', SalesQuotationController::class);
+
+        Route::get('/purchase-orders/meta', [PurchaseOrderController::class, 'meta']);
+        Route::get('/purchase-orders/{id}/print', [PurchaseOrderController::class, 'show']);
+        Route::post('/purchase-orders/{id}/approve', [PurchaseOrderController::class, 'approve']);
+        Route::post('/purchase-orders/{id}/send', [PurchaseOrderController::class, 'send']);
+        Route::post('/purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
+        Route::post('/purchase-orders/{id}/convert-to-invoice', [PurchaseOrderController::class, 'convert']);
+        Route::apiResource('purchase-orders', PurchaseOrderController::class);
 
         Route::get('/shipments/meta', [ShipmentController::class, 'meta']);
         Route::post('/shipments/{id}/ready', [ShipmentController::class, 'ready']);

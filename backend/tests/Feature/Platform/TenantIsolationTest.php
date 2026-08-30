@@ -27,8 +27,10 @@ class TenantIsolationTest extends Wave1SubscriptionTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (['customers','suppliers','drivers','items','shipments','weighbridge_cards','financial_years','journal_entries','inventory_lots','official_document_attachments'] as $table) Schema::dropIfExists($table);
-        foreach (['customers','suppliers','drivers','shipments','weighbridge_cards','journal_entries','inventory_lots'] as $table) Schema::create($table,function(Blueprint $t):void{$t->id();$t->foreignId('company_id');$t->foreignId('branch_id')->nullable();});
+        foreach (['customer_branches','supplier_branches','customers','suppliers','drivers','items','shipments','weighbridge_cards','financial_years','journal_entries','inventory_lots','official_document_attachments'] as $table) Schema::dropIfExists($table);
+        foreach (['customers','suppliers'] as $table) Schema::create($table,function(Blueprint $t):void{$t->id();$t->foreignId('company_id');$t->foreignId('branch_id')->nullable();$t->boolean('scope_all_branches')->default(false);$t->boolean('is_active')->default(true);});
+        foreach (['customer_branches'=>'customer_id','supplier_branches'=>'supplier_id'] as $table=>$foreign) Schema::create($table,function(Blueprint $t)use($foreign):void{$t->id();$t->foreignId('company_id');$t->foreignId($foreign);$t->foreignId('branch_id');$t->boolean('is_active')->default(true);});
+        foreach (['drivers','shipments','weighbridge_cards','journal_entries','inventory_lots'] as $table) Schema::create($table,function(Blueprint $t):void{$t->id();$t->foreignId('company_id');$t->foreignId('branch_id')->nullable();});
         Schema::create('items',fn(Blueprint $t)=>[$t->id(),$t->foreignId('company_id')]);
         Schema::create('financial_years',fn(Blueprint $t)=>[$t->id(),$t->foreignId('company_id')]);
         Schema::create('official_document_attachments',fn(Blueprint $t)=>[$t->id(),$t->foreignId('company_id'),$t->foreignId('document_id')]);
@@ -80,6 +82,34 @@ class TenantIsolationTest extends Wave1SubscriptionTestCase
         $request=$this->plainRequest('POST',['branch_id'=>$this->branchA2]);
         $this->middleware()->handle($request,fn()=>response()->noContent());
         self::assertSame($this->branchA,$request->input('branch_id'));
+    }
+
+    public function test_branch_user_can_use_linked_or_all_branch_customer_but_not_other_or_foreign_customer(): void
+    {
+        $linked=$this->party('customers',$this->companyA,false);$this->linkParty('customer_branches','customer_id',$linked,$this->companyA,$this->branchA);
+        $all=$this->party('customers',$this->companyA,true);
+        $other=$this->party('customers',$this->companyA,false);$this->linkParty('customer_branches','customer_id',$other,$this->companyA,$this->branchA2);
+        $foreign=$this->party('customers',$this->companyB,true);
+        foreach([$linked,$all]as$id){$response=$this->middleware()->handle($this->plainRequest('POST',['customer_id'=>$id]),fn()=>response()->noContent());self::assertSame(204,$response->getStatusCode());}
+        foreach([$other,$foreign]as$id)$this->assertDenied($this->plainRequest('POST',['customer_id'=>$id]));
+    }
+
+    public function test_branch_user_can_use_linked_or_all_branch_supplier_but_not_other_or_foreign_supplier(): void
+    {
+        $linked=$this->party('suppliers',$this->companyA,false);$this->linkParty('supplier_branches','supplier_id',$linked,$this->companyA,$this->branchA);
+        $all=$this->party('suppliers',$this->companyA,true);
+        $other=$this->party('suppliers',$this->companyA,false);$this->linkParty('supplier_branches','supplier_id',$other,$this->companyA,$this->branchA2);
+        $foreign=$this->party('suppliers',$this->companyB,true);
+        foreach([$linked,$all]as$id){$response=$this->middleware()->handle($this->plainRequest('POST',['supplier_id'=>$id]),fn()=>response()->noContent());self::assertSame(204,$response->getStatusCode());}
+        foreach([$other,$foreign]as$id)$this->assertDenied($this->plainRequest('POST',['supplier_id'=>$id]));
+    }
+
+    public function test_branch_and_company_payloads_cannot_widen_party_scope(): void
+    {
+        $party=$this->party('customers',$this->companyA,true);
+        $request=$this->plainRequest('POST',['company_id'=>$this->companyB,'branch_id'=>$this->branchA2,'customer_id'=>$party]);
+        $response=$this->middleware()->handle($request,fn(Request$r)=>response()->json(['company_id'=>$r->input('company_id'),'branch_id'=>$r->input('branch_id')]));
+        self::assertSame(['company_id'=>$this->companyA,'branch_id'=>$this->branchA],$response->getData(true));
     }
 
     public function test_company_wide_role_can_access_company_branches_but_not_foreign_branch(): void
@@ -148,4 +178,6 @@ class TenantIsolationTest extends Wave1SubscriptionTestCase
     {
         $data=['company_id'=>$companyId];if($branchId!==null&&Schema::hasColumn($table,'branch_id'))$data['branch_id']=$branchId;return DB::table($table)->insertGetId($data);
     }
+    private function party(string$table,int$companyId,bool$allBranches): int{return DB::table($table)->insertGetId(['company_id'=>$companyId,'scope_all_branches'=>(int)$allBranches,'is_active'=>1]);}
+    private function linkParty(string$table,string$foreign,int$partyId,int$companyId,int$branchId): void{DB::table($table)->insert(['company_id'=>$companyId,$foreign=>$partyId,'branch_id'=>$branchId,'is_active'=>1]);}
 }
