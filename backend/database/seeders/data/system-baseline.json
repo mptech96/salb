@@ -1,0 +1,2354 @@
+{
+    "version": 1,
+    "roles": [
+        {
+            "role_code": "ACCOUNTANT",
+            "role_name": "محاسب",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "role_name": "مدير فرع",
+            "is_active": 1
+        },
+        {
+            "role_code": "COMPANY_OWNER",
+            "role_name": "مالك الشركة",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "role_name": "مدير",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "role_name": "مبيعات",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "role_name": "مخزون",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "role_name": "مدير النظام",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "role_name": "مشاهد",
+            "is_active": 1
+        }
+    ],
+    "permissions": [
+        {
+            "permission_code": "accounting.integrity.view",
+            "permission_name": "عرض فحص سلامة المحاسبة والمخزون",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "audit_logs.view",
+            "permission_name": "عرض سجل الأنشطة",
+            "module_name": "audit_logs",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "branches.create",
+            "permission_name": "إضافة فرع",
+            "module_name": "branches",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "branches.delete",
+            "permission_name": "حذف فرع",
+            "module_name": "branches",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "branches.update",
+            "permission_name": "تعديل فرع",
+            "module_name": "branches",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "branches.view",
+            "permission_name": "عرض الفروع",
+            "module_name": "branches",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "cars.create",
+            "permission_name": "إضافة سيارة",
+            "module_name": "cars",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "cars.delete",
+            "permission_name": "حذف سيارة",
+            "module_name": "cars",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "cars.update",
+            "permission_name": "تعديل سيارة",
+            "module_name": "cars",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "cars.view",
+            "permission_name": "عرض السيارات",
+            "module_name": "cars",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "companies.view",
+            "permission_name": "عرض الشركات",
+            "module_name": "companies",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "cost_centers.manage",
+            "permission_name": "إدارة مراكز التكلفة",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "customers.create",
+            "permission_name": "إضافة عميل",
+            "module_name": "customers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "customers.delete",
+            "permission_name": "حذف عميل",
+            "module_name": "customers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "customers.update",
+            "permission_name": "تعديل عميل",
+            "module_name": "customers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "customers.view",
+            "permission_name": "عرض العملاء",
+            "module_name": "customers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "dashboard.view",
+            "permission_name": "عرض الرئيسية",
+            "module_name": "dashboard",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "drivers.manage",
+            "permission_name": "إدارة بيانات السائقين",
+            "module_name": "drivers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "drivers.view",
+            "permission_name": "عرض السائقين",
+            "module_name": "drivers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "expenses.create",
+            "permission_name": "إضافة مصروف",
+            "module_name": "expenses",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "expenses.delete",
+            "permission_name": "حذف مصروف",
+            "module_name": "expenses",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "expenses.update",
+            "permission_name": "تعديل مصروف",
+            "module_name": "expenses",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "expenses.view",
+            "permission_name": "عرض المصروفات",
+            "module_name": "expenses",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "financial_accounts.manage",
+            "permission_name": "إدارة الخزائن والبنوك",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "financial_accounts.view",
+            "permission_name": "عرض الخزائن والبنوك",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "financial_setup.manage",
+            "permission_name": "إدارة الضرائب والعملات",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "financial_setup.view",
+            "permission_name": "عرض الضرائب والعملات",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "imports.execute",
+            "permission_name": "تنفيذ استيراد البيانات",
+            "module_name": "imports",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "imports.export",
+            "permission_name": "تصدير البيانات",
+            "module_name": "imports",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "imports.view",
+            "permission_name": "عرض مركز نقل البيانات",
+            "module_name": "imports",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "inventory.process",
+            "permission_name": "إدارة عمليات المخزون",
+            "module_name": "inventory",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "inventory.process.post",
+            "permission_name": "ترحيل عمليات المخزون",
+            "module_name": "inventory",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "inventory.view",
+            "permission_name": "عرض المخزون",
+            "module_name": "inventory",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "items.accounting.manage",
+            "permission_name": "إدارة حسابات الأصناف",
+            "module_name": "items",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "items.create",
+            "permission_name": "إضافة صنف",
+            "module_name": "items",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "items.delete",
+            "permission_name": "حذف صنف",
+            "module_name": "items",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "items.update",
+            "permission_name": "تعديل صنف",
+            "module_name": "items",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "items.view",
+            "permission_name": "عرض الأصناف",
+            "module_name": "items",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "official_documents.view",
+            "permission_name": "عرض الأوراق الرسمية",
+            "module_name": "official_documents",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "opening_balances.post",
+            "permission_name": "ترحيل الأرصدة الافتتاحية",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "opening_balances.view",
+            "permission_name": "عرض الأرصدة الافتتاحية",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchases.create",
+            "permission_name": "إضافة مشتريات",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchases.delete",
+            "permission_name": "حذف مشتريات",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchases.draft",
+            "permission_name": "حفظ مسودة مشتريات",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchases.post",
+            "permission_name": "ترحيل فاتورة مشتريات",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchases.update",
+            "permission_name": "تعديل مشتريات",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchases.view",
+            "permission_name": "عرض المشتريات",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchases.void",
+            "permission_name": "إلغاء/عكس فاتورة مشتريات مرحلة",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchase_orders.approve",
+            "permission_name": "اعتماد أوامر الشراء",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchase_orders.cancel",
+            "permission_name": "إلغاء أوامر الشراء",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchase_orders.convert",
+            "permission_name": "تحويل أمر الشراء",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchase_orders.create",
+            "permission_name": "إنشاء أوامر الشراء",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchase_orders.print",
+            "permission_name": "طباعة أوامر الشراء",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchase_orders.send",
+            "permission_name": "إرسال أوامر الشراء",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchase_orders.update",
+            "permission_name": "تعديل أوامر الشراء",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "purchase_orders.view",
+            "permission_name": "عرض أوامر الشراء",
+            "module_name": "purchases",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "quotations.accept",
+            "permission_name": "قبول/رفض عروض الأسعار",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "quotations.cancel",
+            "permission_name": "إلغاء عروض الأسعار",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "quotations.convert",
+            "permission_name": "تحويل عرض السعر",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "quotations.create",
+            "permission_name": "إنشاء عروض الأسعار",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "quotations.print",
+            "permission_name": "طباعة عروض الأسعار",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "quotations.send",
+            "permission_name": "إرسال عروض الأسعار",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "quotations.update",
+            "permission_name": "تعديل عروض الأسعار",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "quotations.view",
+            "permission_name": "عرض عروض الأسعار",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "reports.export",
+            "permission_name": "تصدير التقارير",
+            "module_name": "reports",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "reports.print",
+            "permission_name": "طباعة التقارير",
+            "module_name": "reports",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "reports.view",
+            "permission_name": "عرض التقارير",
+            "module_name": "reports",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "returns.draft",
+            "permission_name": "حفظ مسودة مردود",
+            "module_name": "returns",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "returns.post",
+            "permission_name": "ترحيل مردود",
+            "module_name": "returns",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "returns.void",
+            "permission_name": "عكس مردود مرحل",
+            "module_name": "returns",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "sales.create",
+            "permission_name": "إضافة مبيعات",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "sales.delete",
+            "permission_name": "حذف مبيعات",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "sales.draft",
+            "permission_name": "حفظ مسودة مبيعات",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "sales.post",
+            "permission_name": "ترحيل فاتورة مبيعات",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "sales.update",
+            "permission_name": "تعديل مبيعات",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "sales.view",
+            "permission_name": "عرض المبيعات",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "sales.void",
+            "permission_name": "إلغاء/عكس فاتورة مبيعات مرحلة",
+            "module_name": "sales",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "settings.default_parties.manage",
+            "permission_name": "تهيئة العميل والمورد الافتراضيين",
+            "module_name": "settings",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "settings.view",
+            "permission_name": "عرض إعدادات المكتب",
+            "module_name": "settings",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.approve",
+            "permission_name": "اعتماد الحمولات",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.cost",
+            "permission_name": "إدارة تكاليف الشحنات",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.create",
+            "permission_name": "إضافة الحمولات",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.delete",
+            "permission_name": "حذف الحمولات",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.prepare",
+            "permission_name": "تجهيز وتسعير الشحنات",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.ready",
+            "permission_name": "جعل الشحنة جاهزة للفوترة",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.reopen",
+            "permission_name": "إعادة فتح شحنة قبل الفوترة",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.update",
+            "permission_name": "تعديل الحمولات",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.view",
+            "permission_name": "عرض الحمولات",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "shipments.weighbridge.allocate",
+            "permission_name": "توزيع كروت الميزان على أصناف الشحنة",
+            "module_name": "shipments",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "statements.print",
+            "permission_name": "طباعة كشف الحساب",
+            "module_name": "statements",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "statements.view",
+            "permission_name": "عرض كشف الحساب",
+            "module_name": "statements",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "suppliers.create",
+            "permission_name": "إضافة مورد",
+            "module_name": "suppliers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "suppliers.delete",
+            "permission_name": "حذف مورد",
+            "module_name": "suppliers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "suppliers.update",
+            "permission_name": "تعديل مورد",
+            "module_name": "suppliers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "suppliers.view",
+            "permission_name": "عرض الموردين",
+            "module_name": "suppliers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "tax_reports.view",
+            "permission_name": "عرض التقرير الضريبي",
+            "module_name": "accounting",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "users.permissions.manage",
+            "permission_name": "إدارة صلاحيات المستخدم التفصيلية",
+            "module_name": "users",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "users.view",
+            "permission_name": "عرض المستخدمين",
+            "module_name": "users",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "vouchers.create",
+            "permission_name": "إضافة سند",
+            "module_name": "vouchers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "vouchers.delete",
+            "permission_name": "حذف سند",
+            "module_name": "vouchers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "vouchers.update",
+            "permission_name": "تعديل سند",
+            "module_name": "vouchers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "vouchers.view",
+            "permission_name": "عرض السندات",
+            "module_name": "vouchers",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "weighbridge.close",
+            "permission_name": "إغلاق كرت الميزان",
+            "module_name": "weighbridge",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "weighbridge.link",
+            "permission_name": "ربط كرت الميزان بشحنة",
+            "module_name": "weighbridge",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "weighbridge.open",
+            "permission_name": "فتح كرت ميزان",
+            "module_name": "weighbridge",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "weighbridge.print",
+            "permission_name": "طباعة كرت الميزان",
+            "module_name": "weighbridge",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "weighbridge.record",
+            "permission_name": "تسجيل وإعادة وتصحيح الوزن",
+            "module_name": "weighbridge",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "weighbridge.view",
+            "permission_name": "عرض محطة الميزان",
+            "module_name": "weighbridge",
+            "permission_scope": "COMPANY"
+        },
+        {
+            "permission_code": "workers.view",
+            "permission_name": "الموارد البشرية",
+            "module_name": "HR",
+            "permission_scope": "COMPANY"
+        }
+    ],
+    "role_permissions": [
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "customers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "customers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "customers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "customers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "expenses.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "expenses.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "expenses.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "expenses.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "reports.export",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "reports.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "reports.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "statements.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "statements.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "suppliers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "suppliers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "suppliers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "suppliers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "vouchers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "vouchers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "vouchers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "vouchers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "ACCOUNTANT",
+            "permission_code": "workers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "audit_logs.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "branches.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "branches.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "branches.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "branches.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "cars.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "cars.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "cars.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "cars.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "companies.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "customers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "customers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "customers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "customers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "dashboard.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "drivers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "expenses.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "expenses.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "expenses.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "expenses.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "inventory.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "items.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "items.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "items.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "items.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "official_documents.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "purchases.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "purchases.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "purchases.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "purchases.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "reports.export",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "reports.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "reports.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "sales.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "sales.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "sales.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "sales.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "settings.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "shipments.approve",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "shipments.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "shipments.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "shipments.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "shipments.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "statements.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "statements.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "suppliers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "suppliers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "suppliers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "suppliers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "users.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "vouchers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "vouchers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "vouchers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "vouchers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "BRANCH_MANAGER",
+            "permission_code": "workers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "audit_logs.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "branches.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "branches.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "branches.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "branches.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "cars.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "cars.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "cars.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "cars.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "companies.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "customers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "customers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "customers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "customers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "dashboard.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "drivers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "expenses.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "expenses.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "expenses.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "expenses.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "inventory.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "items.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "items.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "items.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "items.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "official_documents.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "purchases.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "purchases.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "purchases.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "purchases.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "reports.export",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "reports.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "reports.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "sales.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "sales.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "sales.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "sales.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "settings.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "shipments.approve",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "shipments.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "shipments.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "shipments.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "shipments.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "statements.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "statements.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "suppliers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "suppliers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "suppliers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "suppliers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "users.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "vouchers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "vouchers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "vouchers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "vouchers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "MANAGER",
+            "permission_code": "workers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "cars.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "customers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "customers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "customers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "customers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "items.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "reports.export",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "reports.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "reports.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "sales.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "sales.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "sales.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "sales.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SALES",
+            "permission_code": "workers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "cars.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "cars.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "cars.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "cars.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "inventory.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "items.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "items.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "items.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "items.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "purchases.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "purchases.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "purchases.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "purchases.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "suppliers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "suppliers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "suppliers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "suppliers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "STORE",
+            "permission_code": "workers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "audit_logs.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "branches.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "branches.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "branches.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "branches.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "cars.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "cars.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "cars.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "cars.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "companies.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "customers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "customers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "customers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "customers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "dashboard.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "drivers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "expenses.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "expenses.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "expenses.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "expenses.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "inventory.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "items.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "items.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "items.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "items.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "official_documents.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "purchases.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "purchases.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "purchases.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "purchases.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "reports.export",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "reports.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "reports.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "sales.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "sales.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "sales.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "sales.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "settings.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "shipments.approve",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "shipments.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "shipments.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "shipments.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "shipments.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "statements.print",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "statements.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "suppliers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "suppliers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "suppliers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "suppliers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "users.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "vouchers.create",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "vouchers.delete",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "vouchers.update",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "vouchers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "SUPER_ADMIN",
+            "permission_code": "workers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "branches.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "cars.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "customers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "expenses.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "items.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "purchases.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "reports.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "sales.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "statements.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "suppliers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "vouchers.view",
+            "is_active": 1
+        },
+        {
+            "role_code": "VIEWER",
+            "permission_code": "workers.view",
+            "is_active": 1
+        }
+    ],
+    "feature_catalog": [
+        {
+            "feature_code": "accounting",
+            "feature_name": "Accounting",
+            "feature_type": "BOOLEAN",
+            "module_name": "accounting",
+            "is_active": 1
+        },
+        {
+            "feature_code": "core",
+            "feature_name": "Core ERP",
+            "feature_type": "BOOLEAN",
+            "module_name": "core",
+            "is_active": 1
+        },
+        {
+            "feature_code": "fixed_assets",
+            "feature_name": "Fixed Assets",
+            "feature_type": "BOOLEAN",
+            "module_name": "assets",
+            "is_active": 1
+        },
+        {
+            "feature_code": "imports",
+            "feature_name": "Import / Export",
+            "feature_type": "BOOLEAN",
+            "module_name": "imports",
+            "is_active": 1
+        },
+        {
+            "feature_code": "inventory",
+            "feature_name": "Inventory",
+            "feature_type": "BOOLEAN",
+            "module_name": "inventory",
+            "is_active": 1
+        },
+        {
+            "feature_code": "max_branches",
+            "feature_name": "max_branches",
+            "feature_type": "LIMIT",
+            "module_name": "limits",
+            "is_active": 1
+        },
+        {
+            "feature_code": "max_documents",
+            "feature_name": "max_documents",
+            "feature_type": "LIMIT",
+            "module_name": "limits",
+            "is_active": 1
+        },
+        {
+            "feature_code": "max_stores",
+            "feature_name": "max_stores",
+            "feature_type": "LIMIT",
+            "module_name": "limits",
+            "is_active": 1
+        },
+        {
+            "feature_code": "max_users",
+            "feature_name": "max_users",
+            "feature_type": "LIMIT",
+            "module_name": "limits",
+            "is_active": 1
+        },
+        {
+            "feature_code": "max_vehicles",
+            "feature_name": "max_vehicles",
+            "feature_type": "LIMIT",
+            "module_name": "limits",
+            "is_active": 1
+        },
+        {
+            "feature_code": "official_documents",
+            "feature_name": "Official Documents",
+            "feature_type": "BOOLEAN",
+            "module_name": "documents",
+            "is_active": 1
+        },
+        {
+            "feature_code": "payroll",
+            "feature_name": "Payroll",
+            "feature_type": "BOOLEAN",
+            "module_name": "payroll",
+            "is_active": 1
+        },
+        {
+            "feature_code": "processing",
+            "feature_name": "Processing",
+            "feature_type": "BOOLEAN",
+            "module_name": "inventory",
+            "is_active": 1
+        },
+        {
+            "feature_code": "purchases",
+            "feature_name": "Purchases",
+            "feature_type": "BOOLEAN",
+            "module_name": "purchases",
+            "is_active": 1
+        },
+        {
+            "feature_code": "reports",
+            "feature_name": "Reports",
+            "feature_type": "BOOLEAN",
+            "module_name": "reports",
+            "is_active": 1
+        },
+        {
+            "feature_code": "sales",
+            "feature_name": "Sales",
+            "feature_type": "BOOLEAN",
+            "module_name": "sales",
+            "is_active": 1
+        },
+        {
+            "feature_code": "shipments",
+            "feature_name": "Shipments",
+            "feature_type": "BOOLEAN",
+            "module_name": "shipments",
+            "is_active": 1
+        },
+        {
+            "feature_code": "tax",
+            "feature_name": "Tax",
+            "feature_type": "BOOLEAN",
+            "module_name": "accounting",
+            "is_active": 1
+        },
+        {
+            "feature_code": "weighbridge",
+            "feature_name": "Weighbridge",
+            "feature_type": "BOOLEAN",
+            "module_name": "weighbridge",
+            "is_active": 1
+        }
+    ],
+    "plans": [
+        {
+            "plan_code": "ENTERPRISE",
+            "plan_name": "باقة المؤسسات",
+            "monthly_price": "799.000",
+            "yearly_price": null,
+            "max_branches": 999,
+            "max_users": 999,
+            "max_cars": null,
+            "max_invoices": null,
+            "is_active": 1
+        },
+        {
+            "plan_code": "PRO",
+            "plan_name": "الباقة الاحترافية",
+            "monthly_price": "299.000",
+            "yearly_price": "2990.000",
+            "max_branches": 3,
+            "max_users": 10,
+            "max_cars": 1000,
+            "max_invoices": 3000,
+            "is_active": 1
+        },
+        {
+            "plan_code": "STARTER",
+            "plan_name": "الباقة الاقتصادية",
+            "monthly_price": "99.000",
+            "yearly_price": null,
+            "max_branches": 1,
+            "max_users": 2,
+            "max_cars": 100,
+            "max_invoices": 300,
+            "is_active": 1
+        }
+    ],
+    "plan_features": [
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "accounting",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "core",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "fixed_assets",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "imports",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "inventory",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "max_branches",
+            "is_enabled": null,
+            "limit_value": 999
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "max_documents",
+            "is_enabled": null,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "max_users",
+            "is_enabled": null,
+            "limit_value": 999
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "max_vehicles",
+            "is_enabled": null,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "official_documents",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "payroll",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "processing",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "purchases",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "reports",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "sales",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "shipments",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "tax",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "ENTERPRISE",
+            "feature_code": "weighbridge",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "accounting",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "core",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "fixed_assets",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "imports",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "inventory",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "max_branches",
+            "is_enabled": null,
+            "limit_value": 3
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "max_documents",
+            "is_enabled": null,
+            "limit_value": 3000
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "max_users",
+            "is_enabled": null,
+            "limit_value": 10
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "max_vehicles",
+            "is_enabled": null,
+            "limit_value": 1000
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "official_documents",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "payroll",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "processing",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "purchases",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "reports",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "sales",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "shipments",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "tax",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "PRO",
+            "feature_code": "weighbridge",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "accounting",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "core",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "fixed_assets",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "imports",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "inventory",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "max_branches",
+            "is_enabled": null,
+            "limit_value": 1
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "max_documents",
+            "is_enabled": null,
+            "limit_value": 300
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "max_users",
+            "is_enabled": null,
+            "limit_value": 2
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "max_vehicles",
+            "is_enabled": null,
+            "limit_value": 100
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "official_documents",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "payroll",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "processing",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "purchases",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "reports",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "sales",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "shipments",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "tax",
+            "is_enabled": 1,
+            "limit_value": null
+        },
+        {
+            "plan_code": "STARTER",
+            "feature_code": "weighbridge",
+            "is_enabled": 1,
+            "limit_value": null
+        }
+    ]
+}
