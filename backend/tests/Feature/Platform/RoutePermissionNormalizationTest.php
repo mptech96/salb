@@ -37,6 +37,11 @@ class RoutePermissionNormalizationTest extends TestCase
             'data exchange catalog' => ['api/imports/catalog', 'imports.view'],
             'data exchange export' => ['api/imports/export/inventory-balances', 'imports.export'],
             'named resource route remains supported' => ['api/shipments', 'shipments.view', 'GET', 'shipments.index'],
+            'expense type list uses expense view' => ['api/expense-types', 'expenses.view'],
+            'expense account selector uses expense view' => ['api/expense-types/accounts', 'expenses.view'],
+            'expense type create uses existing create permission' => ['api/expense-types', 'expenses.create', 'POST'],
+            'expense type update uses existing update permission' => ['api/expense-types/{id}', 'expenses.update', 'PUT'],
+            'expense type disable uses existing delete permission' => ['api/expense-types/{id}', 'expenses.delete', 'DELETE'],
         ];
     }
 

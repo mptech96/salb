@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\{
     DashboardController,
     DriverController,
     ExpenseController,
+    ExpenseTypeController,
     EntitlementAdminController,
     FixedAssetCategoryController,
     FixedAssetController,
@@ -207,6 +208,11 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
         Route::apiResource('vouchers', VoucherController::class);
         Route::get('/expenses/meta', [ExpenseController::class, 'meta']);
         Route::apiResource('expenses', ExpenseController::class);
+        Route::get('/expense-types/accounts', [ExpenseTypeController::class, 'accounts']);
+        Route::get('/expense-types', [ExpenseTypeController::class, 'index']);
+        Route::post('/expense-types', [ExpenseTypeController::class, 'store']);
+        Route::put('/expense-types/{id}', [ExpenseTypeController::class, 'update']);
+        Route::delete('/expense-types/{id}', [ExpenseTypeController::class, 'destroy']);
 
         Route::get('/company-settings', [CompanySettingController::class, 'show']);
         Route::post('/company-settings', [CompanySettingController::class, 'update']);

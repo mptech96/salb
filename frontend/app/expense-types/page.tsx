@@ -3,410 +3,174 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import useSystemFeedback from "@/components/common/useSystemFeedback";
+import {
+  DataTableShell,
+  EmptyState,
+  FilterBar,
+  FormField,
+  LoadingState,
+  PageHeader,
+  StatCard,
+  StatusBadge,
+  fieldClassName,
+  primaryButtonClassName,
+  secondaryButtonClassName,
+} from "@/components/ui/enterprise";
+import { readSession } from "@/lib/session";
+
+type ExpenseType = {
+  id: number;
+  company_id: number | null;
+  type_name: string;
+  type_code?: string | null;
+  account_id?: number | null;
+  account_code?: string | null;
+  account_name?: string | null;
+  default_scope?: string | null;
+  affects_cost?: number;
+  description?: string | null;
+  is_active?: number;
+  is_system?: number;
+};
+
+type ExpenseAccount = { id: number; account_code: string; account_name: string };
+type ApiFailure = { response?: { data?: { message?: string } } };
+
+function apiMessage(error: unknown, fallback: string) {
+  return (error as ApiFailure)?.response?.data?.message || fallback;
+}
+
+const emptyForm = () => ({
+  type_name: "", type_code: "", account_id: "", default_scope: "GENERAL",
+  affects_cost: 1, description: "", is_active: 1,
+});
 
 export default function ExpenseTypesPage() {
-  const [types, setTypes] = useState<any[]>([]);
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [selected, setSelected] = useState<any>(null);
+  const [types, setTypes] = useState<ExpenseType[]>([]);
+  const [accounts, setAccounts] = useState<ExpenseAccount[]>([]);
+  const [form, setForm] = useState(emptyForm());
+  const [selected, setSelected] = useState<ExpenseType | null>(null);
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const [form, setForm] = useState(defaultForm());
+  const [deactivatingId, setDeactivatingId] = useState<number | null>(null);
+  const [error, setError] = useState("");
   const { notify, requestConfirmation, feedbackDialog } = useSystemFeedback();
-
-  useEffect(() => {
-    loadAll();
-  }, []);
+  const session = readSession();
+  const readOnly = Boolean(session?.user.is_support_mode && session.user.support_access_level !== "WRITE");
+  const role = String(session?.user.role?.role_code || "").toUpperCase();
+  const manager = ["MANAGER", "COMPANY_MANAGER", "COMPANY_ADMIN", "COMPANY_OWNER", "ADMIN"].includes(role);
+  const canCreate = !readOnly && (manager || session?.permissions.includes("expenses.create"));
+  const canUpdate = !readOnly && (manager || session?.permissions.includes("expenses.update"));
+  const canDelete = !readOnly && (manager || session?.permissions.includes("expenses.delete"));
 
   async function loadAll() {
-    const [t, a] = await Promise.all([
-      api.get("/expense-types"),
-      api.get("/expense-types/accounts"),
-    ]);
-
-    setTypes(t.data.data || []);
-    setAccounts(a.data.data || []);
+    setLoading(true); setError("");
+    try {
+      const [typeResponse, accountResponse] = await Promise.all([
+        api.get("/expense-types"), api.get("/expense-types/accounts"),
+      ]);
+      setTypes(typeResponse.data.data || []);
+      setAccounts(accountResponse.data.data || []);
+    } catch (requestError: unknown) {
+      setError(apiMessage(requestError, "تعذر تحميل أنواع المصروفات."));
+    } finally { setLoading(false); }
   }
 
-  function openNew() {
-    setSelected(null);
-    setForm(defaultForm());
-    setShowForm(true);
-  }
+  // Initial API synchronization is intentionally performed once on mount.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadAll(); }, []);
 
-  function openEdit(row: any) {
+  const filtered = useMemo(() => types.filter((row) =>
+    `${row.type_name} ${row.type_code || ""} ${row.account_name || ""} ${row.account_code || ""}`
+      .toLowerCase().includes(search.trim().toLowerCase())), [types, search]);
+
+  function openNew() { setSelected(null); setForm(emptyForm()); setOpen(true); }
+  function openEdit(row: ExpenseType) {
+    if (Number(row.is_system) === 1) return;
     setSelected(row);
     setForm({
-      type_name: row.type_name || "",
-      type_code: row.type_code || "",
-      account_id: row.account_id || "",
-      default_scope: row.default_scope || "GENERAL",
-      affects_cost: Number(row.affects_cost ?? 1),
-      description: row.description || "",
-      is_active: Number(row.is_active ?? 1),
+      type_name: row.type_name || "", type_code: row.type_code || "", account_id: row.account_id ? String(row.account_id) : "",
+      default_scope: row.default_scope || "GENERAL", affects_cost: Number(row.affects_cost ?? 1),
+      description: row.description || "", is_active: Number(row.is_active ?? 1),
     });
-    setShowForm(true);
+    setOpen(true);
   }
 
-  async function saveType() {
+  async function save() {
     if (saving) return;
-    if (!form.type_name.trim()) return notify("اكتب اسم نوع المصروف", "warning");
-
+    if (!form.type_name.trim()) return notify("اسم نوع المصروف مطلوب.", "warning");
+    if (!form.account_id) return notify("اختر حساب مصروف صالحًا من دليل الحسابات.", "warning");
+    setSaving(true);
     try {
-      setSaving(true);
+      const payload = { ...form, account_id: Number(form.account_id), affects_cost: Number(form.affects_cost), is_active: Number(form.is_active) };
+      if (selected) await api.put(`/expense-types/${selected.id}`, payload);
+      else await api.post("/expense-types", payload);
+      setOpen(false); await loadAll(); notify(selected ? "تم تحديث نوع المصروف." : "تم إنشاء نوع المصروف دون أي حركة مالية.", "success");
+    } catch (requestError: unknown) {
+      notify(apiMessage(requestError, "تعذر حفظ نوع المصروف."), "error");
+    } finally { setSaving(false); }
+  }
 
-      const payload = {
-        ...form,
-        account_id: form.account_id || null,
-        affects_cost: Number(form.affects_cost),
-        is_active: Number(form.is_active),
-      };
-
-      if (selected) {
-        await api.put(`/expense-types/${selected.id}`, payload);
-        notify("تم تعديل نوع المصروف", "success");
-      } else {
-        await api.post("/expense-types", payload);
-        notify("تم إنشاء نوع المصروف", "success");
+  function deactivate(row: ExpenseType) {
+    if (deactivatingId !== null) return;
+    requestConfirmation("سيتم تعطيل النوع مع الاحتفاظ بأي معاملات مالية مرتبطة به.", async () => {
+      setDeactivatingId(row.id);
+      try {
+        await api.delete(`/expense-types/${row.id}`); await loadAll();
+        notify("تم تعطيل نوع المصروف.", "success");
+      } catch (requestError: unknown) {
+        notify(apiMessage(requestError, "تعذر تعطيل نوع المصروف."), "error");
+      } finally {
+        setDeactivatingId(null);
       }
-
-      setShowForm(false);
-      await loadAll();
-    } catch (e: any) {
-      notify(e?.response?.data?.message || "فشل حفظ نوع المصروف", "error");
-    } finally {
-      setSaving(false);
-    }
+    }, "تعطيل نوع المصروف");
   }
 
-  function stopType(id: number) {
-    requestConfirmation("إيقاف نوع المصروف؟ لن يظهر كمصروف نشط.", async () => {
-      await api.delete(`/expense-types/${id}`);
-      await loadAll();
-    }, "تأكيد إيقاف نوع المصروف");
-  }
-
-  const filtered = useMemo(() => {
-    return types.filter((x) =>
-      `${x.type_name || ""} ${x.type_code || ""} ${x.account_name || ""} ${x.account_code || ""}`
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [types, search]);
-
-  return (
-    <section dir="rtl" className="space-y-5">
-      <div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm text-blue-100">إعدادات المصروفات</p>
-            <h1 className="mt-2 text-3xl font-black">أنواع المصروفات</h1>
-            <p className="mt-2 text-sm text-blue-100">
-              كل نوع مصروف يرتبط بحساب محاسبي. عند تسجيل المصروف، النظام ينشئ سند وقيد تلقائيًا.
-            </p>
-          </div>
-
-          <button
-            onClick={openNew}
-            className="rounded-2xl bg-white px-5 py-3 font-bold text-[#0B2A4A]"
-          >
-            + نوع مصروف جديد
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Stat title="إجمالي الأنواع" value={types.length} />
-        <Stat title="الأنواع النشطة" value={types.filter((x) => Number(x.is_active) === 1).length} />
-        <Stat title="مرتبطة بحساب" value={types.filter((x) => x.account_id).length} />
-        <Stat title="تؤثر على التكلفة" value={types.filter((x) => Number(x.affects_cost) === 1).length} />
-      </div>
-
-      <div className="rounded-3xl border bg-white p-4 shadow-sm">
-        <input
-          className="w-full rounded-2xl border bg-slate-50 p-4 outline-none"
-          placeholder="بحث باسم النوع أو الكود أو الحساب..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
-        <div className="border-b p-4">
-          <h2 className="text-xl font-black text-[#0B2A4A]">قائمة أنواع المصروفات</h2>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-[1000px] w-full text-right">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="p-4">النوع</th>
-                <th className="p-4">الكود</th>
-                <th className="p-4">الحساب المحاسبي</th>
-                <th className="p-4">الارتباط الافتراضي</th>
-                <th className="p-4">تأثير التكلفة</th>
-                <th className="p-4">الحالة</th>
-                <th className="p-4">الإجراءات</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-6 text-center text-slate-500">
-                    لا توجد أنواع مصروفات
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((row) => (
-                  <tr key={row.id} className="border-t hover:bg-slate-50">
-                    <td className="p-4 font-black text-[#0B2A4A]">{row.type_name}</td>
-                    <td className="p-4">{row.type_code || "-"}</td>
-                    <td className="p-4">
-                      {row.account_code ? (
-                        <span className="font-bold">
-                          {row.account_code} - {row.account_name}
-                        </span>
-                      ) : (
-                        <span className="text-rose-600 font-bold">بدون حساب</span>
-                      )}
-                    </td>
-                    <td className="p-4">{scopeLabel(row.default_scope)}</td>
-                    <td className="p-4">
-                      {Number(row.affects_cost) === 1 ? "يدخل في تكلفة التشغيل" : "مصروف إداري فقط"}
-                    </td>
-                    <td className="p-4">
-                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${
-                        Number(row.is_active) === 1
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-slate-100 text-slate-600"
-                      }`}>
-                        {Number(row.is_active) === 1 ? "نشط" : "موقوف"}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="rounded-xl bg-blue-700 px-3 py-2 text-sm font-bold text-white"
-                        >
-                          تعديل
-                        </button>
-                        <button
-                          onClick={() => stopType(row.id)}
-                          className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-bold text-white"
-                        >
-                          إيقاف
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {showForm && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="mx-auto max-w-5xl rounded-3xl bg-white shadow-2xl">
-            <div className="border-b p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-black text-[#0B2A4A]">
-                    {selected ? "تعديل نوع مصروف" : "إضافة نوع مصروف"}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    اختر الحساب المحاسبي المناسب. إذا تركته فارغًا، سيقوم النظام بإنشاء حساب مصروف تلقائيًا.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="rounded-2xl bg-slate-200 px-5 py-3 font-bold"
-                >
-                  إغلاق
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-5 p-5">
-              <InfoBox
-                title="كيف يعمل هذا؟"
-                text="عند تسجيل مصروف من هذا النوع، النظام سيستخدم الحساب المختار هنا في القيد المحاسبي. مثال: وقود = مصروف وقود، إيجار = مصروف إيجارات."
-              />
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Input
-                  label="اسم نوع المصروف *"
-                  value={form.type_name}
-                  onChange={(v: string) => setForm({ ...form, type_name: v })}
-                  hint="مثال: وقود، إيجار، صيانة، عمولة شراء، كهرباء."
-                />
-
-                <Input
-                  label="كود النوع"
-                  value={form.type_code}
-                  onChange={(v: string) => setForm({ ...form, type_code: v })}
-                  hint="اختياري. إذا تركته فارغًا سيولده النظام."
-                />
-
-                <Select
-                  label="الحساب المحاسبي"
-                  value={form.account_id}
-                  onChange={(v: string) => setForm({ ...form, account_id: v })}
-                  hint="إذا لم تختار حساب، النظام ينشئ حساب فرعي تلقائيًا تحت المصروفات."
-                  options={[
-                    { id: "", name: "إنشاء حساب تلقائي" },
-                    ...accounts.map((a) => ({
-                      id: a.id,
-                      name: `${a.account_code} - ${a.account_name}`,
-                    })),
-                  ]}
-                />
-
-                <Select
-                  label="الارتباط الافتراضي"
-                  value={form.default_scope}
-                  onChange={(v: string) => setForm({ ...form, default_scope: v })}
-                  hint="يساعد شاشة المصروفات تختار أين سيرتبط المصروف تلقائيًا."
-                  options={[
-                    { id: "GENERAL", name: "عام" },
-                    { id: "SHIPMENT", name: "حمولة" },
-                    { id: "CAR", name: "سيارة" },
-                    { id: "PURCHASE_INVOICE", name: "فاتورة شراء" },
-                    { id: "SALES_INVOICE", name: "فاتورة بيع" },
-                    { id: "DRIVER", name: "سائق" },
-                    { id: "WORKER", name: "عامل" },
-                  ]}
-                />
-
-                <Select
-                  label="هل يؤثر على التكلفة؟"
-                  value={String(form.affects_cost)}
-                  onChange={(v: string) => setForm({ ...form, affects_cost: Number(v) })}
-                  hint="نعم: يدخل في تكلفة الحمولة/السيارة. لا: يظهر كمصروف إداري فقط."
-                  options={[
-                    { id: "1", name: "نعم، يؤثر على التكلفة" },
-                    { id: "0", name: "لا، مصروف إداري فقط" },
-                  ]}
-                />
-
-                <Select
-                  label="الحالة"
-                  value={String(form.is_active)}
-                  onChange={(v: string) => setForm({ ...form, is_active: Number(v) })}
-                  options={[
-                    { id: "1", name: "نشط" },
-                    { id: "0", name: "موقوف" },
-                  ]}
-                />
-              </div>
-
-              <textarea
-                className="w-full rounded-2xl border bg-slate-50 p-4"
-                rows={4}
-                placeholder="وصف أو ملاحظات"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-
-              <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
-                ملاحظة: لا تستخدم نوع مصروف واحد لكل شيء. الأفضل تفصيل الأنواع مثل: وقود، صيانة، إيجار، كهرباء، عمولة شراء، أجور تحميل.
-              </div>
-
-              <button
-                onClick={saveType}
-                disabled={saving}
-                className="w-full rounded-2xl bg-[#0B2A4A] px-5 py-4 font-black text-white disabled:opacity-60"
-              >
-                {saving ? "جاري الحفظ..." : "حفظ نوع المصروف"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {feedbackDialog}
-    </section>
-  );
-}
-
-function defaultForm() {
-  return {
-    type_name: "",
-    type_code: "",
-    account_id: "",
-    default_scope: "GENERAL",
-    affects_cost: 1,
-    description: "",
-    is_active: 1,
-  };
-}
-
-function Stat({ title, value }: any) {
-  return (
-    <div className="rounded-3xl border bg-white p-5 shadow-sm">
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-2 text-2xl font-black text-[#0B2A4A]">{value}</div>
+  return <section dir="rtl" className="min-w-0 space-y-4">
+    <PageHeader title="أنواع المصروفات" description="تعريفات تشغيلية ترتبط بحساب مصروف صالح. إنشاء النوع لا ينشئ مصروفًا أو سندًا أو قيدًا." breadcrumbs={[{ label: "الإعدادات" }, { label: "أنواع المصروفات" }]} actions={canCreate ? <button className={primaryButtonClassName} onClick={openNew}>+ نوع مصروف جديد</button> : undefined}/>
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <StatCard label="إجمالي الأنواع" value={types.length}/>
+      <StatCard label="الأنواع النظامية" value={types.filter((x) => Number(x.is_system) === 1).length}/>
+      <StatCard label="أنواع الشركة" value={types.filter((x) => Number(x.is_system) !== 1).length}/>
+      <StatCard label="النشطة" value={types.filter((x) => Number(x.is_active) === 1).length} tone="positive"/>
     </div>
-  );
+    {readOnly ? <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">وضع الدعم للقراءة فقط — عمليات الإضافة والتعديل والتعطيل غير متاحة.</div> : null}
+    {error ? <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error} <button className="mr-2 underline" onClick={() => void loadAll()}>إعادة المحاولة</button></div> : null}
+    <FilterBar><input className={fieldClassName} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث بالاسم أو الكود أو الحساب..."/></FilterBar>
+    <DataTableShell title="دليل أنواع المصروفات" description={`${filtered.length} سجل مطابق`}>
+      {loading ? <LoadingState/> : filtered.length === 0 ? <EmptyState title="لا توجد أنواع مصروفات" description="أنشئ نوعًا خاصًا بالشركة واربطه بحساب مصروف صالح."/> :
+        <table className="enterprise-table min-w-[980px] text-right"><thead><tr><th>النوع</th><th>الكود</th><th>المصدر</th><th>الحساب</th><th>النطاق</th><th>التكلفة</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
+          {filtered.map((row) => { const system = Number(row.is_system) === 1; return <tr key={row.id}>
+            <td className="font-semibold text-slate-900">{row.type_name}</td><td className="tabular-nums">{row.type_code || "—"}</td>
+            <td><StatusBadge tone={system ? "info" : "neutral"}>{system ? "نوع نظامي" : "خاص بالشركة"}</StatusBadge></td>
+            <td>{row.account_code ? `${row.account_code} — ${row.account_name}` : system ? "الحساب الافتراضي عند الاستخدام" : "—"}</td>
+            <td>{scopeLabel(row.default_scope)}</td><td>{Number(row.affects_cost) === 1 ? "يؤثر" : "إداري"}</td>
+            <td><StatusBadge tone={Number(row.is_active) === 1 ? "success" : "neutral"}>{Number(row.is_active) === 1 ? "نشط" : "متوقف"}</StatusBadge></td>
+            <td><div className="flex gap-2">{system ? <span className="text-xs text-slate-500">للقراءة فقط</span> : <>{canUpdate ? <button className={secondaryButtonClassName} onClick={() => openEdit(row)}>تعديل</button> : null}{Number(row.is_active) === 1 && canDelete ? <button disabled={deactivatingId !== null} className="inline-flex min-h-10 items-center rounded-lg bg-rose-50 px-3 text-sm font-semibold text-rose-700 disabled:opacity-50" onClick={() => deactivate(row)}>{deactivatingId === row.id ? "جاري التعطيل..." : "تعطيل"}</button> : null}</>}</div></td>
+          </tr>; })}
+        </tbody></table>}
+    </DataTableShell>
+    {open ? <div className="fixed inset-0 z-[190] bg-slate-950/45 p-3"><aside className="mr-auto h-full w-full max-w-2xl overflow-y-auto bg-white p-5 shadow-2xl sm:rounded-xl">
+      <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">{selected ? "تعديل نوع مصروف" : "نوع مصروف جديد"}</h2><p className="mt-1 text-xs text-slate-500">التعريف وحده لا ينشئ أي أثر مالي.</p></div><button className={secondaryButtonClassName} disabled={saving} onClick={() => setOpen(false)}>إغلاق</button></div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <FormField label="اسم النوع" required><input className={fieldClassName} value={form.type_name} onChange={(e) => setForm({ ...form, type_name: e.target.value })}/></FormField>
+        <FormField label="الكود" hint="اختياري؛ يولّد الخادم كودًا آمنًا عند تركه فارغًا."><input className={fieldClassName} dir="ltr" value={form.type_code} onChange={(e) => setForm({ ...form, type_code: e.target.value })}/></FormField>
+        <FormField label="حساب المصروف" required className="sm:col-span-2" hint="تظهر فقط حسابات EXPENSE النشطة والقابلة للترحيل التابعة للشركة."><select className={fieldClassName} value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}><option value="">اختر حساب المصروف...</option>{accounts.map((a) => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></FormField>
+        <FormField label="الارتباط الافتراضي"><select className={fieldClassName} value={form.default_scope} onChange={(e) => setForm({ ...form, default_scope: e.target.value })}>{scopeOptions.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></FormField>
+        <FormField label="تأثير التكلفة"><select className={fieldClassName} value={form.affects_cost} onChange={(e) => setForm({ ...form, affects_cost: Number(e.target.value) })}><option value={1}>يؤثر على التكلفة</option><option value={0}>مصروف إداري</option></select></FormField>
+        <FormField label="الحالة"><select className={fieldClassName} value={form.is_active} onChange={(e) => setForm({ ...form, is_active: Number(e.target.value) })}><option value={1}>نشط</option><option value={0}>متوقف</option></select></FormField>
+        <FormField label="الوصف" className="sm:col-span-2"><textarea rows={4} className={fieldClassName} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}/></FormField>
+      </div><div className="sticky bottom-0 mt-5 flex justify-end border-t bg-white py-4"><button className={primaryButtonClassName} disabled={saving} onClick={() => void save()}>{saving ? "جاري الحفظ..." : "حفظ النوع"}</button></div>
+    </aside></div> : null}
+    {feedbackDialog}
+  </section>;
 }
 
-function Input({ label, value, onChange, hint }: any) {
-  return (
-    <label className="block">
-      <div className="mb-1 text-sm font-bold text-slate-700">{label}</div>
-      <input
-        className="w-full rounded-2xl border bg-slate-50 p-3 outline-none focus:border-[#0B2A4A]"
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}
-    </label>
-  );
-}
-
-function Select({ label, value, onChange, options, hint }: any) {
-  return (
-    <label className="block">
-      <div className="mb-1 text-sm font-bold text-slate-700">{label}</div>
-      <select
-        className="w-full rounded-2xl border bg-slate-50 p-3 outline-none focus:border-[#0B2A4A]"
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {options.map((x: any) => (
-          <option key={x.id} value={x.id}>
-            {x.name}
-          </option>
-        ))}
-      </select>
-      {hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}
-    </label>
-  );
-}
-
-function InfoBox({ title, text }: any) {
-  return (
-    <div className="rounded-2xl bg-blue-50 p-4">
-      <div className="font-black text-[#0B2A4A]">{title}</div>
-      <div className="mt-1 text-sm font-semibold text-slate-600">{text}</div>
-    </div>
-  );
-}
-
-function scopeLabel(v: string) {
-  const map: any = {
-    GENERAL: "عام",
-    SHIPMENT: "حمولة",
-    CAR: "سيارة",
-    PURCHASE_INVOICE: "فاتورة شراء",
-    SALES_INVOICE: "فاتورة بيع",
-    DRIVER: "سائق",
-    WORKER: "عامل",
-  };
-
-  return map[v] || v || "-";
-}
+const scopeOptions = [
+  { id: "GENERAL", name: "عام" }, { id: "SHIPMENT", name: "شحنة" }, { id: "CAR", name: "سيارة" },
+  { id: "PURCHASE_INVOICE", name: "فاتورة شراء" }, { id: "SALES_INVOICE", name: "فاتورة بيع" },
+  { id: "DRIVER", name: "سائق" }, { id: "WORKER", name: "عامل" },
+];
+function scopeLabel(value?: string | null) { return scopeOptions.find((x) => x.id === value)?.name || value || "—"; }

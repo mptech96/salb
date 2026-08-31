@@ -159,6 +159,15 @@ class EnsureRoutePermission
         if ($uri === 'purchase-invoices/meta') return 'purchases.view';
         if ($uri === 'vouchers/meta') return 'vouchers.view';
         if ($uri === 'expenses/meta') return 'expenses.view';
+        if (str_starts_with($uri, 'expense-types')) {
+            return match ($method) {
+                'GET', 'HEAD' => 'expenses.view',
+                'POST' => 'expenses.create',
+                'PUT', 'PATCH' => 'expenses.update',
+                'DELETE' => 'expenses.delete',
+                default => null,
+            };
+        }
         if ($uri === 'shipments/meta') return 'shipments.view';
         if (str_starts_with($uri, 'reports/export/')) return 'reports.export';
         if (str_starts_with($uri, 'reports/')) return 'reports.view';
