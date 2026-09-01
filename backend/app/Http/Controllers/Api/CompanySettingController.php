@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CompanySettingController extends Controller
 {
@@ -52,11 +53,16 @@ class CompanySettingController extends Controller
         $company = DB::table('companies')->where('id', $companyId)->first();
         $data = (array) $settings;
         $data['company_name_fallback'] = $company->company_name ?? null;
+        $data['print_company_name'] = $data['print_company_name'] ?: ($company->company_name ?? null);
         $data['company'] = $company;
         $data['address_details'] = $addresses->getDefault($companyId, 'COMPANY', $companyId);
-        $data['logo_url'] = !empty($settings->logo_path) ? asset('storage/' . $settings->logo_path) : null;
-        $data['signature_url'] = !empty($settings->signature_path) ? asset('storage/' . $settings->signature_path) : null;
-        $data['stamp_url'] = !empty($settings->stamp_path) ? asset('storage/' . $settings->stamp_path) : null;
+        foreach (['logo','signature','stamp','header_image','footer_image'] as $asset) {
+            $column = $asset.'_path';
+            $data[$asset.'_url'] = !empty($settings->{$column} ?? null) ? url('/api/company-settings/assets/'.$asset) : null;
+        }
+        foreach (['print_header_texts','print_footer_texts','print_options'] as $json) {
+            $data[$json] = json_decode((string)($settings->{$json} ?? ''), true) ?: [];
+        }
         return response()->json(['status' => true, 'data' => $data]);
     }
 
@@ -79,10 +85,14 @@ class CompanySettingController extends Controller
             'postal_code'=>['nullable','string','max:50'],'additional_no'=>['nullable','string','max:50'],
             'unit_no'=>['nullable','string','max:50'],'address_line1'=>['nullable','string','max:500'],
             'address_line2'=>['nullable','string','max:500'],
+            'print_header_texts'=>['nullable','array'],'print_footer_texts'=>['nullable','array'],
+            'print_header_texts.*'=>['nullable','string','max:3000'],'print_footer_texts.*'=>['nullable','string','max:3000'],
+            'print_options'=>['nullable','array'],
         ]);
 
         DB::transaction(function () use ($companyId, $validated, $addresses) {
             $settingsPayload = collect($validated)->only(['print_company_name','print_phone','print_email','print_city','print_address','tax_number','commercial_register','currency_name','currency_code','invoice_footer','report_footer','primary_color','secondary_color','country_code'])->all();
+            foreach (['print_header_texts','print_footer_texts','print_options'] as $json) if (array_key_exists($json, $validated)) $settingsPayload[$json] = json_encode($validated[$json], JSON_UNESCAPED_UNICODE);
             if (!empty($validated['currency_code'])) $settingsPayload['base_currency_code'] = strtoupper($validated['currency_code']);
             if (empty($settingsPayload['primary_color'])) $settingsPayload['primary_color'] = '#0B2A4A';
             if (empty($settingsPayload['secondary_color'])) $settingsPayload['secondary_color'] = '#123D68';
@@ -111,7 +121,7 @@ class CompanySettingController extends Controller
         $companyId = $context->companyId($request);
 
         $type = (string) $request->input('type', '');
-        if (!in_array($type, ['logo', 'signature', 'stamp'], true)) {
+        if (!in_array($type, ['logo', 'signature', 'stamp', 'header_image', 'footer_image'], true)) {
             throw ValidationException::withMessages(['type' => ['نوع الملف غير صحيح.']]);
         }
 
@@ -119,6 +129,8 @@ class CompanySettingController extends Controller
             'logo' => 'logo_path',
             'signature' => 'signature_path',
             'stamp' => 'stamp_path',
+            'header_image' => 'header_image_path',
+            'footer_image' => 'footer_image_path',
         };
 
         $oldPath = DB::table('company_settings')->where('company_id', $companyId)->value($column);
@@ -157,8 +169,8 @@ class CompanySettingController extends Controller
             }
 
             $safeName = $type . '-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
-            $path = "company-settings/{$companyId}/{$safeName}";
-            Storage::disk('public')->put($path, $binary);
+            $path = "print-branding/{$companyId}/{$safeName}";
+            if (!Storage::disk('local')->put($path, $binary)) throw ValidationException::withMessages(['file'=>['تعذر حفظ الصورة في التخزين الخاص.']]);
         } elseif ($request->hasFile('file')) {
             $request->validate([
                 'file' => ['required','file','mimes:png,jpg,jpeg,webp','max:5120'],
@@ -170,8 +182,12 @@ class CompanySettingController extends Controller
             ]);
 
             $file = $request->file('file');
-            $safeName = $type . '-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . strtolower($file->getClientOriginalExtension());
-            $path = $file->storeAs("company-settings/{$companyId}", $safeName, 'public');
+            $mime = strtolower((string)$file->getMimeType());
+            $ext = match($mime) {'image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp',default=>null};
+            if (!$ext) throw ValidationException::withMessages(['file'=>['محتوى الصورة لا يطابق صيغة مسموحة.']]);
+            $safeName = $type . '-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
+            $path = $file->storeAs("print-branding/{$companyId}", $safeName, 'local');
+            if (!$path) throw ValidationException::withMessages(['file'=>['تعذر حفظ الصورة في التخزين الخاص.']]);
         } else {
             throw ValidationException::withMessages(['file' => ['لم تصل بيانات الصورة إلى الخادم.']]);
         }
@@ -182,7 +198,7 @@ class CompanySettingController extends Controller
         );
 
         if ($oldPath && $oldPath !== $path) {
-            try { Storage::disk('public')->delete($oldPath); } catch (\Throwable $e) {}
+            $this->deleteStoredAsset((string)$oldPath);
         }
 
         $this->logUpdate('CompanySettings', $companyId, 'تم رفع ملف إعدادات: ' . $type);
@@ -191,7 +207,43 @@ class CompanySettingController extends Controller
             'status' => true,
             'message' => 'تم رفع الملف بنجاح.',
             'path' => $path,
-            'url' => asset('storage/' . $path),
+            'url' => url('/api/company-settings/assets/'.$type),
         ]);
+    }
+
+    public function asset(Request $request, string $type, AccountingContext $context): StreamedResponse
+    {
+        $companyId = $context->companyId($request);
+        $column = $this->assetColumn($type);
+        $path = (string) DB::table('company_settings')->where('company_id',$companyId)->value($column);
+        abort_if($path === '', 404);
+        $disk = str_starts_with($path, 'print-branding/') ? 'local' : 'public';
+        abort_unless(Storage::disk($disk)->exists($path), 404);
+        return Storage::disk($disk)->response($path, null, ['Cache-Control'=>'private, max-age=300']);
+    }
+
+    public function removeAsset(Request $request, string $type, AccountingContext $context)
+    {
+        $companyId = $context->companyId($request);
+        $column = $this->assetColumn($type);
+        $path = (string) DB::table('company_settings')->where('company_id',$companyId)->value($column);
+        DB::table('company_settings')->where('company_id',$companyId)->update([$column=>null,'updated_at'=>now()]);
+        if ($path !== '') $this->deleteStoredAsset($path);
+        return response()->json(['status'=>true,'message'=>'تمت إزالة الصورة.']);
+    }
+
+    private function assetColumn(string $type): string
+    {
+        return match($type) {
+            'logo'=>'logo_path','signature'=>'signature_path','stamp'=>'stamp_path',
+            'header_image'=>'header_image_path','footer_image'=>'footer_image_path',
+            default=>abort(404),
+        };
+    }
+
+    private function deleteStoredAsset(string $path): void
+    {
+        if (str_starts_with($path, 'print-branding/')) Storage::disk('local')->delete($path);
+        elseif (str_starts_with($path, 'company-settings/')) Storage::disk('public')->delete($path);
     }
 }

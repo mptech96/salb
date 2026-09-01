@@ -217,6 +217,8 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
         Route::get('/company-settings', [CompanySettingController::class, 'show']);
         Route::post('/company-settings', [CompanySettingController::class, 'update']);
         Route::post('/company-settings/upload', [CompanySettingController::class, 'upload']);
+        Route::get('/company-settings/assets/{type}', [CompanySettingController::class, 'asset']);
+        Route::delete('/company-settings/assets/{type}', [CompanySettingController::class, 'removeAsset']);
 
         Route::get('/financial-accounts/meta', [FinancialAccountController::class, 'meta']);
         Route::get('/financial-accounts', [FinancialAccountController::class, 'index']);

@@ -1,284 +1,39 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
 import api from "../../api";
-import { AccessState, FormSection, LoadingState, PageHeader, primaryButtonClassName, secondaryButtonClassName } from "@/components/ui/enterprise";
+import BrandingAssetImage from "@/components/print/BrandingAssetImage";
+import { FormSection,LoadingState,PageHeader,fieldClassName,primaryButtonClassName,secondaryButtonClassName } from "@/components/ui/enterprise";
+import { locales,localeDirection,PrintAsset,PrintLocale } from "@/lib/print-branding";
+import { readSession } from "@/lib/session";
 
-const DEFAULT_INVOICE_FOOTER =
-  "شكراً لتعاملكم معنا • هذه الفاتورة صادرة إلكترونياً من نظام صلب ERP. يرجى الاحتفاظ بها للرجوع إليها.";
-const DEFAULT_REPORT_FOOTER =
-  "تم إعداد هذا التقرير بواسطة نظام صلب ERP • للاستخدام الإداري والتشغيلي.";
+type Failure={response?:{data?:{message?:string;errors?:Record<string,string[]>}}};
+type Options={paper:string;orientation:string;margin_mm:number;logo_width_mm:number;header_height_mm:number;footer_height_mm:number;show_company_name:boolean;show_company_details:boolean};
+type Settings={print_company_name:string;print_phone:string;print_email:string;print_city:string;print_address:string;tax_number:string;commercial_register:string;primary_color:string;secondary_color:string;print_header_texts:Record<PrintLocale,string>;print_footer_texts:Record<PrintLocale,string>;print_options:Options;[key:string]:unknown};
+const base:Settings={print_company_name:"",print_phone:"",print_email:"",print_city:"",print_address:"",tax_number:"",commercial_register:"",primary_color:"#0B2A4A",secondary_color:"#123D68",print_header_texts:{ar:"",en:"",ur:"",ja:""},print_footer_texts:{ar:"",en:"",ur:"",ja:""},print_options:{paper:"A4",orientation:"portrait",margin_mm:12,logo_width_mm:32,header_height_mm:28,footer_height_mm:20,show_company_name:true,show_company_details:true}};
+function errorMessage(error:unknown){const data=(error as Failure)?.response?.data;return Object.values(data?.errors||{}).flat().join(" — ")||data?.message||"تعذر تنفيذ العملية."}
 
-const initial = {
-  print_company_name: "",
-  print_phone: "",
-  print_email: "",
-  print_city: "",
-  print_address: "",
-  tax_number: "",
-  commercial_register: "",
-  currency_name: "ريال",
-  currency_code: "SAR",
-  logo_path: "",
-  signature_path: "",
-  stamp_path: "",
-  invoice_footer: "",
-  report_footer: "",
-  primary_color: "#0B2A4A",
-  secondary_color: "#123D68",
-};
-
-type AssetKind = "logo" | "signature" | "stamp";
-
-function fileUrl(path?: string) {
-  if (!path) return "";
-  if (/^https?:\/\//i.test(path) || path.startsWith("data:")) return path;
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
-  const root = apiBase.replace(/\/api\/?$/, "");
-  return `${root}/storage/${String(path).replace(/^\/?storage\//, "")}`;
+export default function PrintBrandingPage(){
+ const [form,setForm]=useState<Settings>(base),[locale,setLocale]=useState<PrintLocale>("ar"),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[busy,setBusy]=useState<PrintAsset|null>(null),[error,setError]=useState(""),[notice,setNotice]=useState(""),[version,setVersion]=useState<Record<PrintAsset,number>>({logo:0,header_image:0,footer_image:0,signature:0,stamp:0});
+ const session=readSession(),readOnly=Boolean(session?.user.is_support_mode&&session.user.support_access_level!=="WRITE");
+ async function load(){setLoading(true);try{const r=await api.get("/company-settings"),x=r.data?.data||{},strings=Object.fromEntries(["print_company_name","print_phone","print_email","print_city","print_address","tax_number","commercial_register"].map(key=>[key,x[key]??""])),localized=(value?:Partial<Record<PrintLocale,string|null>>)=>Object.fromEntries(locales.map(item=>[item.code,value?.[item.code]??""])) as Record<PrintLocale,string>;setForm({...base,...x,...strings,print_header_texts:localized(x.print_header_texts),print_footer_texts:localized(x.print_footer_texts),print_options:{...base.print_options,...x.print_options}})}catch(e){setError(errorMessage(e))}finally{setLoading(false)}}
+ // eslint-disable-next-line react-hooks/set-state-in-effect
+ useEffect(()=>{void load()},[]);
+ const set=(key:keyof Settings,value:unknown)=>setForm(f=>({...f,[key]:value}));
+ const setOption=(key:keyof Options,value:unknown)=>setForm(f=>({...f,print_options:{...f.print_options,[key]:value}}));
+ async function save(){if(readOnly||saving)return;setSaving(true);setError("");try{await api.post("/company-settings",form);setNotice("تم حفظ هوية الطباعة.");await load()}catch(e){setError(errorMessage(e))}finally{setSaving(false)}}
+ async function upload(asset:PrintAsset,file?:File){if(!file||readOnly)return;if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>5242880){setError("استخدم PNG/JPG/WEBP بحجم لا يتجاوز 5 MB.");return}setBusy(asset);setError("");try{const fd=new FormData();fd.append("type",asset);fd.append("file",file);await api.post("/company-settings/upload",fd);setVersion(v=>({...v,[asset]:v[asset]+1}));setNotice("تم رفع الصورة وحفظها.")}catch(e){setError(errorMessage(e))}finally{setBusy(null)}}
+ async function remove(asset:PrintAsset){if(readOnly||busy)return;setBusy(asset);try{await api.delete(`/company-settings/assets/${asset}`);setVersion(v=>({...v,[asset]:v[asset]+1}));setNotice("تمت إزالة الصورة.")}catch(e){setError(errorMessage(e))}finally{setBusy(null)}}
+ if(loading)return <LoadingState/>;
+ return <section dir="rtl" className="min-w-0 space-y-4"><PageHeader title="هوية الطباعة" description="إدارة الشعار والترويسة والتذييل ومعاينة A4 الآمنة." breadcrumbs={[{label:"الإعدادات",href:"/settings"},{label:"هوية الطباعة"}]} actions={<Link href="/settings/print-branding/preview" className={secondaryButtonClassName}>فتح صفحة الطباعة للاختبار</Link>}/>{readOnly&&<Info tone="amber">وضع الدعم للقراءة فقط؛ الحفظ والرفع والإزالة معطلة.</Info>}{error&&<Info tone="rose">{error}</Info>}{notice&&<Info tone="green">{notice}</Info>}
+ <div className="grid gap-4 xl:grid-cols-[1fr_390px]"><div className="space-y-4"><FormSection title="الشعار وصور الصفحة"><div className="grid gap-3 md:grid-cols-3">{([['logo','شعار الشركة'],['header_image','صورة الترويسة'],['footer_image','صورة التذييل'],['signature','التوقيع'],['stamp','الختم']] as [PrintAsset,string][]).map(([asset,title])=><Asset key={asset} asset={asset} title={title} version={version[asset]} busy={busy===asset} disabled={readOnly} upload={upload} remove={remove}/>)}</div><p className="mt-2 text-xs text-slate-500">PNG / JPG / WEBP — الحد الأقصى 5 MB. تحفظ الملفات في تخزين خاص وتُعرض بعد التحقق من الشركة.</p></FormSection>
+ <FormSection title="بيانات الشركة في الطباعة"><div className="grid gap-3 md:grid-cols-2">{[["print_company_name","اسم المنشأة"],["print_phone","الهاتف"],["print_email","البريد"],["print_city","المدينة"],["commercial_register","السجل التجاري"],["tax_number","الرقم الضريبي"]].map(([key,label])=><TextField key={key} label={label} value={String(form[key]||"")} onChange={v=>set(key,v)}/>)}</div><label className="mt-3 block text-sm font-semibold">العنوان<textarea rows={3} className={fieldClassName} value={form.print_address} onChange={e=>set("print_address",e.target.value)}/></label></FormSection>
+ <FormSection title="نص الترويسة والتذييل حسب اللغة"><div className="mb-3 flex gap-2 overflow-x-auto">{locales.map(x=><button type="button" key={x.code} onClick={()=>setLocale(x.code)} className={locale===x.code?primaryButtonClassName:secondaryButtonClassName}>{x.label}</button>)}</div><div dir={localeDirection(locale)} className="grid gap-3"><label className="text-sm font-semibold">نص الترويسة<textarea rows={3} className={fieldClassName} value={form.print_header_texts[locale]} onChange={e=>set("print_header_texts",{...form.print_header_texts,[locale]:e.target.value})}/></label><label className="text-sm font-semibold">نص التذييل<textarea rows={3} className={fieldClassName} value={form.print_footer_texts[locale]} onChange={e=>set("print_footer_texts",{...form.print_footer_texts,[locale]:e.target.value})}/></label></div></FormSection>
+ <FormSection title="إعدادات الصفحة"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><label className="text-sm font-semibold">الاتجاه<select className={fieldClassName} value={form.print_options.orientation} onChange={e=>setOption("orientation",e.target.value)}><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></label><NumberField label="الهوامش mm" value={form.print_options.margin_mm} min={5} max={30} onChange={v=>setOption("margin_mm",v)}/><NumberField label="عرض الشعار mm" value={form.print_options.logo_width_mm} min={15} max={70} onChange={v=>setOption("logo_width_mm",v)}/><NumberField label="ارتفاع الترويسة mm" value={form.print_options.header_height_mm} min={10} max={60} onChange={v=>setOption("header_height_mm",v)}/><NumberField label="ارتفاع التذييل mm" value={form.print_options.footer_height_mm} min={10} max={50} onChange={v=>setOption("footer_height_mm",v)}/></div><div className="mt-3 flex flex-wrap gap-5 text-sm"><label><input type="checkbox" checked={form.print_options.show_company_name} onChange={e=>setOption("show_company_name",e.target.checked)}/> إظهار اسم الشركة</label><label><input type="checkbox" checked={form.print_options.show_company_details} onChange={e=>setOption("show_company_details",e.target.checked)}/> إظهار بيانات المنشأة</label></div></FormSection>
+ <div className="sticky bottom-2 flex justify-end rounded-xl border bg-white/95 p-3"><button disabled={readOnly||saving||!!busy} className={primaryButtonClassName} onClick={()=>void save()}>{saving?"جاري الحفظ...":"حفظ هوية الطباعة"}</button></div></div>
+ <aside className="xl:sticky xl:top-4 xl:self-start"><div className="rounded-xl border bg-slate-100 p-3"><h2 className="mb-2 font-bold">معاينة مباشرة</h2><div dir={localeDirection(locale)} className="aspect-[210/297] overflow-hidden bg-white p-5 text-xs shadow"><BrandingAssetImage asset="header_image" version={version.header_image} alt="header" className="mb-2 max-h-20 w-full object-contain"/><div className="flex justify-between border-b pb-3"><div>{form.print_options.show_company_name&&<b>{form.print_company_name||"اسم الشركة"}</b>}<p>{form.print_header_texts[locale]}</p></div><BrandingAssetImage asset="logo" version={version.logo} alt="logo" className="max-h-16 max-w-24 object-contain"/></div><h3 className="my-6 text-center text-lg font-bold">Document / مستند</h3><div className="h-40 rounded border bg-slate-50"/><p className="mt-5 text-center">{form.print_footer_texts[locale]}</p><BrandingAssetImage asset="footer_image" version={version.footer_image} alt="footer" className="mt-2 max-h-16 w-full object-contain"/></div></div></aside></div></section>;
 }
-
-function errorText(e: any) {
-  const data = e?.response?.data;
-  const errors = data?.errors;
-  if (errors && typeof errors === "object") {
-    const msgs = Object.values(errors).flat().filter(Boolean);
-    if (msgs.length) return msgs.join(" — ");
-  }
-  return data?.message || e?.message || "تعذر تنفيذ العملية.";
-}
-
-function responsePath(data: any, kind: AssetKind) {
-  const d = data?.data ?? data;
-  return (
-    d?.path ||
-    d?.file_path ||
-    d?.url ||
-    d?.[`${kind}_path`] ||
-    d?.settings?.[`${kind}_path`] ||
-    ""
-  );
-}
-
-export default function PrintBrandingPage() {
-  const [form, setForm] = useState<any>(initial);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<AssetKind | null>(null);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [preview, setPreview] = useState<Record<AssetKind, string>>({
-    logo: "",
-    signature: "",
-    stamp: "",
-  });
-
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const r = await api.get("/company-settings");
-      const s = r.data?.data || {};
-      setForm({ ...initial, ...s });
-    } catch (e: any) {
-      setError(errorText(e));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const imageSrc = (kind: AssetKind) =>
-    preview[kind] || fileUrl(form[`${kind}_path`]);
-
-  const uploadAsset = async (kind: AssetKind, file?: File | null) => {
-    if (!file) return;
-    setError("");
-    setMessage("");
-
-    if (!file.type.startsWith("image/")) {
-      setError("الشعار والتوقيع والختم يجب أن تكون ملفات صور.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("حجم الصورة أكبر من 5 MB. استخدم نسخة أصغر.");
-      return;
-    }
-
-    const localPreview = URL.createObjectURL(file);
-    setPreview((p) => ({ ...p, [kind]: localPreview }));
-    setUploading(kind);
-
-    try {
-      const fd = new FormData();
-      fd.append("file", file, file.name);
-      fd.append("type", kind);
-
-      // لا نضع Content-Type هنا. المتصفح يضيف multipart boundary تلقائياً.
-      const r = await api.post("/company-settings/upload", fd);
-      const path = responsePath(r.data, kind);
-
-      if (path) {
-        setForm((f: any) => ({ ...f, [`${kind}_path`]: path }));
-      }
-
-      // بعض نسخ الباك تحفظ المسار داخل settings مباشرة ولا تعيده في upload response.
-      // لذلك نعيد القراءة لتأكيد النتيجة.
-      try {
-        const fresh = await api.get("/company-settings");
-        const s = fresh.data?.data || {};
-        setForm((f: any) => ({ ...f, ...s, [`${kind}_path`]: s?.[`${kind}_path`] || path || f?.[`${kind}_path`] }));
-      } catch {}
-
-      setMessage(
-        kind === "logo"
-          ? "تم رفع شعار الشركة بنجاح."
-          : kind === "signature"
-          ? "تم رفع التوقيع بنجاح."
-          : "تم رفع الختم بنجاح."
-      );
-    } catch (e: any) {
-      setError(errorText(e));
-    } finally {
-      setUploading(null);
-    }
-  };
-
-  const save = async () => {
-    setSaving(true);
-    setError("");
-    setMessage("");
-    try {
-      const payload = { ...form };
-      delete payload.id;
-      delete payload.company_id;
-      delete payload.created_at;
-      delete payload.updated_at;
-      await api.post("/company-settings", payload);
-      setMessage("تم حفظ هوية الطباعة والتذييلات بنجاح.");
-      await load();
-    } catch (e: any) {
-      setError(errorText(e));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const setDefaults = () => {
-    setForm((f: any) => ({
-      ...f,
-      invoice_footer: DEFAULT_INVOICE_FOOTER,
-      report_footer: DEFAULT_REPORT_FOOTER,
-    }));
-    setMessage("تم وضع التذييلات الافتراضية في الحقول. اضغط حفظ لاعتمادها.");
-  };
-
-  const companyLine = useMemo(
-    () => [form.print_phone, form.print_email, form.print_city].filter(Boolean).join(" • "),
-    [form]
-  );
-
-  if (loading) return <LoadingState label="جاري تحميل إعدادات الطباعة..." />;
-
-  return (
-    <section dir="rtl" className="space-y-5 pb-12">
-      <PageHeader title="هوية الطباعة والفواتير" description="إدارة شعار الشركة والتوقيع والختم وبيانات المستندات ومعاينة شكل الفاتورة." breadcrumbs={[{label:"الرئيسية",href:"/"},{label:"إعدادات الشركة",href:"/settings"},{label:"هوية الطباعة"}]} />
-
-      {error && <AccessState title="تعذر إكمال العملية" description={error} tone="danger"/>}
-      {message && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-700">{message}</div>}
-
-      <div className="grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
-        <div className="space-y-5">
-          <FormSection title="بيانات رأس الفاتورة">
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="اسم المنشأة في الطباعة" value={form.print_company_name} onChange={(v)=>setForm({...form,print_company_name:v})}/>
-              <Field label="الهاتف" value={form.print_phone} onChange={(v)=>setForm({...form,print_phone:v})}/>
-              <Field label="البريد الإلكتروني" value={form.print_email} onChange={(v)=>setForm({...form,print_email:v})}/>
-              <Field label="المدينة" value={form.print_city} onChange={(v)=>setForm({...form,print_city:v})}/>
-              <Field label="السجل التجاري" value={form.commercial_register} onChange={(v)=>setForm({...form,commercial_register:v})}/>
-              <Field label="الرقم الضريبي" value={form.tax_number} onChange={(v)=>setForm({...form,tax_number:v})}/>
-              <label className="md:col-span-2 space-y-1 text-sm font-bold text-slate-700">
-                <span>العنوان</span>
-                <textarea rows={3} className="w-full rounded-xl border p-3 outline-none focus:border-[#0B2A4A]" value={form.print_address||""} onChange={(e)=>setForm({...form,print_address:e.target.value})}/>
-              </label>
-            </div>
-          </FormSection>
-
-          <FormSection title="الأصول والعلامة التجارية" description="يتم رفع الملف مباشرةً باستخدام عقد الرفع الحالي.">
-            <div className="grid gap-4 md:grid-cols-3">
-              <UploadCard title="شعار الشركة" src={imageSrc("logo")} busy={uploading==="logo"} onFile={(f)=>uploadAsset("logo",f)}/>
-              <UploadCard title="التوقيع" src={imageSrc("signature")} busy={uploading==="signature"} onFile={(f)=>uploadAsset("signature",f)}/>
-              <UploadCard title="الختم" src={imageSrc("stamp")} busy={uploading==="stamp"} onFile={(f)=>uploadAsset("stamp",f)}/>
-            </div>
-            <p className="mt-3 text-xs text-slate-500">PNG / JPG / WEBP — حد الواجهة 5 MB. لا تضف Content-Type يدويًا؛ النظام يرسله كـ multipart/form-data تلقائيًا.</p>
-          </FormSection>
-
-          <FormSection title="ألوان هوية الطباعة" description="تستخدم هذه الألوان الحالية في معاينة المستندات دون تغيير عقد الحفظ.">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-sm font-medium text-slate-700"><span>اللون الرئيسي</span><input type="color" value={form.primary_color||"#0B2A4A"} onChange={event=>setForm({...form,primary_color:event.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white p-1"/></label>
-              <label className="space-y-1 text-sm font-medium text-slate-700"><span>اللون الثانوي</span><input type="color" value={form.secondary_color||"#123D68"} onChange={event=>setForm({...form,secondary_color:event.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white p-1"/></label>
-            </div>
-          </FormSection>
-
-          <FormSection title="تذييل المستندات" actions={<button type="button" onClick={setDefaults} className={secondaryButtonClassName}>إرجاع التذييل الافتراضي</button>}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-1 text-sm font-bold text-slate-700">
-                <span>تذييل الفواتير</span>
-                <textarea rows={5} className="w-full rounded-xl border p-3 outline-none focus:border-[#0B2A4A]" value={form.invoice_footer||""} onChange={(e)=>setForm({...form,invoice_footer:e.target.value})}/>
-              </label>
-              <label className="space-y-1 text-sm font-bold text-slate-700">
-                <span>تذييل التقارير</span>
-                <textarea rows={5} className="w-full rounded-xl border p-3 outline-none focus:border-[#0B2A4A]" value={form.report_footer||""} onChange={(e)=>setForm({...form,report_footer:e.target.value})}/>
-              </label>
-            </div>
-          </FormSection>
-
-          <div className="flex flex-wrap gap-2">
-            <button disabled={saving||!!uploading} onClick={save} className={primaryButtonClassName}>{saving?"جاري الحفظ...":"حفظ هوية الطباعة"}</button>
-            <button type="button" onClick={()=>window.open("/print/purchases/1","_blank")} className={secondaryButtonClassName}>فتح صفحة الطباعة للاختبار</button>
-          </div>
-        </div>
-
-        <div className="xl:sticky xl:top-4 xl:self-start">
-          <div className="rounded-3xl border bg-slate-100 p-4 shadow-sm">
-            <div className="mb-3 font-black text-[#0B2A4A]">معاينة مباشرة</div>
-            <div className="mx-auto min-h-[720px] max-w-[620px] rounded-xl bg-white p-7 shadow-sm">
-              <div className="flex items-start justify-between gap-5 border-b-2 pb-4" style={{borderColor:form.primary_color||"#0B2A4A"}}>
-                <div>
-                  <h3 className="text-xl font-black" style={{color:form.primary_color||"#0B2A4A"}}>{form.print_company_name||"اسم المنشأة"}</h3>
-                  <div className="mt-1 text-xs leading-6 text-slate-600">{form.print_address||"العنوان الوطني / عنوان المنشأة"}</div>
-                  <div className="text-xs text-slate-600">{companyLine||"الهاتف • البريد الإلكتروني • المدينة"}</div>
-                  <div className="text-xs text-slate-600">السجل التجاري: {form.commercial_register||"—"} • الرقم الضريبي: {form.tax_number||"—"}</div>
-                </div>
-                <div className="flex h-20 w-28 items-center justify-center rounded-lg border bg-white p-2">
-                  {imageSrc("logo")?<img src={imageSrc("logo")} className="max-h-full max-w-full object-contain" alt="logo"/>:<span className="text-xs text-slate-400">الشعار</span>}
-                </div>
-              </div>
-
-              <div className="py-6 text-center"><div className="text-xl font-black text-[#0B2A4A]">فاتورة ضريبية</div><div className="mt-1 text-xs text-slate-500">Tax Invoice</div></div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <PreviewBox label="رقم الفاتورة" value="MAIN-7-2026-000001"/><PreviewBox label="التاريخ" value="2026-08-19"/>
-                <PreviewBox label="المورد / العميل" value="شركة الاختبار"/><PreviewBox label="العملة" value="SAR"/>
-              </div>
-              <div className="mt-4 overflow-hidden rounded-lg border text-xs"><div className="grid grid-cols-4 bg-slate-100 p-2 font-bold"><span>الصنف</span><span>الكمية</span><span>السعر</span><span>الإجمالي</span></div><div className="grid grid-cols-4 p-2"><span>حديد سكراب</span><span>980 KG</span><span>25.00</span><span>24,500.00</span></div></div>
-              <div className="mr-auto mt-4 w-64 space-y-1 rounded-lg bg-slate-50 p-3 text-xs"><div className="flex justify-between"><span>قبل الضريبة</span><b>21,304.35</b></div><div className="flex justify-between"><span>VAT</span><b>3,195.65</b></div><div className="flex justify-between border-t pt-1 text-sm"><span>الإجمالي</span><b>24,500.00 SAR</b></div></div>
-
-              <div className="mt-12 flex min-h-24 items-end justify-end gap-5">
-                {imageSrc("signature")&&<img src={imageSrc("signature")} className="max-h-20 max-w-40 object-contain" alt="signature"/>}
-                {imageSrc("stamp")&&<img src={imageSrc("stamp")} className="max-h-24 max-w-32 object-contain opacity-90" alt="stamp"/>}
-              </div>
-              <div className="mt-6 border-t pt-3 text-center text-[10px] leading-5 text-slate-500">{form.invoice_footer||DEFAULT_INVOICE_FOOTER}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Field({label,value,onChange}:{label:string;value:any;onChange:(v:string)=>void}){return <label className="space-y-1 text-sm font-bold text-slate-700"><span>{label}</span><input className="w-full rounded-xl border p-3 outline-none focus:border-[#0B2A4A]" value={value||""} onChange={(e)=>onChange(e.target.value)}/></label>}
-function PreviewBox({label,value}:{label:string;value:string}){return <div className="rounded-lg border bg-slate-50 p-2"><div className="text-[10px] text-slate-500">{label}</div><b>{value}</b></div>}
-function UploadCard({title,src,busy,onFile}:{title:string;src:string;busy:boolean;onFile:(f:File|null)=>void}){return <label className="block rounded-2xl border p-3"><div className="mb-2 font-black text-[#0B2A4A]">{title}</div><div className="flex h-32 items-center justify-center rounded-xl bg-slate-50 p-3">{src?<img src={src} className="max-h-full max-w-full object-contain" alt={title}/>:<span className="text-sm text-slate-400">لا يوجد ملف</span>}</div><input type="file" accept="image/png,image/jpeg,image/webp" className="mt-3 block w-full text-xs" disabled={busy} onChange={(e)=>onFile(e.target.files?.[0]||null)}/><div className="mt-2 text-xs text-slate-500">{busy?"جاري الرفع...":"يتم الرفع فور اختيار الملف"}</div></label>}
+function Asset({title,asset,version,busy,disabled,upload,remove}:{title:string;asset:PrintAsset;version:number;busy:boolean;disabled:boolean;upload:(a:PrintAsset,f?:File)=>void;remove:(a:PrintAsset)=>void}){return <div className="rounded-xl border p-3"><b>{title}</b><div className="my-2 flex h-28 items-center justify-center bg-slate-50"><BrandingAssetImage asset={asset} version={version} alt={title} className="max-h-full max-w-full object-contain"/></div><input disabled={disabled||busy} type="file" accept="image/png,image/jpeg,image/webp" className="w-full text-xs" onChange={e=>upload(asset,e.target.files?.[0])}/><button disabled={disabled||busy} className="mt-2 text-xs font-semibold text-rose-700" onClick={()=>void remove(asset)}>{busy?"جاري...":"إزالة"}</button></div>}
+function TextField({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}){return <label className="text-sm font-semibold">{label}<input className={fieldClassName} value={value} onChange={e=>onChange(e.target.value)}/></label>}
+function NumberField({label,value,onChange,min,max}:{label:string;value:number;onChange:(v:number)=>void;min:number;max:number}){return <label className="text-sm font-semibold">{label}<input type="number" className={fieldClassName} value={value} min={min} max={max} onChange={e=>onChange(Number(e.target.value))}/></label>}
+function Info({children,tone}:{children:React.ReactNode;tone:"amber"|"rose"|"green"}){const c={amber:"bg-amber-50 text-amber-900",rose:"bg-rose-50 text-rose-800",green:"bg-emerald-50 text-emerald-800"}[tone];return <p role={tone==="rose"?"alert":undefined} className={`rounded-lg p-3 text-sm ${c}`}>{children}</p>}

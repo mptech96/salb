@@ -172,7 +172,7 @@ class EnsureRoutePermission
         if (str_starts_with($uri, 'reports/export/')) return 'reports.export';
         if (str_starts_with($uri, 'reports/')) return 'reports.view';
         if (str_starts_with($uri, 'statements/')) return 'statements.view';
-        if (str_starts_with($uri, 'company-settings')) return 'settings.view';
+        if (str_starts_with($uri, 'company-settings')) return in_array(strtoupper($request->method()), ['GET','HEAD'], true) ? 'settings.view' : null;
         if (str_starts_with($uri, 'financial-accounts')) return in_array($method,['GET','HEAD'],true) ? 'financial_accounts.view' : 'financial_accounts.manage';
         if (str_starts_with($uri, 'financial-setup')) return in_array($method,['GET','HEAD'],true) ? 'financial_setup.view' : (str_ends_with($uri,'/cost-center') ? 'cost_centers.manage' : 'financial_setup.manage');
         if (str_starts_with($uri, 'opening-balances')) return in_array($method,['GET','HEAD'],true) ? 'opening_balances.view' : 'opening_balances.post';
