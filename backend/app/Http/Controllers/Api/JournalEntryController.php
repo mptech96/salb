@@ -12,6 +12,7 @@ class JournalEntryController extends Controller
 {
     public function index(Request $request, AccountingContext $context)
     {
+        $validated = $request->validate(['page'=>'nullable|integer|min:1','per_page'=>'nullable|integer|min:1|max:100','search'=>'nullable|string|max:200','q'=>'nullable|string|max:200','from_date'=>'nullable|date','to_date'=>'nullable|date|after_or_equal:from_date','source_type'=>'nullable|string|max:50','status'=>'nullable|string|max:30','account_id'=>'nullable|integer','branch_id'=>'nullable|integer']);
         $companyId = $context->companyId($request);
         $branchId = $context->branchFilter($request);
 
@@ -36,8 +37,8 @@ class JournalEntryController extends Controller
             $query->where('e.source_type', $request->source_type);
         }
 
-        if ($request->filled('q')) {
-            $search = '%' . trim((string) $request->q) . '%';
+        if ($request->filled('search') || $request->filled('q')) {
+            $search = '%' . trim((string) ($request->input('search') ?: $request->input('q'))) . '%';
 
             $query->where(function ($q) use ($search) {
                 $q->where('e.entry_number', 'like', $search)
@@ -46,6 +47,8 @@ class JournalEntryController extends Controller
                     ->orWhere('e.source_type', 'like', $search);
             });
         }
+        if ($request->filled('status')) $query->where('e.status',$request->status);
+        if ($request->filled('account_id')) $query->whereExists(function($q)use($request){$q->selectRaw('1')->from('journal_entry_lines as al')->whereColumn('al.journal_entry_id','e.id')->where('al.account_id',(int)$request->account_id);});
 
         $data = $query
             ->select(
@@ -65,8 +68,7 @@ class JournalEntryController extends Controller
             )
             ->orderByDesc('e.entry_date')
             ->orderByDesc('e.id')
-            ->limit(500)
-            ->get();
+            ->paginate((int)($validated['per_page']??25));
 
         return response()->json([
             'status' => true,

@@ -222,6 +222,7 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
 
         Route::get('/financial-accounts/meta', [FinancialAccountController::class, 'meta']);
         Route::get('/financial-accounts', [FinancialAccountController::class, 'index']);
+        Route::get('/financial-accounts/{id}/transactions', [FinancialAccountController::class, 'transactions']);
         Route::post('/financial-accounts', [FinancialAccountController::class, 'store']);
         Route::put('/financial-accounts/{id}', [FinancialAccountController::class, 'update']);
         Route::delete('/financial-accounts/{id}', [FinancialAccountController::class, 'destroy']);

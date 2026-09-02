@@ -18,9 +18,16 @@ class ExpenseController extends Controller
 
     public function index(Request $r,AccountingContext $ctx)
     {
-        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);
+        $v=$r->validate(['page'=>'nullable|integer|min:1','per_page'=>'nullable|integer|min:1|max:100','search'=>'nullable|string|max:200','from_date'=>'nullable|date','to_date'=>'nullable|date|after_or_equal:from_date','expense_type_id'=>'nullable|integer','payment_status'=>'nullable|in:PAID,UNPAID','financial_account_id'=>'nullable|integer','branch_id'=>'nullable|integer']);
+        $cid=$ctx->companyId($r);$bid=$ctx->branchFilter($r);$perPage=(int)($v['per_page']??25);
         $q=DB::table('expenses as e')->leftJoin('expense_types as t','t.id','=','e.expense_type_id')->leftJoin('shipments as sh','sh.id','=','e.shipment_id')->leftJoin('cars as c','c.id','=','e.car_id')->leftJoin('drivers as d','d.id','=','e.driver_id')->leftJoin('workers as w','w.id','=','e.worker_id')->leftJoin('purchase_invoices as p','p.id','=','e.purchase_invoice_id')->leftJoin('sales_invoices as s','s.id','=','e.sales_invoice_id')->leftJoin('vouchers as v','v.id','=','e.voucher_id')->leftJoin('financial_accounts as fa','fa.id','=','e.financial_account_id')->where('e.company_id',$cid);if($bid!==null)$q->where('e.branch_id',$bid);
-        return response()->json(['status'=>true,'data'=>$q->select('e.*','t.type_name','t.type_code','t.description as type_description','t.affects_cost','sh.shipment_number','c.car_number','d.driver_name','w.worker_name','p.invoice_number as purchase_invoice_number','s.invoice_number as sales_invoice_number','v.voucher_number','fa.account_name as financial_account_name')->orderByDesc('e.id')->get()]);
+        $q->when(!empty($v['search']),function($x)use($v){$s='%'.trim($v['search']).'%';$x->where(function($y)use($s){$y->where('e.notes','like',$s)->orWhere('t.type_name','like',$s)->orWhere('v.voucher_number','like',$s)->orWhere('sh.shipment_number','like',$s)->orWhere('p.invoice_number','like',$s)->orWhere('s.invoice_number','like',$s);});})
+            ->when(!empty($v['from_date']),fn($x)=>$x->whereDate('e.expense_date','>=',$v['from_date']))->when(!empty($v['to_date']),fn($x)=>$x->whereDate('e.expense_date','<=',$v['to_date']))
+            ->when(!empty($v['expense_type_id']),fn($x)=>$x->where('e.expense_type_id',$v['expense_type_id']))->when(!empty($v['payment_status']),fn($x)=>$x->where('e.payment_status',$v['payment_status']))
+            ->when(!empty($v['financial_account_id']),fn($x)=>$x->where('e.financial_account_id',$v['financial_account_id']));
+        $filteredTotal=(clone $q)->sum('e.amount');$paidCount=(clone $q)->where('e.payment_status','PAID')->count();$unpaidCount=(clone $q)->where('e.payment_status','UNPAID')->count();
+        $data=$q->select('e.*','t.type_name','t.type_code','t.description as type_description','t.affects_cost','sh.shipment_number','c.car_number','d.driver_name','w.worker_name','p.invoice_number as purchase_invoice_number','s.invoice_number as sales_invoice_number','v.voucher_number','fa.account_name as financial_account_name')->orderByDesc('e.expense_date')->orderByDesc('e.id')->paginate($perPage);
+        return response()->json(['status'=>true,'data'=>$data,'summary'=>['filtered_total'=>(float)$filteredTotal,'paid_count'=>$paidCount,'unpaid_count'=>$unpaidCount]]);
     }
 
     public function store(Request $r,AccountingEngine $accounting,AccountingContext $ctx,FinancialAccountService $money)

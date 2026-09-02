@@ -6,6 +6,7 @@ import {PageHeader,primaryButtonClassName} from "@/components/ui/enterprise";
 import {FinancialNotice} from "@/components/design-system/AccountingWorkspace";
 import SystemDialog from "@/components/common/SystemDialog";
 import { readSession } from "@/lib/session";
+import ServerPagination,{PaginationMeta} from "@/components/finance/ServerPagination";
 
 const emptyLine = () => ({
   account_id: "",
@@ -35,6 +36,7 @@ const sourceLabel = (source: string) => {
 
 export default function JournalEntriesPage() {
   const [entries, setEntries] = useState<any[]>([]);
+  const [pagination,setPagination]=useState<PaginationMeta>({current_page:1,last_page:1,per_page:25,total:0});
   const [accounts, setAccounts] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,11 @@ export default function JournalEntriesPage() {
     from_date: "",
     to_date: "",
     source_type: "",
+    branch_id: "",
+    account_id: "",
+    status: "",
+    page: 1,
+    per_page: 25,
   });
 
   const [quick, setQuick] = useState({
@@ -122,7 +129,9 @@ export default function JournalEntriesPage() {
         ),
       });
 
-      setEntries(response.data.data || []);
+      const page=response.data.data||{};
+      setEntries(page.data || []);
+      setPagination(page);
     } catch (e: any) {
       setEntries([]);
       setDialog({
@@ -419,10 +428,10 @@ export default function JournalEntriesPage() {
       <PageHeader title="دفتر اليومية" description="القيود اليدوية للحركات الاستثنائية، بينما عمليات النظام ترحّل من مساراتها التشغيلية." breadcrumbs={[{label:"المحاسبة",href:"/accounting"},{label:"دفتر اليومية"}]} actions={<button onClick={()=>{resetForm();setShowForm(true)}} className={primaryButtonClassName}>+ قيد يومي</button>}/>
       <FinancialNotice tone="info">التوازن والسنة المالية وقواعد العكس يتحقق منها الخادم. تعرض الواجهة الفرق بوضوح ولا تصلح القيود تلقائيًا.</FinancialNotice>
 
-      <div className="grid gap-3 rounded-3xl border bg-white p-4 shadow-sm md:grid-cols-5">
+      <div className="grid gap-3 rounded-3xl border bg-white p-4 shadow-sm md:grid-cols-4 xl:grid-cols-8">
         <input
           value={filters.q}
-          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+          onChange={(e) => setFilters({ ...filters, q: e.target.value, page:1 })}
           placeholder="بحث برقم القيد أو المرجع أو البيان..."
           className="rounded-2xl border p-3 md:col-span-2"
         />
@@ -430,15 +439,19 @@ export default function JournalEntriesPage() {
           type="date"
           value={filters.from_date}
           onChange={(e) =>
-            setFilters({ ...filters, from_date: e.target.value })
+            setFilters({ ...filters, from_date: e.target.value, page:1 })
           }
           className="rounded-2xl border p-3"
         />
+        {companyWide && branches.length > 1 && <select value={filters.branch_id} onChange={(e)=>setFilters({...filters,branch_id:e.target.value,page:1})} className="rounded-2xl border p-3"><option value="">كل الفروع</option>{branches.map((branch:any)=><option key={branch.id} value={branch.id}>{branch.branch_name}</option>)}</select>}
+        <select value={filters.account_id || ""} onChange={(e)=>setFilters({...filters,account_id:e.target.value,page:1})} className="rounded-2xl border p-3"><option value="">كل الحسابات</option>{accounts.map((account:any)=><option key={account.id} value={account.id}>{account.account_code} — {account.account_name}</option>)}</select>
+        <select value={filters.source_type} onChange={(e)=>setFilters({...filters,source_type:e.target.value,page:1})} className="rounded-2xl border p-3"><option value="">كل المصادر</option>{["MANUAL","REVERSAL","EXPENSE","VOUCHER","PURCHASE","SALE","INVENTORY"].map(source=><option key={source} value={source}>{sourceLabel(source)}</option>)}</select>
+        <select value={filters.status || ""} onChange={(e)=>setFilters({...filters,status:e.target.value,page:1})} className="rounded-2xl border p-3"><option value="">كل الحالات</option><option value="POSTED">مرحّل</option><option value="DRAFT">مسودة</option></select>
         <input
           type="date"
           value={filters.to_date}
           onChange={(e) =>
-            setFilters({ ...filters, to_date: e.target.value })
+            setFilters({ ...filters, to_date: e.target.value, page:1 })
           }
           className="rounded-2xl border p-3"
         />
@@ -891,6 +904,7 @@ export default function JournalEntriesPage() {
           </tbody>
         </table>
       </div>
+      <ServerPagination meta={pagination} onPage={page=>{const next={...filters,page};setFilters(next);void loadEntries(next)}} onPerPage={per_page=>{const next={...filters,per_page,page:1};setFilters(next);void loadEntries(next)}}/>
 
       {detail && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4">

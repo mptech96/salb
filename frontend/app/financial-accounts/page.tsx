@@ -1,22 +1,691 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
-import {readSession} from "@/lib/session";
+import { readSession } from "@/lib/session";
+import ServerPagination, {
+  PaginationMeta,
+} from "@/components/finance/ServerPagination";
 
-type Meta={branches:any[];accounts:any[];currencies:any[]};type Row=any;type Dialog={open:boolean;type:"success"|"error"|"warning"|"info"|"confirm";title:string;message:string;showCancel?:boolean;confirmText?:string;cancelText?:string;onConfirm?:()=>void|Promise<void>};const closed:Dialog={open:false,type:"info",title:"",message:""};
-const blank={branch_id:"",account_code:"",account_name:"",account_type:"CASH",gl_account_id:"",currency_code:"",bank_name:"",account_number:"",iban:"",wallet_provider:"",is_default_receipt:false,is_default_payment:false,is_active:true,notes:""};
-function message(e:any){const es=e?.response?.data?.errors;if(es){const x=Object.values(es).flat().find(Boolean);if(x)return String(x);}return String(e?.response?.data?.message||e?.message||"تعذر إكمال العملية.");}
-export default function FinancialAccountsPage(){const session=useMemo(()=>readSession(),[]);const role=String(session?.user?.role?.role_code||"").toUpperCase();const branchLocked=role==="BRANCH_MANAGER";const currentBranch=session?.user?.branch_id?String(session.user.branch_id):"";const[meta,setMeta]=useState<Meta>({branches:[],accounts:[],currencies:[]});const[rows,setRows]=useState<Row[]>([]);const[form,setForm]=useState<any>({...blank,branch_id:currentBranch});const[editId,setEditId]=useState<number|null>(null);const[show,setShow]=useState(false);const[loading,setLoading]=useState(false);const[saving,setSaving]=useState(false);const[dialog,setDialog]=useState<Dialog>(closed);const[dialogLoading,setDialogLoading]=useState(false);const[filter,setFilter]=useState("ALL");const notify=(type:Dialog["type"],title:string,msg:string)=>setDialog({open:true,type,title,message:msg,confirmText:"حسنًا",onConfirm:()=>setDialog(closed)});
- const load=async()=>{setLoading(true);try{const[m,r]=await Promise.all([api.get("/financial-accounts/meta"),api.get("/financial-accounts")]);const md=m.data?.data||{};setMeta({branches:md.branches||[],accounts:md.accounts||[],currencies:md.currencies||[]});setRows(r.data?.data||[]);if(!form.currency_code&&md.currencies?.length)setForm((f:any)=>({...f,currency_code:md.currencies.find((x:any)=>Number(x.is_base)===1)?.currency_code||md.currencies[0]?.currency_code||""}));}catch(e:any){notify("error","تعذر تحميل الخزائن والبنوك",message(e));}finally{setLoading(false);}};useEffect(()=>{void load();},[]);
- const openNew=()=>{const cur=meta.currencies.find((x:any)=>Number(x.is_base)===1)?.currency_code||meta.currencies[0]?.currency_code||"";setEditId(null);setForm({...blank,branch_id:branchLocked?currentBranch:"",currency_code:cur});setShow(true)};const edit=(r:any)=>{setEditId(r.id);setForm({branch_id:r.branch_id?String(r.branch_id):"",account_code:r.account_code||"",account_name:r.account_name||"",account_type:r.account_type||"CASH",gl_account_id:String(r.gl_account_id||""),currency_code:r.currency_code||"",bank_name:r.bank_name||"",account_number:r.account_number||"",iban:r.iban||"",wallet_provider:r.wallet_provider||"",is_default_receipt:Boolean(r.is_default_receipt),is_default_payment:Boolean(r.is_default_payment),is_active:Boolean(r.is_active),notes:r.notes||""});setShow(true)};
- const autoGl=(type:string)=>{const code=type==="BANK"?"1120":type==="WALLET"?"1130":"1110";return meta.accounts.find((a:any)=>String(a.account_code)===code)?.id||""};
- const save=async()=>{if(!form.account_name.trim())return notify("warning","الاسم مطلوب","اكتب اسم الخزينة أو البنك أو المحفظة.");if(!form.gl_account_id)return notify("warning","حساب الأستاذ","اختر حساب الأستاذ المرتبط.");setSaving(true);try{const p={...form,branch_id:form.branch_id?Number(form.branch_id):null,gl_account_id:Number(form.gl_account_id),account_code:form.account_code.trim()||null};const res=editId?await api.put(`/financial-accounts/${editId}`,p):await api.post("/financial-accounts",p);setShow(false);await load();notify("success","تم الحفظ",res.data?.message||"تم حفظ الحساب المالي.");}catch(e:any){notify("error","تعذر الحفظ",message(e));}finally{setSaving(false)}};
- const remove=(r:any)=>setDialog({open:true,type:"confirm",title:"حذف / تعطيل الحساب المالي",message:`سيحافظ النظام على التاريخ إذا كان «${r.account_name}» مستخدمًا في قيود سابقة.`,showCancel:true,confirmText:"تنفيذ",cancelText:"إلغاء",onConfirm:async()=>{setDialogLoading(true);try{const res=await api.delete(`/financial-accounts/${r.id}`);setDialog(closed);await load();notify("success","تم التنفيذ",res.data?.message||"تم التنفيذ.");}catch(e:any){notify("error","تعذر التنفيذ",message(e));}finally{setDialogLoading(false)}}});
- const shown=filter==="ALL"?rows:rows.filter(r=>String(r.branch_id||"CENTRAL")===filter);
- return <section dir="rtl" className="space-y-5"><div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-sm text-blue-100">طبقة مالية تشغيلية</p><h1 className="mt-2 text-3xl font-black">الخزائن والبنوك والمحافظ</h1><p className="mt-2 max-w-3xl text-sm text-blue-100">حسابات تشغيلية مرنة لأي عدد من الفروع، مرتبطة بحسابات الأستاذ الموحدة. الحساب المركزي يمكن استخدامه عبر الفروع، والحساب الفرعي يظل خاصًا بفرعه.</p></div><button onClick={openNew} className="rounded-2xl bg-white px-5 py-3 font-black text-[#0B2A4A]">+ حساب مالي</button></div></div>
- <div className="rounded-3xl border bg-white p-4 shadow-sm"><select value={filter} onChange={e=>setFilter(e.target.value)} className="w-full rounded-2xl border bg-slate-50 p-4 md:max-w-sm"><option value="ALL">كل الحسابات المالية</option><option value="CENTRAL">حسابات مركزية للشركة</option>{meta.branches.map((b:any)=><option key={b.id} value={b.id}>{b.branch_name}</option>)}</select></div>
- <div className="overflow-hidden rounded-3xl border bg-white shadow-sm"><div className="flex items-center justify-between border-b p-4"><h2 className="text-xl font-black text-[#0B2A4A]">الحسابات التشغيلية</h2><span className="text-sm text-slate-500">{loading?"جاري التحميل...":`${shown.length} حساب`}</span></div><div className="overflow-x-auto"><table className="w-full min-w-[1350px] text-right"><thead className="bg-slate-100"><tr><th className="p-4">الكود</th><th>الاسم</th><th>النوع</th><th>النطاق</th><th>حساب الأستاذ</th><th>العملة</th><th>افتراضي قبض</th><th>افتراضي صرف</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>{shown.map((r:any)=><tr key={r.id} className="border-t"><td className="p-4">{r.account_code}</td><td className="font-black text-[#0B2A4A]">{r.account_name}</td><td>{typeLabel(r.account_type)}</td><td>{r.branch_name||"مركزي - كل الشركة"}</td><td>{r.gl_account_code} - {r.gl_account_name}</td><td>{r.currency_code}</td><td>{Number(r.is_default_receipt)===1?"✓":"—"}</td><td>{Number(r.is_default_payment)===1?"✓":"—"}</td><td>{Number(r.is_active)===1?"نشط":"متوقف"}</td><td><div className="flex gap-2"><button onClick={()=>edit(r)} className="rounded-xl bg-blue-700 px-3 py-2 text-sm font-bold text-white">تعديل</button><button onClick={()=>remove(r)} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-bold text-white">حذف</button></div></td></tr>)}{!loading&&!shown.length&&<tr><td colSpan={10} className="p-10 text-center text-slate-500">لا توجد حسابات.</td></tr>}</tbody></table></div></div>
- {show&&<div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm"><div className="absolute left-0 top-0 h-full w-full overflow-y-auto bg-white p-5 shadow-2xl md:w-[650px]"><div className="flex items-start justify-between"><div><h2 className="text-2xl font-black text-[#0B2A4A]">{editId?"تعديل حساب مالي":"إضافة حساب مالي"}</h2><p className="mt-1 text-sm text-slate-500">لا ينشئ هذا حساب GL جديدًا؛ بل يربط الخزينة/البنك بحساب الأستاذ المناسب.</p></div><button onClick={()=>setShow(false)} className="rounded-xl bg-slate-100 px-4 py-2">✕</button></div><div className="mt-5 grid gap-3 md:grid-cols-2"><Field t="النطاق"><select disabled={branchLocked} value={form.branch_id} onChange={e=>setForm({...form,branch_id:e.target.value})} className="input"><option value="">مركزي - كل الشركة</option>{meta.branches.map((b:any)=><option key={b.id} value={b.id}>{b.branch_name}</option>)}</select></Field><Field t="النوع"><select value={form.account_type} onChange={e=>{const type=e.target.value;setForm({...form,account_type:type,gl_account_id:String(autoGl(type)||form.gl_account_id)})}} className="input"><option value="CASH">صندوق</option><option value="PETTY_CASH">عهدة / صندوق صغير</option><option value="BANK">بنك</option><option value="WALLET">محفظة إلكترونية</option><option value="OTHER">حساب مالي آخر</option></select></Field><Field t="الكود"><input value={form.account_code} onChange={e=>setForm({...form,account_code:e.target.value.toUpperCase()})} placeholder="يولد تلقائيًا إن ترك فارغًا" className="input"/></Field><Field t="الاسم *"><input value={form.account_name} onChange={e=>setForm({...form,account_name:e.target.value})} placeholder="مثال: صندوق فرع عدن" className="input"/></Field><Field t="حساب الأستاذ *"><select value={form.gl_account_id} onChange={e=>setForm({...form,gl_account_id:e.target.value})} className="input"><option value="">اختر الحساب</option>{meta.accounts.map((a:any)=><option key={a.id} value={a.id}>{a.account_code} - {a.account_name}</option>)}</select></Field><Field t="العملة *"><select value={form.currency_code} onChange={e=>setForm({...form,currency_code:e.target.value})} className="input"><option value="">اختر العملة</option>{meta.currencies.map((c:any)=><option key={c.currency_code} value={c.currency_code}>{c.currency_code} - {c.currency_name}</option>)}</select></Field>{form.account_type==="BANK"&&<><Field t="اسم البنك"><input value={form.bank_name} onChange={e=>setForm({...form,bank_name:e.target.value})} className="input"/></Field><Field t="رقم الحساب"><input value={form.account_number} onChange={e=>setForm({...form,account_number:e.target.value})} className="input"/></Field><Field t="IBAN"><input value={form.iban} onChange={e=>setForm({...form,iban:e.target.value})} className="input"/></Field></>}{form.account_type==="WALLET"&&<Field t="مزود المحفظة"><input value={form.wallet_provider} onChange={e=>setForm({...form,wallet_provider:e.target.value})} className="input"/></Field>}</div><div className="mt-4 grid gap-3 sm:grid-cols-3"><Check t="افتراضي للقبض" v={form.is_default_receipt} onChange={(v:boolean)=>setForm({...form,is_default_receipt:v})}/><Check t="افتراضي للصرف" v={form.is_default_payment} onChange={(v:boolean)=>setForm({...form,is_default_payment:v})}/><Check t="نشط" v={form.is_active} onChange={(v:boolean)=>setForm({...form,is_active:v})}/></div><textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="ملاحظات" className="mt-4 min-h-24 w-full rounded-2xl border bg-slate-50 p-4"/><div className="sticky bottom-0 mt-5 flex gap-3 border-t bg-white py-4"><button disabled={saving} onClick={()=>void save()} className="rounded-2xl bg-[#0B2A4A] px-6 py-3 font-black text-white">{saving?"جاري الحفظ...":"حفظ"}</button><button onClick={()=>setShow(false)} className="rounded-2xl border px-6 py-3 font-black">إلغاء</button></div></div></div>}
- <style jsx global>{`.input{width:100%;border:1px solid rgb(226 232 240);background:rgb(248 250 252);border-radius:1rem;padding:1rem;outline:none}.input:focus{border-color:#0B2A4A}`}</style><SystemDialog open={dialog.open} type={dialog.type} title={dialog.title} message={dialog.message} confirmText={dialog.confirmText} cancelText={dialog.cancelText} showCancel={dialog.showCancel} loading={dialogLoading} onConfirm={dialog.onConfirm||(()=>setDialog(closed))} onClose={()=>!dialogLoading&&setDialog(closed)}/></section>}
-function typeLabel(x:string){return({CASH:"صندوق",PETTY_CASH:"عهدة/صندوق صغير",BANK:"بنك",WALLET:"محفظة",OTHER:"أخرى"}as any)[x]||x}function Field({t,children}:{t:string;children:React.ReactNode}){return <label className="space-y-2"><span className="text-sm font-bold text-slate-700">{t}</span>{children}</label>}function Check({t,v,onChange}:{t:string;v:boolean;onChange:(v:boolean)=>void}){return <label className="flex items-center gap-2 rounded-2xl border bg-slate-50 p-4"><input type="checkbox" checked={v} onChange={e=>onChange(e.target.checked)}/><span className="font-bold">{t}</span></label>}
+type Meta = { branches: any[]; accounts: any[]; currencies: any[] };
+type Row = any;
+type Dialog = {
+  open: boolean;
+  type: "success" | "error" | "warning" | "info" | "confirm";
+  title: string;
+  message: string;
+  showCancel?: boolean;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm?: () => void | Promise<void>;
+};
+const closed: Dialog = { open: false, type: "info", title: "", message: "" };
+const blank = {
+  branch_id: "",
+  account_code: "",
+  account_name: "",
+  account_type: "CASH",
+  gl_account_id: "",
+  currency_code: "",
+  bank_name: "",
+  account_number: "",
+  iban: "",
+  wallet_provider: "",
+  is_default_receipt: false,
+  is_default_payment: false,
+  is_active: true,
+  notes: "",
+};
+function message(e: any) {
+  const es = e?.response?.data?.errors;
+  if (es) {
+    const x = Object.values(es).flat().find(Boolean);
+    if (x) return String(x);
+  }
+  return String(
+    e?.response?.data?.message || e?.message || "تعذر إكمال العملية.",
+  );
+}
+export default function FinancialAccountsPage() {
+  const session = useMemo(() => readSession(), []);
+  const role = String(session?.user?.role?.role_code || "").toUpperCase();
+  const branchLocked = role === "BRANCH_MANAGER";
+  const currentBranch = session?.user?.branch_id
+    ? String(session.user.branch_id)
+    : "";
+  const [meta, setMeta] = useState<Meta>({
+    branches: [],
+    accounts: [],
+    currencies: [],
+  });
+  const [rows, setRows] = useState<Row[]>([]);
+  const [form, setForm] = useState<any>({ ...blank, branch_id: currentBranch });
+  const [editId, setEditId] = useState<number | null>(null);
+  const [show, setShow] = useState(false);
+  const [ledger, setLedger] = useState<any>(null);
+  const [ledgerRows, setLedgerRows] = useState<any[]>([]);
+  const [ledgerMeta, setLedgerMeta] = useState<PaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    per_page: 25,
+    total: 0,
+  });
+  const [ledgerSummary, setLedgerSummary] = useState<any>({
+    opening_balance: 0,
+    closing_balance: 0,
+  });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [dialog, setDialog] = useState<Dialog>(closed);
+  const [dialogLoading, setDialogLoading] = useState(false);
+  const [filter, setFilter] = useState("ALL");
+  const notify = (type: Dialog["type"], title: string, msg: string) =>
+    setDialog({
+      open: true,
+      type,
+      title,
+      message: msg,
+      confirmText: "حسنًا",
+      onConfirm: () => setDialog(closed),
+    });
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [m, r] = await Promise.all([
+        api.get("/financial-accounts/meta"),
+        api.get("/financial-accounts"),
+      ]);
+      const md = m.data?.data || {};
+      setMeta({
+        branches: md.branches || [],
+        accounts: md.accounts || [],
+        currencies: md.currencies || [],
+      });
+      setRows(r.data?.data || []);
+      if (!form.currency_code && md.currencies?.length)
+        setForm((f: any) => ({
+          ...f,
+          currency_code:
+            md.currencies.find((x: any) => Number(x.is_base) === 1)
+              ?.currency_code ||
+            md.currencies[0]?.currency_code ||
+            "",
+        }));
+    } catch (e: any) {
+      notify("error", "تعذر تحميل الخزائن والبنوك", message(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    void load();
+  }, []);
+  const openNew = () => {
+    const cur =
+      meta.currencies.find((x: any) => Number(x.is_base) === 1)
+        ?.currency_code ||
+      meta.currencies[0]?.currency_code ||
+      "";
+    setEditId(null);
+    setForm({
+      ...blank,
+      branch_id: branchLocked ? currentBranch : "",
+      currency_code: cur,
+    });
+    setShow(true);
+  };
+  const edit = (r: any) => {
+    setEditId(r.id);
+    setForm({
+      branch_id: r.branch_id ? String(r.branch_id) : "",
+      account_code: r.account_code || "",
+      account_name: r.account_name || "",
+      account_type: r.account_type || "CASH",
+      gl_account_id: String(r.gl_account_id || ""),
+      currency_code: r.currency_code || "",
+      bank_name: r.bank_name || "",
+      account_number: r.account_number || "",
+      iban: r.iban || "",
+      wallet_provider: r.wallet_provider || "",
+      is_default_receipt: Boolean(r.is_default_receipt),
+      is_default_payment: Boolean(r.is_default_payment),
+      is_active: Boolean(r.is_active),
+      notes: r.notes || "",
+    });
+    setShow(true);
+  };
+  const autoGl = (type: string) => {
+    const code = type === "BANK" ? "1120" : type === "WALLET" ? "1130" : "1110";
+    return (
+      meta.accounts.find((a: any) => String(a.account_code) === code)?.id || ""
+    );
+  };
+  const save = async () => {
+    if (!form.account_name.trim())
+      return notify(
+        "warning",
+        "الاسم مطلوب",
+        "اكتب اسم الخزينة أو البنك أو المحفظة.",
+      );
+    if (!form.gl_account_id)
+      return notify("warning", "حساب الأستاذ", "اختر حساب الأستاذ المرتبط.");
+    setSaving(true);
+    try {
+      const p = {
+        ...form,
+        branch_id: form.branch_id ? Number(form.branch_id) : null,
+        gl_account_id: Number(form.gl_account_id),
+        account_code: form.account_code.trim() || null,
+      };
+      const res = editId
+        ? await api.put(`/financial-accounts/${editId}`, p)
+        : await api.post("/financial-accounts", p);
+      setShow(false);
+      await load();
+      notify(
+        "success",
+        "تم الحفظ",
+        res.data?.message || "تم حفظ الحساب المالي.",
+      );
+    } catch (e: any) {
+      notify("error", "تعذر الحفظ", message(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+  const remove = (r: any) =>
+    setDialog({
+      open: true,
+      type: "confirm",
+      title: "حذف / تعطيل الحساب المالي",
+      message: `سيحافظ النظام على التاريخ إذا كان «${r.account_name}» مستخدمًا في قيود سابقة.`,
+      showCancel: true,
+      confirmText: "تنفيذ",
+      cancelText: "إلغاء",
+      onConfirm: async () => {
+        setDialogLoading(true);
+        try {
+          const res = await api.delete(`/financial-accounts/${r.id}`);
+          setDialog(closed);
+          await load();
+          notify("success", "تم التنفيذ", res.data?.message || "تم التنفيذ.");
+        } catch (e: any) {
+          notify("error", "تعذر التنفيذ", message(e));
+        } finally {
+          setDialogLoading(false);
+        }
+      },
+    });
+  const openLedger = async (r: any, page = 1, per_page = 25) => {
+    setLedger(r);
+    try {
+      const res = await api.get(`/financial-accounts/${r.id}/transactions`, {
+        params: { page, per_page },
+      });
+      setLedgerRows(res.data?.data?.data || []);
+      setLedgerMeta(res.data?.data || {});
+      setLedgerSummary(res.data?.summary || {});
+    } catch (e: any) {
+      notify("error", "تعذر تحميل الحركة", message(e));
+    }
+  };
+  const shown =
+    filter === "ALL"
+      ? rows
+      : rows.filter((r) => String(r.branch_id || "CENTRAL") === filter);
+  return (
+    <section dir="rtl" className="space-y-5">
+      <div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm text-blue-100">طبقة مالية تشغيلية</p>
+            <h1 className="mt-2 text-3xl font-black">
+              الخزائن والبنوك والمحافظ
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm text-blue-100">
+              حسابات تشغيلية مرنة لأي عدد من الفروع، مرتبطة بحسابات الأستاذ
+              الموحدة. الحساب المركزي يمكن استخدامه عبر الفروع، والحساب الفرعي
+              يظل خاصًا بفرعه.
+            </p>
+          </div>
+          <button
+            onClick={openNew}
+            className="rounded-2xl bg-white px-5 py-3 font-black text-[#0B2A4A]"
+          >
+            + حساب مالي
+          </button>
+        </div>
+      </div>
+      <div className="rounded-3xl border bg-white p-4 shadow-sm">
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="w-full rounded-2xl border bg-slate-50 p-4 md:max-w-sm"
+        >
+          <option value="ALL">كل الحسابات المالية</option>
+          <option value="CENTRAL">حسابات مركزية للشركة</option>
+          {meta.branches.map((b: any) => (
+            <option key={b.id} value={b.id}>
+              {b.branch_name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b p-4">
+          <h2 className="text-xl font-black text-[#0B2A4A]">
+            الحسابات التشغيلية
+          </h2>
+          <span className="text-sm text-slate-500">
+            {loading ? "جاري التحميل..." : `${shown.length} حساب`}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1400px] text-right">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-4">الكود</th>
+                <th>الاسم</th>
+                <th>النوع</th>
+                <th>النطاق</th>
+                <th>حساب الأستاذ</th>
+                <th>العملة</th>
+                <th>الرصيد الحالي</th>
+                <th>افتراضي قبض</th>
+                <th>افتراضي صرف</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((r: any) => (
+                <tr key={r.id} className="border-t">
+                  <td className="p-4">{r.account_code}</td>
+                  <td className="font-black text-[#0B2A4A]">
+                    {r.account_name}
+                  </td>
+                  <td>{typeLabel(r.account_type)}</td>
+                  <td>{r.branch_name || "مركزي - كل الشركة"}</td>
+                  <td>
+                    {r.gl_account_code} - {r.gl_account_name}
+                  </td>
+                  <td>{r.currency_code}</td>
+                  <td className="font-black tabular-nums">
+                    {Number(r.current_balance || 0).toLocaleString("en-US", {
+                      minimumFractionDigits: 3,
+                    })}
+                  </td>
+                  <td>{Number(r.is_default_receipt) === 1 ? "✓" : "—"}</td>
+                  <td>{Number(r.is_default_payment) === 1 ? "✓" : "—"}</td>
+                  <td>{Number(r.is_active) === 1 ? "نشط" : "متوقف"}</td>
+                  <td>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => void openLedger(r)}
+                        className="rounded-xl border px-3 py-2 text-sm font-bold"
+                      >
+                        الحركة
+                      </button>
+                      <button
+                        onClick={() => edit(r)}
+                        className="rounded-xl bg-blue-700 px-3 py-2 text-sm font-bold text-white"
+                      >
+                        تعديل
+                      </button>
+                      <button
+                        onClick={() => remove(r)}
+                        className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-bold text-white"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!loading && !shown.length && (
+                <tr>
+                  <td colSpan={11} className="p-10 text-center text-slate-500">
+                    لا توجد حسابات.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {ledger && (
+        <div className="fixed inset-0 z-50 bg-black/45 p-3">
+          <div className="mx-auto max-h-[95vh] max-w-6xl overflow-auto rounded-3xl bg-white">
+            <div className="sticky top-0 flex items-center justify-between border-b bg-white p-5">
+              <div>
+                <h2 className="text-xl font-black">
+                  حركة {ledger.account_name}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  الرصيد المرحّل للصفحة{" "}
+                  {Number(ledgerSummary.opening_balance || 0).toFixed(3)} —
+                  الختامي{" "}
+                  {Number(ledgerSummary.closing_balance || 0).toFixed(3)}
+                </p>
+              </div>
+              <button
+                className="rounded-xl border px-4 py-2"
+                onClick={() => setLedger(null)}
+              >
+                إغلاق
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-right">
+                <thead className="bg-slate-100">
+                  <tr>
+                    {[
+                      "التاريخ",
+                      "القيد",
+                      "المصدر",
+                      "البيان",
+                      "مدين",
+                      "دائن",
+                      "الرصيد الجاري",
+                    ].map((x) => (
+                      <th key={x} className="p-3">
+                        {x}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledgerRows.map((x: any) => (
+                    <tr key={x.id} className="border-t">
+                      <td className="p-3">{x.entry_date}</td>
+                      <td>{x.entry_number}</td>
+                      <td>{x.source_type}</td>
+                      <td>{x.description || "—"}</td>
+                      <td>{Number(x.debit).toFixed(3)}</td>
+                      <td>{Number(x.credit).toFixed(3)}</td>
+                      <td className="font-black">
+                        {Number(x.running_balance).toFixed(3)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ServerPagination
+              meta={ledgerMeta}
+              onPage={(p) => void openLedger(ledger, p, ledgerMeta.per_page)}
+              onPerPage={(pp) => void openLedger(ledger, 1, pp)}
+            />
+          </div>
+        </div>
+      )}
+      {show && (
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm">
+          <div className="absolute left-0 top-0 h-full w-full overflow-y-auto bg-white p-5 shadow-2xl md:w-[650px]">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-[#0B2A4A]">
+                  {editId ? "تعديل حساب مالي" : "إضافة حساب مالي"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  لا ينشئ هذا حساب GL جديدًا؛ بل يربط الخزينة/البنك بحساب
+                  الأستاذ المناسب.
+                </p>
+              </div>
+              <button
+                onClick={() => setShow(false)}
+                className="rounded-xl bg-slate-100 px-4 py-2"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <Field t="النطاق">
+                <select
+                  disabled={branchLocked}
+                  value={form.branch_id}
+                  onChange={(e) =>
+                    setForm({ ...form, branch_id: e.target.value })
+                  }
+                  className="input"
+                >
+                  <option value="">مركزي - كل الشركة</option>
+                  {meta.branches.map((b: any) => (
+                    <option key={b.id} value={b.id}>
+                      {b.branch_name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field t="النوع">
+                <select
+                  value={form.account_type}
+                  onChange={(e) => {
+                    const type = e.target.value;
+                    setForm({
+                      ...form,
+                      account_type: type,
+                      gl_account_id: String(autoGl(type) || form.gl_account_id),
+                    });
+                  }}
+                  className="input"
+                >
+                  <option value="CASH">صندوق</option>
+                  <option value="PETTY_CASH">عهدة / صندوق صغير</option>
+                  <option value="BANK">بنك</option>
+                  <option value="WALLET">محفظة إلكترونية</option>
+                  <option value="OTHER">حساب مالي آخر</option>
+                </select>
+              </Field>
+              <Field t="الكود">
+                <input
+                  value={form.account_code}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      account_code: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="يولد تلقائيًا إن ترك فارغًا"
+                  className="input"
+                />
+              </Field>
+              <Field t="الاسم *">
+                <input
+                  value={form.account_name}
+                  onChange={(e) =>
+                    setForm({ ...form, account_name: e.target.value })
+                  }
+                  placeholder="مثال: صندوق فرع عدن"
+                  className="input"
+                />
+              </Field>
+              <Field t="حساب الأستاذ *">
+                <select
+                  value={form.gl_account_id}
+                  onChange={(e) =>
+                    setForm({ ...form, gl_account_id: e.target.value })
+                  }
+                  className="input"
+                >
+                  <option value="">اختر الحساب</option>
+                  {meta.accounts.map((a: any) => (
+                    <option key={a.id} value={a.id}>
+                      {a.account_code} - {a.account_name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field t="العملة *">
+                <select
+                  value={form.currency_code}
+                  onChange={(e) =>
+                    setForm({ ...form, currency_code: e.target.value })
+                  }
+                  className="input"
+                >
+                  <option value="">اختر العملة</option>
+                  {meta.currencies.map((c: any) => (
+                    <option key={c.currency_code} value={c.currency_code}>
+                      {c.currency_code} - {c.currency_name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {form.account_type === "BANK" && (
+                <>
+                  <Field t="اسم البنك">
+                    <input
+                      value={form.bank_name}
+                      onChange={(e) =>
+                        setForm({ ...form, bank_name: e.target.value })
+                      }
+                      className="input"
+                    />
+                  </Field>
+                  <Field t="رقم الحساب">
+                    <input
+                      value={form.account_number}
+                      onChange={(e) =>
+                        setForm({ ...form, account_number: e.target.value })
+                      }
+                      className="input"
+                    />
+                  </Field>
+                  <Field t="IBAN">
+                    <input
+                      value={form.iban}
+                      onChange={(e) =>
+                        setForm({ ...form, iban: e.target.value })
+                      }
+                      className="input"
+                    />
+                  </Field>
+                </>
+              )}
+              {form.account_type === "WALLET" && (
+                <Field t="مزود المحفظة">
+                  <input
+                    value={form.wallet_provider}
+                    onChange={(e) =>
+                      setForm({ ...form, wallet_provider: e.target.value })
+                    }
+                    className="input"
+                  />
+                </Field>
+              )}
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <Check
+                t="افتراضي للقبض"
+                v={form.is_default_receipt}
+                onChange={(v: boolean) =>
+                  setForm({ ...form, is_default_receipt: v })
+                }
+              />
+              <Check
+                t="افتراضي للصرف"
+                v={form.is_default_payment}
+                onChange={(v: boolean) =>
+                  setForm({ ...form, is_default_payment: v })
+                }
+              />
+              <Check
+                t="نشط"
+                v={form.is_active}
+                onChange={(v: boolean) => setForm({ ...form, is_active: v })}
+              />
+            </div>
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="ملاحظات"
+              className="mt-4 min-h-24 w-full rounded-2xl border bg-slate-50 p-4"
+            />
+            <div className="sticky bottom-0 mt-5 flex gap-3 border-t bg-white py-4">
+              <button
+                disabled={saving}
+                onClick={() => void save()}
+                className="rounded-2xl bg-[#0B2A4A] px-6 py-3 font-black text-white"
+              >
+                {saving ? "جاري الحفظ..." : "حفظ"}
+              </button>
+              <button
+                onClick={() => setShow(false)}
+                className="rounded-2xl border px-6 py-3 font-black"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <style jsx global>{`
+        .input {
+          width: 100%;
+          border: 1px solid rgb(226 232 240);
+          background: rgb(248 250 252);
+          border-radius: 1rem;
+          padding: 1rem;
+          outline: none;
+        }
+        .input:focus {
+          border-color: #0b2a4a;
+        }
+      `}</style>
+      <SystemDialog
+        open={dialog.open}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+        showCancel={dialog.showCancel}
+        loading={dialogLoading}
+        onConfirm={dialog.onConfirm || (() => setDialog(closed))}
+        onClose={() => !dialogLoading && setDialog(closed)}
+      />
+    </section>
+  );
+}
+function typeLabel(x: string) {
+  return (
+    (
+      {
+        CASH: "صندوق",
+        PETTY_CASH: "عهدة/صندوق صغير",
+        BANK: "بنك",
+        WALLET: "محفظة",
+        OTHER: "أخرى",
+      } as any
+    )[x] || x
+  );
+}
+function Field({ t, children }: { t: string; children: React.ReactNode }) {
+  return (
+    <label className="space-y-2">
+      <span className="text-sm font-bold text-slate-700">{t}</span>
+      {children}
+    </label>
+  );
+}
+function Check({
+  t,
+  v,
+  onChange,
+}: {
+  t: string;
+  v: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 rounded-2xl border bg-slate-50 p-4">
+      <input
+        type="checkbox"
+        checked={v}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="font-bold">{t}</span>
+    </label>
+  );
+}
