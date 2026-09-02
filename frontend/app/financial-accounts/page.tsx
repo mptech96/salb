@@ -63,6 +63,7 @@ export default function FinancialAccountsPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [show, setShow] = useState(false);
   const [ledger, setLedger] = useState<any>(null);
+  const [ledgerScope, setLedgerScope] = useState<"tagged"|"unmatched">("tagged");
   const [ledgerRows, setLedgerRows] = useState<any[]>([]);
   const [ledgerMeta, setLedgerMeta] = useState<PaginationMeta>({
     current_page: 1,
@@ -216,11 +217,12 @@ export default function FinancialAccountsPage() {
         }
       },
     });
-  const openLedger = async (r: any, page = 1, per_page = 25) => {
+  const openLedger = async (r: any, page = 1, per_page = 25, scope: "tagged"|"unmatched" = ledgerScope) => {
     setLedger(r);
+    setLedgerScope(scope);
     try {
       const res = await api.get(`/financial-accounts/${r.id}/transactions`, {
-        params: { page, per_page },
+        params: { page, per_page, scope },
       });
       setLedgerRows(res.data?.data?.data || []);
       setLedgerMeta(res.data?.data || {});
@@ -281,7 +283,7 @@ export default function FinancialAccountsPage() {
           </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1400px] text-right">
+          <table className="w-full min-w-[1650px] text-right">
             <thead className="bg-slate-100">
               <tr>
                 <th className="p-4">الكود</th>
@@ -290,7 +292,10 @@ export default function FinancialAccountsPage() {
                 <th>النطاق</th>
                 <th>حساب الأستاذ</th>
                 <th>العملة</th>
-                <th>الرصيد الحالي</th>
+                <th>الرصيد الموسوم</th>
+                <th>رصيد GL</th>
+                <th>الفرق</th>
+                <th>المصالحة</th>
                 <th>افتراضي قبض</th>
                 <th>افتراضي صرف</th>
                 <th>الحالة</th>
@@ -311,10 +316,13 @@ export default function FinancialAccountsPage() {
                   </td>
                   <td>{r.currency_code}</td>
                   <td className="font-black tabular-nums">
-                    {Number(r.current_balance || 0).toLocaleString("en-US", {
+                    {Number(r.tagged_balance || 0).toLocaleString("en-US", {
                       minimumFractionDigits: 3,
                     })}
                   </td>
+                  <td className="font-black tabular-nums">{Number(r.gl_balance||0).toFixed(3)}</td>
+                  <td className={`font-black tabular-nums ${Math.abs(Number(r.reconciliation_difference||0))<.001?"text-emerald-700":"text-rose-700"}`}>{Number(r.reconciliation_difference||0).toFixed(3)}</td>
+                  <td><span className={`rounded-full px-2 py-1 text-xs font-bold ${r.is_reconciled?"bg-emerald-50 text-emerald-700":"bg-rose-50 text-rose-700"}`}>{r.is_reconciled?"متصالح":"غير متصالح"}</span>{Number(r.unmatched_lines_count||0)>0?<div className="mt-1 text-[10px] text-slate-500">{r.unmatched_lines_count} حركة GL غير موسومة</div>:null}</td>
                   <td>{Number(r.is_default_receipt) === 1 ? "✓" : "—"}</td>
                   <td>{Number(r.is_default_payment) === 1 ? "✓" : "—"}</td>
                   <td>{Number(r.is_active) === 1 ? "نشط" : "متوقف"}</td>
@@ -344,7 +352,7 @@ export default function FinancialAccountsPage() {
               ))}
               {!loading && !shown.length && (
                 <tr>
-                  <td colSpan={11} className="p-10 text-center text-slate-500">
+                  <td colSpan={14} className="p-10 text-center text-slate-500">
                     لا توجد حسابات.
                   </td>
                 </tr>
@@ -362,7 +370,8 @@ export default function FinancialAccountsPage() {
                   حركة {ledger.account_name}
                 </h2>
                 <p className="text-sm text-slate-500">
-                  الرصيد المرحّل للصفحة{" "}
+                  الموسوم {Number(ledgerSummary.tagged_balance||0).toFixed(3)} — GL {Number(ledgerSummary.gl_balance||0).toFixed(3)} — الفرق {Number(ledgerSummary.difference||0).toFixed(3)}
+                </p><p className="text-xs text-slate-500">الرصيد المرحّل للصفحة{" "}
                   {Number(ledgerSummary.opening_balance || 0).toFixed(3)} —
                   الختامي{" "}
                   {Number(ledgerSummary.closing_balance || 0).toFixed(3)}
@@ -375,6 +384,7 @@ export default function FinancialAccountsPage() {
                 إغلاق
               </button>
             </div>
+            <div className="flex gap-2 border-b p-3"><button onClick={()=>void openLedger(ledger,1,ledgerMeta.per_page,"tagged")} className={`rounded-lg px-3 py-2 text-sm font-bold ${ledgerScope==="tagged"?"bg-[#0B2A4A] text-white":"border"}`}>الحركات الموسومة</button><button onClick={()=>void openLedger(ledger,1,ledgerMeta.per_page,"unmatched")} className={`rounded-lg px-3 py-2 text-sm font-bold ${ledgerScope==="unmatched"?"bg-rose-700 text-white":"border"}`}>حركات GL غير الموسومة</button></div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-right">
                 <thead className="bg-slate-100">
@@ -413,8 +423,8 @@ export default function FinancialAccountsPage() {
             </div>
             <ServerPagination
               meta={ledgerMeta}
-              onPage={(p) => void openLedger(ledger, p, ledgerMeta.per_page)}
-              onPerPage={(pp) => void openLedger(ledger, 1, pp)}
+              onPage={(p) => void openLedger(ledger, p, ledgerMeta.per_page,ledgerScope)}
+              onPerPage={(pp) => void openLedger(ledger, 1, pp,ledgerScope)}
             />
           </div>
         </div>

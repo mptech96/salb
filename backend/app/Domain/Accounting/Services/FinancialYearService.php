@@ -67,7 +67,7 @@ class FinancialYearService
             $closure=DB::table('financial_year_closures')->where('company_id',$companyId)->where('financial_year_id',$yearId)->where('status','CLOSED')->orderByDesc('id')->first();
             if(!$closure)throw new \RuntimeException('لم يتم العثور على سجل الإقفال.');
             DB::table('financial_years')->where('id',$yearId)->update(['is_closed'=>0,'closed_at'=>null,'closed_by'=>null,'updated_at'=>now()]);
-            $reversed=[];foreach([$closure->retained_earnings_entry_id,$closure->profit_loss_entry_id] as $eid){if($eid)$reversed[]=$this->journals->reverse($companyId,(int)$eid,['entry_date'=>$y->end_date,'source_type'=>'YEAR_REOPEN','description'=>'عكس إقفال السنة '.$y->year_name,'is_closing_entry'=>1,'created_by'=>$userId]);}
+            $reversed=[];foreach([$closure->retained_earnings_entry_id,$closure->profit_loss_entry_id] as $eid){if($eid)$reversed[]=$this->journals->reverse($companyId,(int)$eid,['entry_date'=>$y->end_date,'source_type'=>'YEAR_REOPEN','reason'=>'إعادة فتح السنة المالية '.$y->year_name,'is_closing_entry'=>1,'created_by'=>$userId]);}
             DB::table('financial_year_closures')->where('id',$closure->id)->update(['status'=>'REOPENED','reopened_by'=>$userId,'reopened_at'=>now(),'updated_at'=>now()]);
             return ['reversed_entries'=>$reversed];
         });

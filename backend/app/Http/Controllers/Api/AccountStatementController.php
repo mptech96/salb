@@ -70,22 +70,35 @@ class AccountStatementController extends Controller
         AccountingReportService $service,
         AccountingContext $context
     ) {
-        return response()->json([
+        try{return response()->json([
             'status' => true,
             'data' => $service->ledger(
                 $context->companyId($request),
                 $this->resolvedBranchId($request, $context),
                 $id,
-                $request->only([
-                    'financial_year_id',
-                    'from_date',
-                    'to_date',
-                    'cost_center_id',
-                    'party_type',
-                    'party_id',
+                $request->validate([
+                    'financial_year_id'=>'nullable|integer',
+                    'from_date'=>'nullable|date','to_date'=>'nullable|date|after_or_equal:from_date','cost_center_id'=>'nullable|integer',
+                    'party_type'=>'nullable|string|max:30','party_id'=>'nullable|integer','page'=>'nullable|integer|min:1','per_page'=>'nullable|integer|in:25,50,100','search'=>'nullable|string|max:200',
                 ])
             ),
-        ]);
+        ]);}catch(\Throwable$e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+    }
+
+    public function accountExport(Request $request,int $id,AccountingReportService $service,AccountingContext $context)
+    {
+        $filters=$request->validate(['format'=>'required|in:csv,xls','financial_year_id'=>'nullable|integer','from_date'=>'nullable|date','to_date'=>'nullable|date|after_or_equal:from_date','cost_center_id'=>'nullable|integer','party_type'=>'nullable|string|max:30','party_id'=>'nullable|integer','search'=>'nullable|string|max:200']);
+        $format=$filters['format'];unset($filters['format']);$companyId=$context->companyId($request);$branchId=$this->resolvedBranchId($request,$context);
+        try{$service->ledger($companyId,$branchId,$id,[...$filters,'page'=>1,'per_page'=>25]);}catch(\Throwable$e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        // تنفيذ التصدير على الخادم وبنفس مرشحات الأستاذ، على دفعات 100 سجل دون تحميل النطاق في المتصفح.
+        return response()->streamDownload(function()use($service,$companyId,$branchId,$id,$filters,$format){
+            $out=fopen('php://output','w');if($format==='csv')fwrite($out,"\xEF\xBB\xBF");
+            $headers=['التاريخ','رقم القيد','المصدر','المرجع/البيان','الفرع','مدين','دائن','الرصيد','الجانب'];
+            if($format==='xls')echo "<html dir=\"rtl\"><meta charset=\"UTF-8\"><table border=\"1\"><tr><th>".implode('</th><th>',$headers).'</th></tr>';
+            else fputcsv($out,$headers);
+            foreach($service->ledgerExportRows($companyId,$branchId,$id,$filters)as$r){$row=[$r->entry_date,$r->entry_number,$r->source_type,$r->description?:$r->entry_description,$r->branch_name?:'الشركة',$r->debit,$r->credit,$r->running_balance,$r->running_side];if($format==='xls')echo '<tr>'.implode('',array_map(fn($v)=>'<td>'.htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8').'</td>',$row)).'</tr>';else fputcsv($out,$row);}
+            if($format==='xls')echo '</table></html>';fclose($out);
+        },'sulb-ledger-'.$id.'.'.$format,['Content-Type'=>$format==='csv'?'text/csv; charset=UTF-8':'application/vnd.ms-excel; charset=UTF-8']);
     }
 
     private function party(
@@ -134,6 +147,9 @@ class AccountStatementController extends Controller
                     'from_date',
                     'to_date',
                     'cost_center_id',
+                    'page',
+                    'per_page',
+                    'search',
                 ]),
                 ['party_type' => $type, 'party_id' => $id]
             )

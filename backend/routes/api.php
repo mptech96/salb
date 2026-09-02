@@ -402,6 +402,7 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
 
         Route::get('/statements/entities/{kind}', [AccountStatementController::class, 'entities']);
         Route::get('/statements/account/{id}', [AccountStatementController::class, 'account']);
+        Route::get('/statements/account/{id}/export', [AccountStatementController::class, 'accountExport']);
         Route::get('/statements/supplier/{id}', [AccountStatementController::class, 'supplier']);
         Route::get('/statements/customer/{id}', [AccountStatementController::class, 'customer']);
         Route::get('/statements/driver/{id}', [AccountStatementController::class, 'driver']);
