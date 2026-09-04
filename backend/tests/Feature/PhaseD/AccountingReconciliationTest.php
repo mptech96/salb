@@ -95,8 +95,8 @@ class AccountingReconciliationTest extends TestCase
         $this->journal('2026-04-02','POSTED',[[$this->asset,5,0],[$this->liability,0,5]],$branch,'unmatched');
         $this->journal('2026-04-03','DRAFT',[[$this->asset,999,0],[$this->liability,0,999]],$branch,'draft');
         $context=Mockery::mock(AccountingContext::class);$context->shouldReceive('companyId')->andReturn(1);$context->shouldReceive('branchFilter')->andReturn(null);
-        $service=Mockery::mock(FinancialAccountService::class);$service->shouldReceive('list')->andReturn(DB::table('financial_accounts as fa')->leftJoin('branches as b','b.id','=','fa.branch_id')->leftJoin('accounts as a','a.id','=','fa.gl_account_id')->where('fa.company_id',1)->select('fa.*','b.branch_name','a.account_code as gl_account_code','a.account_name as gl_account_name')->get());
-        $response=app(FinancialAccountController::class)->index(Request::create('/api/financial-accounts'),$context,$service)->getData(true);$row=$response['data'][0];self::assertSame(10.0,(float)$row['tagged_balance']);self::assertSame(15.0,(float)$row['gl_balance']);self::assertSame(5.0,(float)$row['reconciliation_difference']);self::assertFalse($row['is_reconciled']);self::assertSame(1,$row['unmatched_lines_count']);
+        $service=app(FinancialAccountService::class);DB::enableQueryLog();DB::flushQueryLog();
+        $response=app(FinancialAccountController::class)->index(Request::create('/api/financial-accounts'),$context,$service)->getData(true);$queries=DB::getQueryLog();DB::disableQueryLog();$row=$response['data']['data'][0];self::assertSame(10.0,(float)$row['tagged_balance']);self::assertSame(15.0,(float)$row['gl_balance']);self::assertSame(5.0,(float)$row['reconciliation_difference']);self::assertFalse($row['is_reconciled']);self::assertSame(1,$row['unmatched_lines_count']);self::assertCount(4,$queries,'Two pagination queries and two grouped aggregate queries, not per-row aggregates.');
     }
 
     public function test_close_and_reopen_are_balanced_idempotent_and_restore_open_reporting(): void

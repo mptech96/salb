@@ -235,9 +235,11 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
         Route::post('/financial-setup/cost-center', [FinancialSetupController::class, 'costCenter']);
 
         Route::get('/opening-balances/meta', [OpeningBalanceController::class, 'meta']);
+        Route::get('/opening-balances/lookup', [OpeningBalanceController::class, 'lookup']);
         Route::get('/opening-balances', [OpeningBalanceController::class, 'index']);
         Route::post('/opening-balances', [OpeningBalanceController::class, 'store']);
         Route::get('/opening-balances/{id}', [OpeningBalanceController::class, 'show']);
+        Route::get('/opening-balances/{id}/preview', [OpeningBalanceController::class, 'preview']);
         Route::put('/opening-balances/{id}', [OpeningBalanceController::class, 'update']);
         Route::post('/opening-balances/{id}/post', [OpeningBalanceController::class, 'post']);
 

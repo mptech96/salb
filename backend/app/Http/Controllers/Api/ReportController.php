@@ -158,7 +158,7 @@ class ReportController extends Controller
         TenantScope::apply($suppliersQuery, $branchId, 's.branch_id');
 
         $data = $suppliersQuery
-            ->select('s.id', 's.supplier_name', 's.phone', 's.opening_balance')
+            ->select('s.id', 's.supplier_name', 's.phone')
             ->orderByDesc('s.id')
             ->get()
             ->map(function ($supplier) use ($companyId, $branchId) {
@@ -186,7 +186,7 @@ class ReportController extends Controller
                 TenantScope::apply($receiptsQuery, $branchId, 'v.branch_id');
                 $receipts = (float) $receiptsQuery->sum('v.amount');
 
-                $opening = (float) ($supplier->opening_balance ?? 0);
+                $openingQuery=DB::table('journal_entry_lines as l')->join('journal_entries as j','j.id','=','l.journal_entry_id')->where('l.company_id',$companyId)->where('j.status','POSTED')->where('j.source_type','OPENING_BALANCE')->where('l.party_type','SUPPLIER')->where('l.party_id',$supplier->id);TenantScope::apply($openingQuery,$branchId,'l.branch_id');$opening=(float)$openingQuery->sum(DB::raw('l.credit-l.debit'));
 
                 return [
                     'supplier_id' => $supplier->id,
@@ -213,7 +213,7 @@ class ReportController extends Controller
         TenantScope::apply($customersQuery, $branchId, 'c.branch_id');
 
         $data = $customersQuery
-            ->select('c.id', 'c.customer_name', 'c.phone', 'c.opening_balance')
+            ->select('c.id', 'c.customer_name', 'c.phone')
             ->orderByDesc('c.id')
             ->get()
             ->map(function ($customer) use ($companyId, $branchId) {
@@ -241,7 +241,7 @@ class ReportController extends Controller
                 TenantScope::apply($paymentsQuery, $branchId, 'v.branch_id');
                 $payments = (float) $paymentsQuery->sum('v.amount');
 
-                $opening = (float) ($customer->opening_balance ?? 0);
+                $openingQuery=DB::table('journal_entry_lines as l')->join('journal_entries as j','j.id','=','l.journal_entry_id')->where('l.company_id',$companyId)->where('j.status','POSTED')->where('j.source_type','OPENING_BALANCE')->where('l.party_type','CUSTOMER')->where('l.party_id',$customer->id);TenantScope::apply($openingQuery,$branchId,'l.branch_id');$opening=(float)$openingQuery->sum(DB::raw('l.debit-l.credit'));
 
                 return [
                     'customer_id' => $customer->id,

@@ -263,6 +263,30 @@ class CompanyOnboardingTest extends Wave1SubscriptionTestCase
         }
     }
 
+    public function test_p1_real_provisioning_readiness_and_bootstrap_retry(): void
+    {
+        $this->useRealAccountingBootstrap();
+        Schema::create('tax_codes',function(Blueprint $t){$t->id();$t->unsignedBigInteger('company_id');$t->boolean('is_active')->default(true);});
+        $payload=$this->payload('p1-readiness','PLATFORM_ADMIN');
+        $result=$this->service()->provision($payload);$cid=$result['company_id'];
+        $branch=(int)DB::table('branches')->where('company_id',$cid)->value('id');
+        self::assertSame(84,DB::table('accounts')->where('company_id',$cid)->count());
+        self::assertSame(1,DB::table('company_currencies')->where('company_id',$cid)->where('is_base',1)->where('is_active',1)->count());
+        self::assertSame(1,DB::table('financial_years')->where('company_id',$cid)->where('is_closed',0)->count());
+        self::assertSame(2,DB::table('cost_centers')->where('company_id',$cid)->count());
+        self::assertSame(1,DB::table('financial_accounts')->where('company_id',$cid)->where('account_type','CASH')->count());
+        $tables=['accounts','accounting_settings','company_currencies','financial_years','cost_centers','financial_accounts','branch_financial_settings'];
+        $before=[];foreach($tables as$table)$before[$table]=DB::table($table)->where('company_id',$cid)->count();
+        app(AccountingBootstrapService::class)->bootstrapCompany($cid,$branch);
+        foreach($tables as$table)self::assertSame($before[$table],DB::table($table)->where('company_id',$cid)->count(),$table);
+        self::assertTrue($this->service()->provision($payload)['idempotent_replay']);
+        $method=new \ReflectionMethod(\App\Http\Controllers\Api\FinancialSetupController::class,'readiness');
+        $readiness=$method->invoke(app(\App\Http\Controllers\Api\FinancialSetupController::class),$cid);
+        self::assertSame('READY',$readiness['status']);
+        self::assertSame('NOT_CONFIGURED',$readiness['tax_status']);
+        self::assertSame(0,DB::table('tax_codes')->count());
+    }
+
     private function useRealAccountingBootstrap(): void
     {
         Schema::create('financial_years',function(Blueprint $t){$t->id();$t->unsignedBigInteger('company_id');$t->string('year_name');$t->date('start_date');$t->date('end_date');$t->boolean('is_closed');$t->timestamps();});
@@ -270,7 +294,7 @@ class CompanyOnboardingTest extends Wave1SubscriptionTestCase
         Schema::create('accounts',function(Blueprint $t){$t->id();$t->unsignedBigInteger('company_id');$t->unsignedBigInteger('parent_id')->nullable();$t->string('account_code');$t->string('account_name');$t->string('account_type');$t->string('normal_side');$t->integer('account_level');$t->boolean('is_group');$t->boolean('allow_posting');$t->boolean('allow_cost_center');$t->boolean('is_active');$t->text('notes')->nullable();$t->timestamps();});
         Schema::create('accounting_settings',function(Blueprint $t){$t->id();$t->unsignedBigInteger('company_id');$t->string('setting_key');$t->unsignedBigInteger('account_id');$t->timestamps();});
         Schema::create('currencies',function(Blueprint $t){$t->id();$t->string('currency_code')->unique();$t->string('currency_name');$t->string('symbol')->nullable();$t->unsignedTinyInteger('decimal_places');$t->boolean('is_active');$t->timestamps();});
-        Schema::create('company_currencies',function(Blueprint $t){$t->id();$t->unsignedBigInteger('company_id');$t->string('currency_code');$t->boolean('is_active');$t->timestamps();});
+        Schema::create('company_currencies',function(Blueprint $t){$t->id();$t->unsignedBigInteger('company_id');$t->string('currency_code');$t->boolean('is_base')->default(false);$t->boolean('is_active');$t->timestamps();});
         Schema::create('financial_accounts',function(Blueprint $t){$t->id();$t->unsignedBigInteger('company_id');$t->unsignedBigInteger('branch_id');$t->string('account_code');$t->string('account_name');$t->string('account_type');$t->unsignedBigInteger('gl_account_id');$t->string('currency_code');$t->boolean('is_default_receipt');$t->boolean('is_default_payment');$t->boolean('is_active');$t->timestamps();});
         Schema::create('branch_financial_settings',function(Blueprint $t){$t->id();$t->unsignedBigInteger('company_id');$t->unsignedBigInteger('branch_id');$t->unsignedBigInteger('default_cash_financial_account_id');$t->unsignedBigInteger('default_cost_center_id');$t->timestamps();});
 

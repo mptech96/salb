@@ -3,18 +3,27 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class FinancialAccountService
 {
-    public function list(int $companyId, ?int $branchId = null)
+    public function list(int $companyId, ?int $branchId = null, array $filters = [])
     {
+        $perPage = min(100, max(25, (int)($filters['per_page'] ?? 25)));
+        $search = trim((string)($filters['search'] ?? ''));
         return DB::table('financial_accounts as f')
             ->join('accounts as a','a.id','=','f.gl_account_id')
             ->leftJoin('branches as b','b.id','=','f.branch_id')
             ->where('f.company_id',$companyId)
             ->when($branchId !== null, fn($q) => $q->where(function($x) use ($branchId) { $x->where('f.branch_id',$branchId)->orWhereNull('f.branch_id'); }))
+            ->when(isset($filters['branch_id']) && $filters['branch_id'] !== '', fn($q) => $q->where('f.branch_id',(int)$filters['branch_id']))
+            ->when(($filters['scope']??null)==='CENTRAL',fn($q)=>$q->whereNull('f.branch_id'))
+            ->when(isset($filters['account_type']) && $filters['account_type'] !== '', fn($q) => $q->where('f.account_type',strtoupper((string)$filters['account_type'])))
+            ->when(isset($filters['is_active']) && $filters['is_active'] !== '', fn($q) => $q->where('f.is_active',(int)$filters['is_active']))
+            ->when($search !== '', function($q) use($search){$like='%'.$search.'%';$q->where(function($x)use($like){$x->where('f.account_code','like',$like)->orWhere('f.account_name','like',$like)->orWhere('a.account_code','like',$like)->orWhere('a.account_name','like',$like);});})
             ->select('f.*','a.account_code as gl_account_code','a.account_name as gl_account_name','b.branch_name')
-            ->orderBy('b.branch_name')->orderBy('f.account_type')->orderBy('f.account_name')->get();
+            ->orderByRaw('CASE WHEN f.branch_id IS NULL THEN 0 ELSE 1 END')->orderBy('b.branch_name')->orderBy('f.account_type')->orderBy('f.account_name')->orderBy('f.id')
+            ->paginate($perPage,['*'],'page',(int)($filters['page']??1));
     }
 
     public function save(int $companyId, array $data, ?int $id = null): int
@@ -50,13 +59,24 @@ class FinancialAccountService
                 'iban'=>$data['iban']??null,'wallet_provider'=>$data['wallet_provider']??null,'is_default_receipt'=>(int)($data['is_default_receipt']??0),
                 'is_default_payment'=>(int)($data['is_default_payment']??0),'is_active'=>(int)($data['is_active']??1),'notes'=>$data['notes']??null,'updated_at'=>now()
             ];
+            if (!(int)$payload['is_active']) {
+                $payload['is_default_receipt']=0;
+                $payload['is_default_payment']=0;
+            }
             if ($id) {
-                $exists = DB::table('financial_accounts')->where('company_id',$companyId)->where('id',$id)->exists();
+                $exists = DB::table('financial_accounts')->where('company_id',$companyId)->where('id',$id)->first();
                 if (!$exists) throw new \RuntimeException('الحساب المالي غير موجود.');
+                $used=DB::table('journal_entry_lines')->where('company_id',$companyId)->where('financial_account_id',$id)->exists();
+                if($used&&((int)$exists->gl_account_id!==(int)$gl->id||strtoupper((string)$exists->currency_code)!==$currency||(int)($exists->branch_id??0)!==(int)($branchId??0)))
+                    throw new \RuntimeException('لا يمكن تغيير حساب الأستاذ أو العملة أو الفرع بعد وجود حركات تاريخية على الحساب المالي.');
                 DB::table('financial_accounts')->where('id',$id)->update($payload); $faId=$id;
             } else { $payload['created_at']=now(); $faId=DB::table('financial_accounts')->insertGetId($payload); }
 
-            if ($branchId) {
+            if (!(int)$payload['is_active']) {
+                foreach(['default_cash_financial_account_id','default_bank_financial_account_id','default_wallet_financial_account_id'] as $column)
+                    DB::table('branch_financial_settings')->where('company_id',$companyId)->where($column,$faId)->update([$column=>null,'updated_at'=>now()]);
+            }
+            if ($branchId && (int)$payload['is_active']) {
                 if ((int)$payload['is_default_receipt'] === 1) DB::table('financial_accounts')->where('company_id',$companyId)->where('branch_id',$branchId)->where('id','<>',$faId)->update(['is_default_receipt'=>0,'updated_at'=>now()]);
                 if ((int)$payload['is_default_payment'] === 1) DB::table('financial_accounts')->where('company_id',$companyId)->where('branch_id',$branchId)->where('id','<>',$faId)->update(['is_default_payment'=>0,'updated_at'=>now()]);
                 $this->syncBranchDefaults($companyId,$branchId,$faId,$type,(bool)$payload['is_default_receipt'],(bool)$payload['is_default_payment']);
@@ -88,7 +108,7 @@ class FinancialAccountService
             default => $settings->default_cash_financial_account_id ?? null,
         };
         if ($specificId) {
-            $row=DB::table('financial_accounts')->where('company_id',$companyId)->where('id',$specificId)->where('is_active',1)->first();
+            $row=DB::table('financial_accounts')->where('company_id',$companyId)->where('id',$specificId)->where('account_type',$wanted)->where('is_active',1)->where(fn($q)=>$q->whereNull('branch_id')->orWhere('branch_id',$branchId))->first();
             if ($row) return $row;
         }
 
@@ -103,11 +123,31 @@ class FinancialAccountService
         return $row;
     }
 
+    private function hasUsage(int $companyId,int $id):bool
+    {
+        foreach(['journal_entry_lines','vouchers','expenses','opening_balance_lines']as$table)
+            if(Schema::hasTable($table)&&Schema::hasColumn($table,'financial_account_id')&&DB::table($table)->where('company_id',$companyId)->where('financial_account_id',$id)->exists())return true;
+        return false;
+    }
+
     public function assertCurrency(object $financialAccount, string $currencyCode): void
     {
         $tx=strtoupper(trim($currencyCode)); $fa=strtoupper(trim((string)($financialAccount->currency_code ?? '')));
         if ($tx === '' || $fa === '') throw new \RuntimeException('عملة الحركة أو الحساب المالي غير محددة.');
         if ($tx !== $fa) throw new \RuntimeException('عملة الحركة '.$tx.' لا تطابق عملة الخزينة/البنك '.$fa.'. اختر حسابًا ماليًا بنفس العملة أو غيّر عملة الحركة.');
+    }
+
+    public function deactivateOrDelete(int $companyId, int $id): string
+    {
+        return DB::transaction(function() use($companyId,$id){
+            $account=DB::table('financial_accounts')->where('company_id',$companyId)->where('id',$id)->lockForUpdate()->first();
+            if(!$account)throw new \RuntimeException('الحساب المالي غير موجود.');
+            $used=$this->hasUsage($companyId,$id);
+            $columns=['default_cash_financial_account_id','default_bank_financial_account_id','default_wallet_financial_account_id'];
+            foreach($columns as$column)DB::table('branch_financial_settings')->where('company_id',$companyId)->where($column,$id)->update([$column=>null,'updated_at'=>now()]);
+            if($used){DB::table('financial_accounts')->where('id',$id)->update(['is_active'=>0,'is_default_receipt'=>0,'is_default_payment'=>0,'updated_at'=>now()]);return'الحساب مستخدم تاريخيًا لذلك تم تعطيله بدل حذفه، وإزالة مراجع الافتراض غير الصالحة.';}
+            DB::table('financial_accounts')->where('id',$id)->delete();return'تم حذف الحساب المالي وإزالة مراجع الافتراض المرتبطة به.';
+        });
     }
 
     public function ensureDefaultCashForBranch(int $companyId, int $branchId, string $branchName, int $glAccountId, ?int $costCenterId = null): int
@@ -143,8 +183,7 @@ class FinancialAccountService
 
     private function ensureCompanyCurrency(int $companyId, string $code): void
     {
-        if (!DB::table('currencies')->where('currency_code',$code)->exists()) DB::table('currencies')->insert(['currency_code'=>$code,'currency_name'=>$code,'symbol'=>null,'decimal_places'=>3,'is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
-        DB::table('company_currencies')->updateOrInsert(['company_id'=>$companyId,'currency_code'=>$code],['is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+        $master=DB::table('currencies')->where('currency_code',$code)->where('is_active',1)->exists();$enabled=DB::table('company_currencies')->where('company_id',$companyId)->where('currency_code',$code)->where('is_active',1)->exists();if(!$master||!$enabled)throw new \RuntimeException('العملة غير مفعلة للشركة أو غير موجودة في الدليل النظامي.');
     }
     private function syncBranchDefaults(int $companyId,int $branchId,int $faId,string $type,bool $defaultReceipt=false,bool $defaultPayment=false): void
     {

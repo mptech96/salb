@@ -182,7 +182,8 @@ class EnsureRoutePermission
         if (str_starts_with($uri, 'imports/export/')) return 'imports.export';
         if (str_starts_with($uri, 'imports')) return in_array($method,['GET','HEAD'],true) ? 'imports.view' : 'imports.execute';
         if (str_starts_with($uri, 'weighbridge')) return in_array($method,['GET','HEAD'],true) ? 'shipments.view' : 'shipments.update';
-        if (str_starts_with($uri, 'accounts') || str_starts_with($uri, 'journal-entries') || $uri === 'trial-balance' || str_starts_with($uri, 'accounting/') || str_starts_with($uri, 'financial-years')) return 'statements.view';
+        if (str_starts_with($uri, 'accounts')) return in_array($method,['GET','HEAD'],true) ? 'statements.view' : 'financial_setup.manage';
+        if (str_starts_with($uri, 'journal-entries') || $uri === 'trial-balance' || str_starts_with($uri, 'accounting/') || str_starts_with($uri, 'financial-years')) return 'statements.view';
         if ($uri === 'shipments/sell') return 'sales.create';
         if ($uri === 'shipments/{id}/approve') return 'shipments.approve';
         if (str_starts_with($uri, 'shipment-costs') || str_contains($uri, '/costs')) return in_array($method,['GET','HEAD'],true) ? 'shipments.view' : 'shipments.update';

@@ -80,6 +80,8 @@ export default function FinancialAccountsPage() {
   const [dialog, setDialog] = useState<Dialog>(closed);
   const [dialogLoading, setDialogLoading] = useState(false);
   const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [listMeta, setListMeta] = useState<PaginationMeta>({current_page:1,last_page:1,per_page:25,total:0});
   const notify = (type: Dialog["type"], title: string, msg: string) =>
     setDialog({
       open: true,
@@ -89,12 +91,12 @@ export default function FinancialAccountsPage() {
       confirmText: "حسنًا",
       onConfirm: () => setDialog(closed),
     });
-  const load = async () => {
+  const load = async (page=1,perPage=listMeta.per_page,branchFilter=filter) => {
     setLoading(true);
     try {
       const [m, r] = await Promise.all([
         api.get("/financial-accounts/meta"),
-        api.get("/financial-accounts"),
+        api.get("/financial-accounts",{params:{page,per_page:perPage,search:search||undefined,branch_id:branchFilter!=="ALL"&&branchFilter!=="CENTRAL"?branchFilter:undefined,scope:branchFilter==="CENTRAL"?"CENTRAL":undefined}}),
       ]);
       const md = m.data?.data || {};
       setMeta({
@@ -102,7 +104,7 @@ export default function FinancialAccountsPage() {
         accounts: md.accounts || [],
         currencies: md.currencies || [],
       });
-      setRows(r.data?.data || []);
+      const pageData=r.data?.data||{};setRows(pageData.data||[]);setListMeta(pageData);
       if (!form.currency_code && md.currencies?.length)
         setForm((f: any) => ({
           ...f,
@@ -231,10 +233,7 @@ export default function FinancialAccountsPage() {
       notify("error", "تعذر تحميل الحركة", message(e));
     }
   };
-  const shown =
-    filter === "ALL"
-      ? rows
-      : rows.filter((r) => String(r.branch_id || "CENTRAL") === filter);
+  const shown = rows;
   return (
     <section dir="rtl" className="space-y-5">
       <div className="rounded-3xl bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white shadow-lg">
@@ -258,10 +257,11 @@ export default function FinancialAccountsPage() {
           </button>
         </div>
       </div>
-      <div className="rounded-3xl border bg-white p-4 shadow-sm">
+      <div className="grid gap-3 rounded-3xl border bg-white p-4 shadow-sm md:grid-cols-[1fr_1fr_auto]">
+        <input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void load(1)}} placeholder="بحث بالكود أو الاسم أو حساب الأستاذ" className="w-full rounded-2xl border bg-slate-50 p-4"/>
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={(e) => {setFilter(e.target.value);void load(1,listMeta.per_page,e.target.value)}}
           className="w-full rounded-2xl border bg-slate-50 p-4 md:max-w-sm"
         >
           <option value="ALL">كل الحسابات المالية</option>
@@ -272,6 +272,7 @@ export default function FinancialAccountsPage() {
             </option>
           ))}
         </select>
+        <button onClick={()=>void load(1)} className="rounded-2xl bg-[#0B2A4A] px-5 py-3 font-bold text-white">بحث</button>
       </div>
       <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
         <div className="flex items-center justify-between border-b p-4">
@@ -279,7 +280,7 @@ export default function FinancialAccountsPage() {
             الحسابات التشغيلية
           </h2>
           <span className="text-sm text-slate-500">
-            {loading ? "جاري التحميل..." : `${shown.length} حساب`}
+            {loading ? "جاري التحميل..." : `${listMeta.total||0} حساب`}
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -360,6 +361,7 @@ export default function FinancialAccountsPage() {
             </tbody>
           </table>
         </div>
+        <ServerPagination meta={listMeta} onPage={(page)=>void load(page)} onPerPage={(perPage)=>{setListMeta(m=>({...m,per_page:perPage}));void load(1,perPage)}} />
       </div>
       {ledger && (
         <div className="fixed inset-0 z-50 bg-black/45 p-3">

@@ -46,6 +46,13 @@ class FixedAssetDepreciationService
                 throw new \Exception('الأصل المطلوب غير موجود.');
             }
 
+            if ($asset->opening_balance_batch_id) {
+                $openingDate=DB::table('opening_balance_batches')->where('company_id',$companyId)->where('id',$asset->opening_balance_batch_id)->value('opening_date');
+                if (!$openingDate || $month->copy()->endOfMonth()->lte(Carbon::parse($openingDate)->endOfDay())) {
+                    throw new \Exception('لا يمكن إعادة إهلاك فترة يغطيها الرصيد الافتتاحي للأصل.');
+                }
+            }
+
             if (!$asset->is_active) {
                 throw new \Exception('لا يمكن إهلاك أصل غير نشط.');
             }
