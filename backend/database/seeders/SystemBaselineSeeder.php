@@ -13,6 +13,9 @@ class SystemBaselineSeeder extends Seeder
         $path = database_path('seeders/data/system-baseline.json');
         $data = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
         $expected = [
+            'currencies' => 2,
+            'voucher_types' => 2,
+            'expense_types' => 8,
             'roles' => 8,
             'permissions' => 109,
             'role_permissions' => 231,
@@ -28,6 +31,32 @@ class SystemBaselineSeeder extends Seeder
         }
 
         DB::transaction(function () use ($data): void {
+            foreach ($data['currencies'] as $row) {
+                if (! DB::table('currencies')->where('currency_code', $row['currency_code'])->exists()) {
+                    DB::table('currencies')->insert([...$row, 'created_at' => now(), 'updated_at' => now()]);
+                }
+            }
+            foreach ($data['voucher_types'] as $row) {
+                if (! DB::table('voucher_types')->where('type_code', $row['type_code'])->exists()) {
+                    DB::table('voucher_types')->insert([...$row, 'created_at' => now(), 'updated_at' => now()]);
+                }
+            }
+            foreach ($data['expense_types'] as $row) {
+                $exists = DB::table('expense_types')
+                    ->whereNull('company_id')
+                    ->where('type_code', $row['type_code'])
+                    ->exists();
+                if (! $exists) {
+                    DB::table('expense_types')->insert([
+                        ...$row,
+                        'company_id' => null,
+                        'account_id' => null,
+                        'description' => null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
             foreach ($data['roles'] as $row) {
                 DB::table('roles')->insertOrIgnore([...$row, 'created_at' => now(), 'updated_at' => now()]);
             }

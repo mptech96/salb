@@ -19,14 +19,38 @@ class PrintBrandingSecurityTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        foreach (['entity_addresses','company_currencies','currencies','companies'] as $table) Schema::dropIfExists($table);
         Schema::dropIfExists('company_settings');
         Schema::create('company_settings', function (Blueprint $table): void {
             $table->id(); $table->unsignedBigInteger('company_id')->unique();
             foreach (['logo_path','signature_path','stamp_path','header_image_path','footer_image_path'] as $column) $table->string($column,500)->nullable();
+            $table->string('print_company_name')->nullable(); $table->string('currency_name')->nullable();
+            $table->string('currency_code',10)->nullable(); $table->string('base_currency_code',10)->nullable();
+            $table->unsignedTinyInteger('currency_decimal_places')->default(3);
+            $table->string('primary_color')->nullable(); $table->string('secondary_color')->nullable();
             $table->json('print_header_texts')->nullable(); $table->json('print_footer_texts')->nullable(); $table->json('print_options')->nullable();
             $table->timestamps();
         });
-        DB::table('company_settings')->insert([['company_id'=>1],['company_id'=>2]]);
+        Schema::create('companies', function (Blueprint $table): void {$table->id();$table->string('company_name');});
+        Schema::create('entity_addresses', function (Blueprint $table): void {
+            $table->id();$table->unsignedBigInteger('company_id');$table->string('entity_type');$table->unsignedBigInteger('entity_id');
+            $table->boolean('is_default')->default(true);$table->boolean('is_active')->default(true);
+        });
+        Schema::create('currencies', function (Blueprint $table): void {
+            $table->id();$table->string('currency_code',10)->unique();$table->string('currency_name');
+            $table->string('symbol')->nullable();$table->unsignedTinyInteger('decimal_places')->default(2);$table->boolean('is_active')->default(true);$table->timestamps();
+        });
+        Schema::create('company_currencies', function (Blueprint $table): void {
+            $table->id();$table->unsignedBigInteger('company_id');$table->string('currency_code',10);
+            $table->boolean('is_base')->default(false);$table->boolean('is_active')->default(true);$table->timestamps();
+        });
+        DB::table('companies')->insert([['id'=>1,'company_name'=>'Company One'],['id'=>2,'company_name'=>'Company Two'],['id'=>3,'company_name'=>'Company Three']]);
+        DB::table('company_settings')->insert([
+            ['company_id'=>1,'print_company_name'=>'Company One','currency_name'=>'Saudi Riyal','currency_code'=>'SAR','base_currency_code'=>'SAR'],
+            ['company_id'=>2,'print_company_name'=>'Company Two','currency_name'=>'Must Not Replace Master','currency_code'=>'SAR','base_currency_code'=>'SAR'],
+        ]);
+        DB::table('currencies')->insert(['currency_code'=>'SAR','currency_name'=>'Canonical SAR','decimal_places'=>2,'is_active'=>1]);
+        DB::table('company_currencies')->insert(['company_id'=>1,'currency_code'=>'SAR','is_base'=>1,'is_active'=>1]);
         Storage::fake('local'); Storage::fake('public');
     }
 
@@ -65,6 +89,30 @@ class PrintBrandingSecurityTest extends TestCase
         self::assertSame(200,$controller->asset($this->request(1),'logo',$context)->getStatusCode());
         try {$controller->asset($this->request(2),'logo',$context);self::fail('Cross-company asset exposed');} catch (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {}
         $controller->removeAsset($this->request(1),'logo',$context);self::assertNull(DB::table('company_settings')->where('company_id',1)->value('logo_path'));
+    }
+
+    public function test_get_settings_is_read_only_for_currency_master_and_company_currency_state(): void
+    {
+        $currenciesBefore=DB::table('currencies')->orderBy('id')->get()->map(fn($row)=>(array)$row)->all();
+        $companyCurrenciesBefore=DB::table('company_currencies')->orderBy('id')->get()->map(fn($row)=>(array)$row)->all();
+
+        $response=$this->controller()->show($this->request(2),app(AccountingContext::class),app(\App\Services\EntityAddressService::class));
+
+        self::assertSame(200,$response->getStatusCode());
+        self::assertSame('Company Two',$response->getData(true)['data']['print_company_name']);
+        self::assertSame($currenciesBefore,DB::table('currencies')->orderBy('id')->get()->map(fn($row)=>(array)$row)->all());
+        self::assertSame($companyCurrenciesBefore,DB::table('company_currencies')->orderBy('id')->get()->map(fn($row)=>(array)$row)->all());
+        self::assertFalse(DB::table('company_currencies')->where('company_id',2)->exists());
+        self::assertSame('Canonical SAR',DB::table('currencies')->where('currency_code','SAR')->value('currency_name'));
+    }
+
+    public function test_get_missing_settings_reports_missing_without_creating_configuration(): void
+    {
+        $response=$this->controller()->show($this->request(3),app(AccountingContext::class),app(\App\Services\EntityAddressService::class));
+        self::assertSame(200,$response->getStatusCode());
+        self::assertSame('MISSING',$response->getData(true)['data']['currency_configuration_status']);
+        self::assertFalse(DB::table('company_settings')->where('company_id',3)->exists());
+        self::assertFalse(DB::table('company_currencies')->where('company_id',3)->exists());
     }
 
     private function controller(): CompanySettingController { return app(CompanySettingController::class); }

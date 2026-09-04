@@ -14,6 +14,43 @@ class SystemBaselineSeederTest extends TestCase
     {
         parent::setUp();
 
+        Schema::create('currencies', function (Blueprint $table): void {
+            $table->id();
+            $table->string('currency_code', 10)->unique();
+            $table->string('currency_name', 100);
+            $table->string('symbol', 20)->nullable();
+            $table->unsignedTinyInteger('decimal_places')->default(2);
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('voucher_types', function (Blueprint $table): void {
+            $table->id();
+            $table->string('type_name', 100)->nullable();
+            $table->string('type_code', 50)->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('expense_types', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('company_id')->nullable();
+            $table->string('type_name', 150);
+            $table->string('type_code', 50)->nullable();
+            $table->unsignedBigInteger('account_id')->nullable();
+            $table->string('default_scope', 50)->default('GENERAL');
+            $table->boolean('affects_cost')->default(true);
+            $table->string('usage_type', 20)->default('GENERAL');
+            $table->string('description', 255)->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('tax_codes', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('company_id');
+            $table->string('tax_code', 50);
+        });
+
         Schema::create('roles', function (Blueprint $table): void {
             $table->id();
             $table->string('role_name', 100);
@@ -90,6 +127,14 @@ class SystemBaselineSeederTest extends TestCase
         self::assertSame(19, DB::table('feature_catalog')->count());
         self::assertSame(3, DB::table('plans')->count());
         self::assertSame(54, DB::table('plan_features')->count());
+        self::assertSame(['SAR', 'USD'], DB::table('currencies')->orderBy('currency_code')->pluck('currency_code')->all());
+        self::assertSame(['PAYMENT', 'RECEIPT'], DB::table('voucher_types')->orderBy('type_code')->pluck('type_code')->all());
+        self::assertSame(
+            ['BUY_COMMISSION', 'CAR_RENT', 'DRIVER_TRIP', 'GENERAL', 'OTHER', 'SALE_COMMISSION', 'WEIGHT_DIFF', 'WORKERS'],
+            DB::table('expense_types')->whereNull('company_id')->orderBy('type_code')->pluck('type_code')->all()
+        );
+        self::assertSame(0, DB::table('expense_types')->whereNotNull('company_id')->count());
+        self::assertSame(0, DB::table('tax_codes')->count());
         self::assertSame(0, DB::table('plan_features as pf')
             ->leftJoin('plans as p', 'p.id', '=', 'pf.plan_id')
             ->whereNull('p.id')
@@ -129,5 +174,26 @@ class SystemBaselineSeederTest extends TestCase
         self::assertSame(999, (int) $plans['ENTERPRISE']->max_users);
         self::assertNull($plans['ENTERPRISE']->max_cars);
         self::assertNull($plans['ENTERPRISE']->max_invoices);
+    }
+
+    public function test_dictionary_seed_preserves_existing_ids_and_tenant_owned_expense_types(): void
+    {
+        DB::table('currencies')->insert(['id'=>91,'currency_code'=>'SAR','currency_name'=>'Existing SAR','decimal_places'=>4,'is_active'=>1]);
+        DB::table('voucher_types')->insert(['id'=>92,'type_code'=>'RECEIPT','type_name'=>'Existing Receipt']);
+        DB::table('expense_types')->insert([
+            ['id'=>93,'company_id'=>null,'type_code'=>'GENERAL','type_name'=>'Existing General'],
+            ['id'=>94,'company_id'=>7,'type_code'=>'GENERAL','type_name'=>'Tenant General'],
+        ]);
+
+        $this->seed(SystemBaselineSeeder::class);
+        $this->seed(SystemBaselineSeeder::class);
+
+        self::assertSame(91,(int)DB::table('currencies')->where('currency_code','SAR')->value('id'));
+        self::assertSame('Existing SAR',DB::table('currencies')->where('id',91)->value('currency_name'));
+        self::assertSame(92,(int)DB::table('voucher_types')->where('type_code','RECEIPT')->value('id'));
+        self::assertSame('Existing Receipt',DB::table('voucher_types')->where('id',92)->value('type_name'));
+        self::assertSame(93,(int)DB::table('expense_types')->whereNull('company_id')->where('type_code','GENERAL')->value('id'));
+        self::assertSame('Tenant General',DB::table('expense_types')->where('id',94)->value('type_name'));
+        self::assertSame(1,DB::table('expense_types')->where('company_id',7)->count());
     }
 }

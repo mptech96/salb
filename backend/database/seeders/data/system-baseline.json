@@ -1,5 +1,97 @@
 {
-    "version": 1,
+    "version": 2,
+    "currencies": [
+        {
+            "currency_code": "SAR",
+            "currency_name": "ريال سعودي",
+            "symbol": "SAR",
+            "decimal_places": 2,
+            "is_active": 1
+        },
+        {
+            "currency_code": "USD",
+            "currency_name": "USD",
+            "symbol": null,
+            "decimal_places": 3,
+            "is_active": 1
+        }
+    ],
+    "voucher_types": [
+        {
+            "type_code": "RECEIPT",
+            "type_name": "سند قبض"
+        },
+        {
+            "type_code": "PAYMENT",
+            "type_name": "سند صرف"
+        }
+    ],
+    "expense_types": [
+        {
+            "type_code": "CAR_RENT",
+            "type_name": "إيجار سيارة",
+            "default_scope": "GENERAL",
+            "affects_cost": 1,
+            "usage_type": "GENERAL",
+            "is_active": 1
+        },
+        {
+            "type_code": "DRIVER_TRIP",
+            "type_name": "مشوار سائق",
+            "default_scope": "GENERAL",
+            "affects_cost": 1,
+            "usage_type": "GENERAL",
+            "is_active": 1
+        },
+        {
+            "type_code": "WORKERS",
+            "type_name": "عمال تحميل وتنزيل",
+            "default_scope": "GENERAL",
+            "affects_cost": 1,
+            "usage_type": "GENERAL",
+            "is_active": 1
+        },
+        {
+            "type_code": "BUY_COMMISSION",
+            "type_name": "عمولة شراء",
+            "default_scope": "GENERAL",
+            "affects_cost": 1,
+            "usage_type": "SHIPMENT",
+            "is_active": 1
+        },
+        {
+            "type_code": "SALE_COMMISSION",
+            "type_name": "عمولة بيع",
+            "default_scope": "GENERAL",
+            "affects_cost": 1,
+            "usage_type": "GENERAL",
+            "is_active": 1
+        },
+        {
+            "type_code": "GENERAL",
+            "type_name": "مصروفات عامة",
+            "default_scope": "GENERAL",
+            "affects_cost": 1,
+            "usage_type": "GENERAL",
+            "is_active": 1
+        },
+        {
+            "type_code": "WEIGHT_DIFF",
+            "type_name": "فرق وزن / تسوية",
+            "default_scope": "GENERAL",
+            "affects_cost": 1,
+            "usage_type": "GENERAL",
+            "is_active": 1
+        },
+        {
+            "type_code": "OTHER",
+            "type_name": "أخرى",
+            "default_scope": "GENERAL",
+            "affects_cost": 1,
+            "usage_type": "GENERAL",
+            "is_active": 1
+        }
+    ],
     "roles": [
         {
             "role_code": "ACCOUNTANT",

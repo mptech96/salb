@@ -9,7 +9,6 @@ use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -22,9 +21,10 @@ class CompanySettingController extends Controller
         $companyId = $context->companyId($request);
 
         $settings = DB::table('company_settings')->where('company_id', $companyId)->first();
+        $hasPersistedSettings = $settings !== null;
 
         if (!$settings) {
-            DB::table('company_settings')->insert([
+            $settings = (object) [
                 'company_id' => $companyId,
                 'currency_name' => 'USD',
                 'currency_code' => 'USD',
@@ -32,30 +32,20 @@ class CompanySettingController extends Controller
                 'currency_decimal_places' => 3,
                 'primary_color' => '#0B2A4A',
                 'secondary_color' => '#123D68',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            $settings = DB::table('company_settings')->where('company_id', $companyId)->first();
-        }
-
-        if (Schema::hasTable('currencies') && Schema::hasTable('company_currencies')) {
-            $base = strtoupper(trim((string)($settings->base_currency_code ?? $settings->currency_code ?? 'USD'))) ?: 'USD';
-            DB::table('currencies')->updateOrInsert(['currency_code'=>$base],[
-                'currency_name'=>$settings->currency_name ?: $base,
-                'decimal_places'=>(int)($settings->currency_decimal_places ?? 3),
-                'is_active'=>1,'created_at'=>now(),'updated_at'=>now(),
-            ]);
-            DB::table('company_currencies')->updateOrInsert(['company_id'=>$companyId,'currency_code'=>$base],[
-                'is_base'=>1,'is_active'=>1,'created_at'=>now(),'updated_at'=>now(),
-            ]);
+            ];
         }
 
         $company = DB::table('companies')->where('id', $companyId)->first();
         $data = (array) $settings;
         $data['company_name_fallback'] = $company->company_name ?? null;
-        $data['print_company_name'] = $data['print_company_name'] ?: ($company->company_name ?? null);
+        $data['print_company_name'] = ($data['print_company_name'] ?? null) ?: ($company->company_name ?? null);
         $data['company'] = $company;
         $data['address_details'] = $addresses->getDefault($companyId, 'COMPANY', $companyId);
+        $baseCurrency = strtoupper(trim((string) ($data['base_currency_code'] ?? $data['currency_code'] ?? '')));
+        $activeBases = DB::table('company_currencies')->where('company_id', $companyId)->where('is_base', 1)->where('is_active', 1)->pluck('currency_code');
+        $data['currency_configuration_status'] = ! $hasPersistedSettings
+            ? 'MISSING'
+            : ($baseCurrency !== '' && $activeBases->count() === 1 && strtoupper((string) $activeBases->first()) === $baseCurrency ? 'CONFIGURED' : 'DRIFT');
         foreach (['logo','signature','stamp','header_image','footer_image'] as $asset) {
             $column = $asset.'_path';
             $data[$asset.'_url'] = !empty($settings->{$column} ?? null) ? url('/api/company-settings/assets/'.$asset) : null;
