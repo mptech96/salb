@@ -51,7 +51,15 @@ export default function OfficialDocumentsPage() {
 
   const fileUrl = (path?: string) => {
     if (!path) return "";
-    return `http://127.0.0.1:8000/storage/${path}`;
+    if (/^https?:\/\//i.test(path)) return path;
+
+    const apiBase =
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://127.0.0.1:8000/api";
+
+    const root = apiBase.replace(/\/api\/?$/, "");
+
+    return `${root}/storage/${String(path).replace(/^\/?storage\//, "")}`;
   };
 
   const loadDocs = async () => {
