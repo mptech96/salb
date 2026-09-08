@@ -13,6 +13,8 @@ type Props = {
   cancelText?: string;
   showCancel?: boolean;
   loading?: boolean;
+  confirmDisabled?: boolean;
+  showConfirm?: boolean;
   children?: ReactNode;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
@@ -62,6 +64,8 @@ export default function SystemDialog({
   cancelText = "إلغاء",
   showCancel = false,
   loading = false,
+  confirmDisabled = false,
+  showConfirm = true,
   children,
   onConfirm,
   onClose,
@@ -129,14 +133,14 @@ export default function SystemDialog({
             </button>
           ) : null}
 
-          <button
+          {showConfirm ? <button
             type="button"
             onClick={() => void onConfirm()}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
             className={`min-w-32 rounded-2xl px-5 py-3 font-black text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${style.buttonClass}`}
           >
             {loading ? "جاري التنفيذ..." : confirmText}
-          </button>
+          </button> : null}
         </div>
       </div>
     </div>

@@ -273,6 +273,10 @@ class CompanyOnboardingTest extends Wave1SubscriptionTestCase
         self::assertSame(84,DB::table('accounts')->where('company_id',$cid)->count());
         self::assertSame(1,DB::table('company_currencies')->where('company_id',$cid)->where('is_base',1)->where('is_active',1)->count());
         self::assertSame(1,DB::table('financial_years')->where('company_id',$cid)->where('is_closed',0)->count());
+        $year=DB::table('financial_years')->where('company_id',$cid)->first();
+        self::assertSame('2026',(string)$year->year_name);
+        self::assertSame('2026-01-01',(string)$year->start_date);
+        self::assertSame('2026-12-31',(string)$year->end_date);
         self::assertSame(2,DB::table('cost_centers')->where('company_id',$cid)->count());
         self::assertSame(1,DB::table('financial_accounts')->where('company_id',$cid)->where('account_type','CASH')->count());
         $tables=['accounts','accounting_settings','company_currencies','financial_years','cost_centers','financial_accounts','branch_financial_settings'];

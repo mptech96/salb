@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\FinancialAccountController;
 use App\Services\Accounting\AccountingContext;
 use App\Services\FinancialAccountService;
 use App\Services\FixedAssets\FixedAssetYearEndService;
+use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -101,13 +102,35 @@ class AccountingReconciliationTest extends TestCase
 
     public function test_close_and_reopen_are_balanced_idempotent_and_restore_open_reporting(): void
     {
+        Carbon::setTestNow('2027-01-02 10:00:00');
         $this->journal('2026-05-01','POSTED',[[$this->asset,100,0],[$this->revenue,0,100]],null,'sale');
         $assets=Mockery::mock(FixedAssetYearEndService::class);$assets->shouldReceive('missingCount')->andReturn(0);$assets->shouldReceive('complete')->once()->andReturn([]);
         $service=new FinancialYearService(app(JournalService::class),$this->reports,app(\App\Services\Accounting\PostingSupport::class),$assets);
-        $closed=$service->close(1,1,1);self::assertNotNull($closed['profit_loss_entry_id']);self::assertNotNull($closed['retained_earnings_entry_id']);self::assertSame(2,DB::table('journal_entries')->where('is_closing_entry',1)->count());
-        try{$service->close(1,1,1);self::fail('Duplicate close accepted');}catch(\RuntimeException){}self::assertSame(2,DB::table('journal_entries')->where('is_closing_entry',1)->count());
+        try{$service->close(1,1,1);self::fail('Unconfirmed close accepted');}catch(\RuntimeException){}
+        $closed=$service->close(1,1,1,true);self::assertNotNull($closed['profit_loss_entry_id']);self::assertNotNull($closed['retained_earnings_entry_id']);self::assertSame(2,DB::table('journal_entries')->where('is_closing_entry',1)->count());
+        $retry=$service->close(1,1,1,true);self::assertTrue($retry['idempotent']);self::assertSame(2,DB::table('journal_entries')->where('is_closing_entry',1)->count());
         foreach(DB::table('journal_entries')->where('is_closing_entry',1)->pluck('id')as$id){$sum=DB::table('journal_entry_lines')->where('journal_entry_id',$id)->selectRaw('SUM(debit) d,SUM(credit) c')->first();self::assertSame((float)$sum->d,(float)$sum->c);}
-        $service->reopen(1,1,1);self::assertSame(0,(int)DB::table('financial_years')->where('id',1)->value('is_closed'));self::assertSame(4,DB::table('journal_entries')->where('is_closing_entry',1)->count());self::assertSame(100.0,$this->reports->incomeStatement(1,null,['from_date'=>'2026-01-01','to_date'=>'2026-12-31'])['net_result']);
+        $service->reopen(1,1,1);self::assertSame(0,(int)DB::table('financial_years')->where('id',1)->value('is_closed'));self::assertSame(4,DB::table('journal_entries')->where('is_closing_entry',1)->count());self::assertSame(100.0,$this->reports->incomeStatement(1,null,['from_date'=>'2026-01-01','to_date'=>'2026-12-31'])['net_result']);Carbon::setTestNow();
+    }
+
+    public function test_next_year_creation_is_company_scoped_and_idempotent(): void
+    {
+        $assets=Mockery::mock(FixedAssetYearEndService::class);$service=new FinancialYearService(app(JournalService::class),$this->reports,app(\App\Services\Accounting\PostingSupport::class),$assets);
+        $first=$service->ensureNextYear(1,1);$second=$service->ensureNextYear(1,1);self::assertSame($first,$second);self::assertSame(1,DB::table('financial_years')->where('company_id',1)->where('year_name','2027')->count());
+        try{$service->ensureNextYear(2,1);self::fail('Foreign company year accepted');}catch(\RuntimeException){}
+    }
+
+    public function test_year_end_review_reports_and_blocks_integrity_defects_without_closing(): void
+    {
+        Carbon::setTestNow('2027-01-02 10:00:00');
+        $draft=$this->journal('2026-08-01','DRAFT',[[$this->asset,10,0],[$this->liability,0,10]],null,'draft');
+        $bad=$this->journal('2026-08-02','POSTED',[[$this->asset,5,0]],null,'unbalanced');
+        DB::table('accounting_settings')->where('company_id',1)->where('setting_key','RETAINED_EARNINGS_ACCOUNT')->delete();
+        $assets=Mockery::mock(FixedAssetYearEndService::class);$assets->shouldReceive('missingCount')->andReturn(0);$service=new FinancialYearService(app(JournalService::class),$this->reports,app(\App\Services\Accounting\PostingSupport::class),$assets);
+        $preview=$service->preview(1,1);self::assertSame('NEEDS_ATTENTION',$preview['status']);self::assertFalse($preview['can_close']);self::assertSame(1,$preview['unposted_entries_count']);self::assertNotEmpty($preview['blockers']);
+        try{$service->close(1,1,1,true);self::fail('Unsafe close accepted');}catch(\RuntimeException){}
+        self::assertSame(0,(int)DB::table('financial_years')->where('id',1)->value('is_closed'));self::assertSame(0,DB::table('financial_year_closures')->count());
+        DB::table('journal_entry_lines')->where('journal_entry_id',$bad)->delete();DB::table('journal_entries')->whereIn('id',[$draft,$bad])->delete();Carbon::setTestNow();
     }
 
     public function test_closed_year_branch_balance_keeps_branch_result_without_synthetic_journal(): void

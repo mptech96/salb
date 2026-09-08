@@ -20,21 +20,61 @@ class FinancialYearService
         return DB::table('financial_years')->insertGetId(['company_id'=>$companyId,'year_name'=>$d['year_name']??$this->name($start,$end),'start_date'=>$start,'end_date'=>$end,'is_closed'=>0,'created_at'=>now(),'updated_at'=>now()]);
     }
 
+    public function ensureNextYear(int $companyId, int $yearId): int
+    {
+        return DB::transaction(function () use ($companyId, $yearId) {
+            $year = $this->year($companyId, $yearId, true);
+            $start = Carbon::parse($year->end_date)->addDay();
+            $end = $start->copy()->addYear()->subDay();
+            $name = $this->name($start->toDateString(), $end->toDateString());
+            $existing = DB::table('financial_years')->where('company_id', $companyId)->where('year_name', $name)->lockForUpdate()->first();
+            if ($existing) {
+                if ((string) $existing->start_date !== $start->toDateString() || (string) $existing->end_date !== $end->toDateString()) {
+                    throw new \RuntimeException('السنة المالية التالية موجودة بفترة مختلفة وتحتاج مراجعة.');
+                }
+                return (int) $existing->id;
+            }
+            $overlap = DB::table('financial_years')->where('company_id', $companyId)
+                ->where(fn ($q) => $q->whereBetween('start_date', [$start->toDateString(), $end->toDateString()])
+                    ->orWhereBetween('end_date', [$start->toDateString(), $end->toDateString()]))->exists();
+            if ($overlap) throw new \RuntimeException('فترة السنة المالية التالية تتداخل مع سنة مسجلة.');
+            return DB::table('financial_years')->insertGetId(['company_id'=>$companyId,'year_name'=>$name,'start_date'=>$start->toDateString(),'end_date'=>$end->toDateString(),'is_closed'=>0,'created_at'=>now(),'updated_at'=>now()]);
+        });
+    }
+
     public function preview(int $companyId,int $yearId): array
     {
-        $y=DB::table('financial_years')->where('company_id',$companyId)->where('id',$yearId)->first();if(!$y)throw new \RuntimeException('السنة المالية غير موجودة.');
+        $y=$this->year($companyId,$yearId);
         $trial=$this->reports->trialBalance($companyId,null,['from_date'=>$y->start_date,'to_date'=>$y->end_date]);
         $income=$this->reports->incomeStatement($companyId,null,['from_date'=>$y->start_date,'to_date'=>$y->end_date]);
         $entries=DB::table('journal_entries')->where('company_id',$companyId)->where('financial_year_id',$yearId)->where('status','POSTED')->count();
-        $missingDepreciation=$this->assetYearEnd->missingCount($companyId,$y->start_date,$y->end_date);return ['year'=>$y,'entries_count'=>$entries,'trial_balance_difference'=>$trial['totals']['difference'],'revenue_total'=>$income['revenue_total'],'expense_total'=>$income['cost_of_revenue_total']+$income['operating_expenses_total'],'net_result'=>$income['net_result'],'pending_depreciation_months'=>$missingDepreciation,'depreciation_will_post_on_close'=>$missingDepreciation>0,'can_close'=>abs((float)$trial['totals']['difference'])<0.001 && !(int)$y->is_closed];
+        $drafts=DB::table('journal_entries')->where('company_id',$companyId)->where('financial_year_id',$yearId)->where('status','<>','POSTED')->count();
+        $imbalanced=DB::table('journal_entry_lines as l')->join('journal_entries as e','e.id','=','l.journal_entry_id')->where('e.company_id',$companyId)->where('e.financial_year_id',$yearId)->where('e.status','POSTED')->groupBy('e.id')->havingRaw('ABS(SUM(l.debit)-SUM(l.credit)) >= 0.001')->get()->count();
+        $result=$this->closeAccount($companyId,'CURRENT_YEAR_RESULT_ACCOUNT');
+        $retained=$this->closeAccount($companyId,'RETAINED_EARNINGS_ACCOUNT');
+        $blockers=[];
+        if(abs((float)$trial['totals']['difference'])>=0.001||$imbalanced>0)$blockers[]='توجد قيود غير متوازنة.';
+        if($drafts>0)$blockers[]='توجد قيود غير مرحلة داخل السنة.';
+        if(!$result)$blockers[]='حساب نتيجة السنة غير مضبوط.';
+        if(!$retained)$blockers[]='حساب الأرباح المحتجزة غير مضبوط.';
+        if(Carbon::today()->lte(Carbon::parse($y->end_date)))$blockers[]='لم تنتهِ السنة المالية بعد.';
+        $nextStart=Carbon::parse($y->end_date)->addDay();$nextEnd=$nextStart->copy()->addYear()->subDay();$nextName=$this->name($nextStart->toDateString(),$nextEnd->toDateString());
+        $next=DB::table('financial_years')->where('company_id',$companyId)->where('year_name',$nextName)->first();
+        $missingDepreciation=$this->assetYearEnd->missingCount($companyId,$y->start_date,$y->end_date);
+        $status=(int)$y->is_closed?'CLOSED':($blockers?'NEEDS_ATTENTION':'REVIEW_READY');
+        return ['year'=>$y,'status'=>$status,'entries_count'=>$entries,'unposted_entries_count'=>$drafts,'total_debits'=>$trial['totals']['period_debit']??0,'total_credits'=>$trial['totals']['period_credit']??0,'trial_balance_difference'=>$trial['totals']['difference'],'revenue_total'=>$income['revenue_total'],'expense_total'=>$income['cost_of_revenue_total']+$income['operating_expenses_total'],'net_result'=>$income['net_result'],'retained_earnings_account'=>$retained,'current_year_result_account'=>$result,'next_year'=>['year_name'=>$nextName,'start_date'=>$nextStart->toDateString(),'end_date'=>$nextEnd->toDateString(),'exists'=>(bool)$next,'id'=>$next?->id],'blockers'=>$blockers,'pending_depreciation_months'=>$missingDepreciation,'depreciation_will_post_on_close'=>$missingDepreciation>0,'can_close'=>!$blockers && !(int)$y->is_closed];
     }
 
-    public function close(int $companyId,int $yearId,?int $userId=null): array
+    public function close(int $companyId,int $yearId,?int $userId=null,bool $confirmed=false): array
     {
+        if(!$confirmed)throw new \RuntimeException('يجب تأكيد مراجعة واعتماد ترحيل السنة قبل الإقفال.');
         return DB::transaction(function() use($companyId,$yearId,$userId){
-            $y=DB::table('financial_years')->where('company_id',$companyId)->where('id',$yearId)->lockForUpdate()->first();if(!$y)throw new \RuntimeException('السنة المالية غير موجودة.');if((int)$y->is_closed)throw new \RuntimeException('السنة المالية مقفلة بالفعل.');
+            $y=$this->year($companyId,$yearId,true);
+            if((int)$y->is_closed){$closure=DB::table('financial_year_closures')->where('company_id',$companyId)->where('financial_year_id',$yearId)->where('status','CLOSED')->latest('id')->first();if($closure)return $this->closureResult($closure);throw new \RuntimeException('السنة المالية مقفلة بالفعل.');}
+            $p=$this->preview($companyId,$yearId);if(!$p['can_close'])throw new \RuntimeException(implode(' ',$p['blockers']));
+            $nextId=$this->ensureNextYear($companyId,$yearId);
             $depreciation=$this->assetYearEnd->complete($companyId,$y->start_date,$y->end_date,$userId);
-            $p=$this->preview($companyId,$yearId);if(!$p['can_close'])throw new \RuntimeException('لا يمكن الإقفال قبل توازن القيود ومعالجة الفروقات.');
+            $p=$this->preview($companyId,$yearId);if(!$p['can_close'])throw new \RuntimeException(implode(' ',$p['blockers']));
             $resultAcc=$this->support->setting($companyId,'CURRENT_YEAR_RESULT_ACCOUNT');$retained=$this->support->setting($companyId,'RETAINED_EARNINGS_ACCOUNT');
             $balances=DB::table('journal_entry_lines as l')->join('journal_entries as e','e.id','=','l.journal_entry_id')->join('accounts as a','a.id','=','l.account_id')
                 ->where('l.company_id',$companyId)->where('e.financial_year_id',$yearId)->where('e.status','POSTED')->where('e.is_closing_entry',0)->whereIn('a.account_type',['REVENUE','EXPENSE'])
@@ -49,14 +89,20 @@ class FinancialYearService
                 :[['account_id'=>$retained,'debit'=>abs($net),'credit'=>0,'description'=>'ترحيل الخسارة إلى الأرباح المحتجزة'],['account_id'=>$resultAcc,'debit'=>0,'credit'=>abs($net),'description'=>'إقفال نتيجة السنة']];
                 $retEntry=$this->journals->post(['company_id'=>$companyId,'branch_id'=>null,'allow_company_level'=>true,'entry_date'=>$y->end_date,'source_type'=>'YEAR_CLOSE_RETAINED','source_id'=>$yearId,'description'=>'ترحيل نتيجة السنة إلى الأرباح المحتجزة','lines'=>$transfer,'is_closing_entry'=>1,'is_system_generated'=>1,'created_by'=>$userId]);}
             DB::table('financial_years')->where('id',$yearId)->where('company_id',$companyId)->update(['is_closed'=>1,'closed_at'=>now(),'closed_by'=>$userId,'updated_at'=>now()]);
-            $nextStart=Carbon::parse($y->end_date)->addDay()->toDateString();$nextEnd=Carbon::parse($nextStart)->addYear()->subDay()->toDateString();
-            $next=DB::table('financial_years')->where('company_id',$companyId)->where('start_date',$nextStart)->first();
-            $nextId=$next?(int)$next->id:DB::table('financial_years')->insertGetId(['company_id'=>$companyId,'year_name'=>$this->name($nextStart,$nextEnd),'start_date'=>$nextStart,'end_date'=>$nextEnd,'is_closed'=>0,'created_at'=>now(),'updated_at'=>now()]);
             $last=DB::table('financial_year_closures')->where('company_id',$companyId)->max('id')??0;$cn='FYC-'.date('Y',strtotime($y->end_date)).'-'.str_pad($last+1,5,'0',STR_PAD_LEFT);
             $cid=DB::table('financial_year_closures')->insertGetId(['company_id'=>$companyId,'financial_year_id'=>$yearId,'closure_number'=>$cn,'close_date'=>$y->end_date,'revenue_total'=>$p['revenue_total'],'expense_total'=>$p['expense_total'],'net_result'=>$net,'profit_loss_entry_id'=>$plEntry,'retained_earnings_entry_id'=>$retEntry,'next_financial_year_id'=>$nextId,'status'=>'CLOSED','closed_by'=>$userId,'created_at'=>now(),'updated_at'=>now()]);
             return ['closure_id'=>$cid,'closure_number'=>$cn,'net_result'=>$net,'next_financial_year_id'=>$nextId,'profit_loss_entry_id'=>$plEntry,'retained_earnings_entry_id'=>$retEntry,'depreciation'=>$depreciation];
         });
     }
+
+    private function year(int $companyId,int $yearId,bool $lock=false): object
+    {$q=DB::table('financial_years')->where('company_id',$companyId)->where('id',$yearId);if($lock)$q->lockForUpdate();$year=$q->first();if(!$year)throw new \RuntimeException('السنة المالية غير موجودة.');return $year;}
+
+    private function closeAccount(int $companyId,string $key): ?object
+    {$id=DB::table('accounting_settings')->where('company_id',$companyId)->where('setting_key',$key)->value('account_id');return $id?DB::table('accounts')->where('company_id',$companyId)->where('id',$id)->where('is_active',1)->where('allow_posting',1)->select('id','account_code','account_name')->first():null;}
+
+    private function closureResult(object $c): array
+    {return ['closure_id'=>(int)$c->id,'closure_number'=>$c->closure_number,'net_result'=>(float)$c->net_result,'next_financial_year_id'=>$c->next_financial_year_id,'profit_loss_entry_id'=>$c->profit_loss_entry_id,'retained_earnings_entry_id'=>$c->retained_earnings_entry_id,'idempotent'=>true];}
 
     public function reopen(int $companyId,int $yearId,?int $userId=null): array
     {

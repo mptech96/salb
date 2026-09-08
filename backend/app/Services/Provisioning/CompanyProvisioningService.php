@@ -99,7 +99,13 @@ final class CompanyProvisioningService
             'created_at'=>now(),'updated_at'=>now(),
         ]);
 
-        $accounting = $this->accounting->bootstrapCompany($companyId, $branchId, $input['start_date'], $input['end_date']);
+        $financialYearAnchor = CarbonImmutable::parse((string) ($input['start_date'] ?? 'now'));
+        $accounting = $this->accounting->bootstrapCompany(
+            $companyId,
+            $branchId,
+            $financialYearAnchor->startOfYear()->toDateString(),
+            $financialYearAnchor->endOfYear()->toDateString(),
+        );
         $status = ($input['subscription_mode'] ?? 'PAID') === 'TRIAL' && ($input['trial_allowed'] ?? false) ? 'TRIAL' : 'PENDING';
         $subscriptionId = DB::table('subscriptions')->insertGetId([
             'company_id'=>$companyId,'plan_id'=>$plan->id,'start_date'=>$input['start_date'],'end_date'=>$input['end_date'],
