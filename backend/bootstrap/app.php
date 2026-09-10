@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withCommands()
     ->withMiddleware(function (Middleware $middleware): void {
         /*
          * واجهات API يجب ألا تتحول إلى Route باسم login عند غياب المصادقة.
