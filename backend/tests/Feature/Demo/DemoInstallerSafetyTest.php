@@ -24,9 +24,12 @@ final class DemoInstallerSafetyTest extends TestCase
     public function test_installer_has_a_deterministic_marker_and_uses_canonical_workflows(): void
     {
         self::assertSame('SULB_DEMO_INSTALL_V1',DemoCompanyInstaller::MARKER);self::assertSame('demo',DemoCompanyInstaller::USERNAME);$source=file_get_contents(app_path('Services/Demo/DemoCompanyInstaller.php'));
-        foreach(['CompanyProvisioningService','EnterpriseInvoiceService','CommercialDocumentService','ExpensePosting','VoucherPosting','JournalService','DemoIntegrityService','DB::transaction']as$dependency)self::assertStringContainsString($dependency,$source);
+        foreach(['CompanyProvisioningService','EnterpriseInvoiceService','CommercialDocumentService','ExpensePosting','VoucherPosting','JournalService','DemoIntegrityService','DemoExpenseTypeService','DB::transaction']as$dependency)self::assertStringContainsString($dependency,$source);
         foreach(['truncate(', 'migrate:fresh', 'SUPER_ADMIN']as$unsafe)self::assertStringNotContainsString($unsafe,$source);
         self::assertStringContainsString("where('idempotency_key',self::MARKER)",$source);self::assertStringContainsString('where(\'company_id\',$cid)',$source);
+        self::assertStringContainsString('$expenseTypes=$this->expenseTypes->ensure($cid)', $source);
+        self::assertStringContainsString('where(\'company_id\',$cid)->where(\'is_active\',1)', $source);
+        self::assertStringNotContainsString('whereNotNull(\'account_id\')->where(fn($q)=>$q->whereNull(\'company_id\')', $source);
     }
 
     public function test_status_command_is_read_only(): void
