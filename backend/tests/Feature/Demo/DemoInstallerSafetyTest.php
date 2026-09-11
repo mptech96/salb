@@ -30,6 +30,7 @@ final class DemoInstallerSafetyTest extends TestCase
         self::assertStringContainsString('$expenseTypes=$this->expenseTypes->ensure($cid)', $source);
         self::assertStringContainsString('where(\'company_id\',$cid)->where(\'is_active\',1)', $source);
         self::assertStringNotContainsString('whereNotNull(\'account_id\')->where(fn($q)=>$q->whereNull(\'company_id\')', $source);
+        self::assertLessThan(strpos($source, '$integrity=$this->integrity->validate($cid,$fy)'), strpos($source, 'return DB::transaction'));
     }
 
     public function test_status_command_is_read_only(): void
