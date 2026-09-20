@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import api from "../../../../api";
+import PrintHeader from "@/components/reports/PrintHeader";
+import PrintFooter from "@/components/reports/PrintFooter";
+import { printWhenReady } from "@/lib/print-branding";
 
 type SalarySlipData = {
   company?: any;
@@ -21,6 +24,7 @@ export default function SalarySlipPage() {
   const workerId = params?.workerId;
 
   const [data, setData] = useState<SalarySlipData | null>(null);
+  const [printProfile, setPrintProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -35,11 +39,24 @@ export default function SalarySlipPage() {
     setError("");
 
     try {
-      const res = await api.get(
-        `/payroll/${runId}/salary-slip/${workerId}`
-      );
+      const [res, settings] = await Promise.all([
+        api.get(`/payroll/${runId}/salary-slip/${workerId}`),
+        api.get("/company-settings").catch(() => null),
+      ]);
 
       setData(res?.data?.data || null);
+      const company = res?.data?.data?.company || {};
+      const saved = settings?.data?.data || {};
+      setPrintProfile({
+        ...company,
+        ...saved,
+        company_name: saved.print_company_name || company.company_name || company.name,
+        phone: saved.print_phone || company.phone,
+        email: saved.print_email || company.email,
+        address: saved.print_address || company.address,
+        city: saved.print_city || company.city,
+        branch_name: res?.data?.data?.salary?.branch_name,
+      });
     } catch (e: any) {
       setError(
         e?.response?.data?.message ||
@@ -110,7 +127,7 @@ export default function SalarySlipPage() {
         <div className="mb-4 flex flex-col gap-3 print:hidden sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => void printWhenReady()}
             className="rounded-2xl bg-[#0B2A4A] px-5 py-3 font-black text-white hover:bg-[#123D68]"
           >
             طباعة كشف الراتب
@@ -125,42 +142,15 @@ export default function SalarySlipPage() {
           </button>
         </div>
 
-        <section className="overflow-hidden rounded-3xl bg-white shadow-xl print:rounded-none print:shadow-none">
-          <header className="bg-gradient-to-l from-[#0B2A4A] to-[#123D68] p-6 text-white sm:p-8">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-sm font-bold text-blue-100">
-                  SULB ERP
-                </div>
+        <section className="sulb-print-area overflow-hidden rounded-3xl bg-white p-5 shadow-xl print:rounded-none print:shadow-none sm:p-8">
+          <PrintHeader profile={printProfile} title="كشف راتب موظف" />
+          <div className="mb-6 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-3">
+            <div><span className="text-slate-500">رقم المسير: </span><b>{salary.run_number || `PAY-${runId}`}</b></div>
+            <div><span className="text-slate-500">الشهر: </span><b>{formatMonth(salary.salary_month)}</b></div>
+            <div><span className="text-slate-500">الفرع: </span><b>{salary.branch_name || "الفرع الرئيسي"}</b></div>
+          </div>
 
-                <h1 className="mt-2 text-3xl font-black">
-                  كشف راتب موظف
-                </h1>
-
-                <div className="mt-2 text-sm font-semibold text-blue-100">
-                  {salary.run_number || `PAY-${runId}`}
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-white/10 p-4 text-sm leading-7">
-                <div className="font-black">
-                  {company.company_name ||
-                    company.name ||
-                    "شركة صلب"}
-                </div>
-
-                <div>
-                  الشهر: {formatMonth(salary.salary_month)}
-                </div>
-
-                <div>
-                  الفرع: {salary.branch_name || "الفرع الرئيسي"}
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <div className="space-y-6 p-5 sm:p-8">
+          <div className="space-y-6">
             <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <InfoCard
                 title="بيانات الموظف"
@@ -333,6 +323,7 @@ export default function SalarySlipPage() {
               تم إصدار هذا الكشف إلكترونيًا من نظام SULB ERP.
               لا يحتاج إلى توقيع ما لم تتطلب سياسة الشركة خلاف ذلك.
             </footer>
+            <PrintFooter profile={printProfile} />
           </div>
         </section>
       </div>

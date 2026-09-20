@@ -393,7 +393,7 @@ export default function ExpensesPage() {
                         "عام"}
                     </td>
                     <td className="p-4">{x.voucher_number || "-"}</td>
-                    <td className="p-4">{x.journal_entry_id || "-"}</td>
+                    <td className="p-4"><div>{x.journal_entry_id || "-"}</div><a target="_blank" href={`/print/expense/${x.id}`} className="mt-1 inline-block text-xs font-bold text-sky-700">طباعة</a></td>
                   </tr>
                 ))
               )}

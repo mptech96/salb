@@ -84,7 +84,13 @@ export default function VouchersPage() {
         }),
         api.get("/vouchers/meta"),
       ]);
-      const md = m.data.data || {},
+      const rawMeta = m.data.data || {},
+        md = {
+          ...rawMeta,
+          financial_accounts: Array.isArray(rawMeta.financial_accounts)
+            ? rawMeta.financial_accounts
+            : rawMeta.financial_accounts?.data || [],
+        },
         pg = r.data.data || {};
       setRows(pg.data || []);
       setPagination(pg);
@@ -343,7 +349,7 @@ export default function VouchersPage() {
                       {x.currency_code || meta.base_currency}
                     </td>
                     <td className="p-4">{x.financial_account_name || "-"}</td>
-                    <td className="p-4">{x.journal_entry_id || "-"}</td>
+                    <td className="p-4"><div>{x.journal_entry_id || "-"}</div><a target="_blank" href={`/print/voucher/${x.id}`} className="mt-1 inline-block text-xs font-bold text-sky-700">طباعة</a></td>
                   </tr>
                 ))
               )}

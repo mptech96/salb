@@ -149,6 +149,10 @@ body {
   body * { visibility: hidden !important; }
   .sulb-print-area, .sulb-print-area * { visibility: visible !important; }
   .sulb-print-area { position: absolute !important; inset: 0 !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; background: #fff !important; }
+  .print-branding-header { break-after: avoid !important; page-break-after: avoid !important; }
+  .print-branding-header > img { max-height: var(--print-header-height, 28mm) !important; }
+  .print-branding-footer { break-inside: avoid !important; page-break-inside: avoid !important; }
+  .print-branding-footer img { max-height: var(--print-footer-height, 20mm) !important; }
   .no-print { display: none !important; }
   .print-only { display: block !important; visibility: visible !important; }
   table { width: 100% !important; border-collapse: collapse !important; }

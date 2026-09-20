@@ -4,6 +4,7 @@ namespace Tests\Feature\PhaseB;
 
 use App\Http\Controllers\Api\CompanySettingController;
 use App\Services\Accounting\AccountingContext;
+use App\Http\Controllers\Api\AdvancedReportController;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -113,6 +114,39 @@ class PrintBrandingSecurityTest extends TestCase
         self::assertSame('MISSING',$response->getData(true)['data']['currency_configuration_status']);
         self::assertFalse(DB::table('company_settings')->where('company_id',3)->exists());
         self::assertFalse(DB::table('company_currencies')->where('company_id',3)->exists());
+    }
+
+    public function test_private_branding_asset_can_be_embedded_without_exposing_its_storage_path(): void
+    {
+        $path='print-branding/1/header-image.png';
+        Storage::disk('local')->put($path,base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII='));
+        $method=new \ReflectionMethod(AdvancedReportController::class,'brandingDataUri');
+        $uri=$method->invoke(app(AdvancedReportController::class),$path);
+        self::assertIsString($uri);
+        self::assertStringStartsWith('data:image/png;base64,',$uri);
+        self::assertStringNotContainsString($path,$uri);
+    }
+
+    public function test_document_and_report_print_paths_use_the_shared_authenticated_branding_components(): void
+    {
+        $header=file_get_contents(base_path('../frontend/components/reports/PrintHeader.tsx'));
+        $footer=file_get_contents(base_path('../frontend/components/reports/PrintFooter.tsx'));
+        $document=file_get_contents(base_path('../frontend/app/print/[type]/[id]/page.tsx'));
+        $reports=file_get_contents(base_path('../frontend/app/reports/page.tsx'));
+        $salarySlip=file_get_contents(base_path('../frontend/app/payroll/[runId]/salary-slip/[workerId]/page.tsx'));
+        $officialDocuments=file_get_contents(base_path('../frontend/app/official-documents/page.tsx'));
+        foreach (['header_image','logo','signature','stamp'] as $asset) self::assertStringContainsString("asset=\"{$asset}\"",$header);
+        self::assertStringContainsString('print_header_texts',$header);
+        self::assertStringContainsString('footer_image',$footer);
+        self::assertStringContainsString('print_footer_texts',$footer);
+        self::assertStringContainsString('printWhenReady',$document);
+        self::assertStringContainsString('<PrintFooter profile={printProfile}', $document);
+        self::assertStringContainsString('<PrintFooter profile={data.print_profile}', $reports);
+        self::assertStringContainsString('<PrintHeader profile={printProfile}', $salarySlip);
+        self::assertStringContainsString('<PrintFooter profile={printProfile}', $salarySlip);
+        self::assertStringContainsString('printWhenReady', $salarySlip);
+        self::assertStringContainsString('/company-settings/assets/${asset}', $officialDocuments);
+        self::assertStringContainsString('waitForPrintWindow', $officialDocuments);
     }
 
     private function controller(): CompanySettingController { return app(CompanySettingController::class); }

@@ -234,11 +234,9 @@ export default function OfficialDocumentsPage() {
     reader.readAsDataURL(file);
   };
 
-  const addStampOrSignature = (type: "stamp" | "signature") => {
-    const src =
-      type === "stamp"
-        ? fileUrl(settings?.stamp_path)
-        : fileUrl(settings?.signature_path);
+  const addStampOrSignature = async (type: "stamp" | "signature") => {
+    const configured = type === "stamp" ? settings?.stamp_path : settings?.signature_path;
+    const src = await loadPrivateBrandingAsset(type, configured);
 
     if (!src) return notify(type === "stamp" ? "ارفع الختم من الإعدادات أولًا" : "ارفع التوقيع من الإعدادات أولًا", "warning");
 
@@ -297,7 +295,7 @@ export default function OfficialDocumentsPage() {
     return temp.innerHTML;
   };
 
-  const buildOfficialPaperHtml = () => {
+  const buildOfficialPaperHtml = (assets: {logo:string;header:string;footer:string}) => {
     const floatingHtml = floatingItems
       .map(
         (item) => `
@@ -324,18 +322,22 @@ export default function OfficialDocumentsPage() {
             * { box-sizing: border-box; }
             body { margin: 0; background: white; font-family: Arial, Tahoma, sans-serif; color: #111827; }
             .paper { width: 210mm; min-height: 297mm; background: white; margin: 0 auto; padding: 18mm 18mm 22mm; position: relative; overflow:hidden; }
-            .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid ${settings?.primary_color || "#0B2A4A"}; padding-bottom: 14px; }
+            .brand-image { display:block; width:100%; max-height:28mm; object-fit:contain; margin-bottom:8px; }
+            .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid ${settings?.primary_color || "#0B2A4A"}; padding-bottom: 14px; page-break-after:avoid; }
             .company h1 { margin: 0 0 8px; color: ${settings?.primary_color || "#0B2A4A"}; font-size: 24px; }
             .company div { font-size: 13px; line-height: 1.8; color: #475569; }
             .logo { max-width: 140px; max-height: 90px; object-fit: contain; }
             .doc-title { text-align: center; margin: 30px 0 20px; font-size: 22px; color: ${settings?.primary_color || "#0B2A4A"}; }
             .content { min-height: 650px; line-height: 2; font-size: 16px; position:relative; z-index:2; }
-            .footer { position: absolute; left: 18mm; right: 18mm; bottom: 12mm; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 12px; color: #64748b; text-align: center; }
+            .footer { margin-top:12mm; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 12px; color: #64748b; text-align: center; page-break-inside:avoid; }
+            .footer img { display:block; width:100%; max-height:20mm; object-fit:contain; margin-top:8px; }
+            table thead { display:table-header-group; } tr { page-break-inside:avoid; }
           </style>
         </head>
         <body>
           <div class="paper">
             ${floatingHtml}
+            ${assets.header ? `<img class="brand-image" src="${assets.header}" alt="" />` : ""}
             <div class="header">
               <div class="company">
                 <h1>${settings?.print_company_name || "اسم المكتب"}</h1>
@@ -343,23 +345,30 @@ export default function OfficialDocumentsPage() {
                 <div>${settings?.print_phone || ""} - ${settings?.print_email || ""}</div>
                 <div>السجل التجاري: ${settings?.commercial_register || "-"} | الرقم الضريبي: ${settings?.tax_number || "-"}</div>
               </div>
-              ${settings?.logo_path ? `<img class="logo" src="${fileUrl(settings.logo_path)}" />` : ""}
+              ${assets.logo ? `<img class="logo" src="${assets.logo}" alt="" />` : ""}
             </div>
+            ${settings?.print_header_texts?.ar ? `<div>${settings.print_header_texts.ar}</div>` : ""}
             <h2 class="doc-title">${form.doc_title || "ورقة رسمية"}</h2>
             <div class="content">${cleanContentForPrint()}</div>
-            <div class="footer">${settings?.report_footer || ""}</div>
+            <div class="footer">${settings?.print_footer_texts?.ar || settings?.report_footer || ""}${assets.footer ? `<img src="${assets.footer}" alt="" />` : ""}</div>
           </div>
         </body>
       </html>
     `;
   };
 
-  const printDoc = () => {
+  const printDoc = async () => {
     const win = window.open("", "_blank");
     if (!win) return;
-    win.document.write(buildOfficialPaperHtml());
+    const [logo, header, footer] = await Promise.all([
+      loadPrivateBrandingAsset("logo", settings?.logo_path),
+      loadPrivateBrandingAsset("header_image", settings?.header_image_path),
+      loadPrivateBrandingAsset("footer_image", settings?.footer_image_path),
+    ]);
+    win.document.write(buildOfficialPaperHtml({logo, header, footer}));
     win.document.close();
-    setTimeout(() => win.print(), 500);
+    await waitForPrintWindow(win);
+    win.print();
   };
 
   return (
@@ -654,4 +663,41 @@ function Toolbar({ exec }: { exec: (cmd: string, value?: string) => void }) {
       `}</style>
     </div>
   );
+}
+
+async function loadPrivateBrandingAsset(asset: "logo" | "header_image" | "footer_image" | "stamp" | "signature", configured: unknown): Promise<string> {
+  if (!configured) return "";
+  try {
+    const response = await api.get(`/company-settings/assets/${asset}`, { responseType: "blob" });
+    return await blobToDataUrl(response.data);
+  } catch {
+    return "";
+  }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function waitForPrintWindow(win: Window): Promise<void> {
+  if (win.document.readyState !== "complete") {
+    await new Promise<void>((resolve) => win.addEventListener("load", () => resolve(), { once: true }));
+  }
+  if (win.document.fonts?.ready) await win.document.fonts.ready;
+  await Promise.all(Array.from(win.document.images).map(async (image) => {
+    if (!image.complete) {
+      await new Promise<void>((resolve) => {
+        image.addEventListener("load", () => resolve(), { once: true });
+        image.addEventListener("error", () => resolve(), { once: true });
+      });
+    }
+    if (image.complete && image.naturalWidth > 0 && typeof image.decode === "function") {
+      await image.decode().catch(() => undefined);
+    }
+  }));
 }

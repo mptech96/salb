@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
 import PrintHeader from "@/components/reports/PrintHeader";
+import PrintFooter from "@/components/reports/PrintFooter";
+import { printWhenReady } from "@/lib/print-branding";
 import {PageHeader} from "@/components/ui/enterprise";
 import ServerPagination, {PaginationMeta} from "@/components/finance/ServerPagination";
 
@@ -84,7 +86,7 @@ export default function StatementsPage() {
       </div>
 
       {data && <>
-        <div className="no-print flex flex-wrap gap-2"><button onClick={() => window.print()} className="rounded-xl border bg-white px-4 py-2 font-bold">طباعة / PDF</button>{kind==="account"?<><button onClick={()=>void exportLedger("xls")} className="rounded-xl border bg-white px-4 py-2 font-bold">Excel — كامل النطاق</button><button onClick={()=>void exportLedger("csv")} className="rounded-xl border bg-white px-4 py-2 font-bold">CSV — كامل النطاق</button></>:null}</div>
+        <div className="no-print flex flex-wrap gap-2"><button onClick={() => void printWhenReady()} className="rounded-xl border bg-white px-4 py-2 font-bold">طباعة / PDF</button>{kind==="account"?<><button onClick={()=>void exportLedger("xls")} className="rounded-xl border bg-white px-4 py-2 font-bold">Excel — كامل النطاق</button><button onClick={()=>void exportLedger("csv")} className="rounded-xl border bg-white px-4 py-2 font-bold">CSV — كامل النطاق</button></>:null}</div>
         <div className="sulb-print-area space-y-4 rounded-3xl border bg-white p-5 shadow-sm">
           <PrintHeader profile={printProfile} title={`كشف حساب ${statementName}`} filters={{ from_date: from, to_date: to }} />
           <div className="grid gap-3 md:grid-cols-4">
@@ -92,7 +94,7 @@ export default function StatementsPage() {
           </div>
           <div className="overflow-x-auto rounded-2xl border"><table className="w-full min-w-[1050px] text-right text-sm"><thead className="bg-slate-100"><tr><th className="p-3">التاريخ</th><th>رقم القيد</th><th>المصدر</th><th>البيان</th><th>الفرع</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead><tbody>{data.rows?.map((r:any) => <tr key={r.id} className="border-t even:bg-slate-50/50"><td className="p-3">{r.entry_date}</td><td className="font-bold">{r.entry_number}</td><td>{r.source_type}</td><td>{r.description||r.entry_description}</td><td>{r.branch_name||'الشركة'}</td><td>{fmt(r.debit)}</td><td>{fmt(r.credit)}</td><td className="font-black">{fmt(r.running_balance)} {r.running_side==='DEBIT'?'مدين':'دائن'}</td></tr>)}</tbody></table></div>
           <div className="no-print"><ServerPagination meta={pagination} onPage={(p)=>void load(p,pagination.per_page)} onPerPage={(pp)=>void load(1,pp)}/></div>
-          <div className="print-only border-t pt-3 text-center text-xs text-slate-500">{printProfile?.report_footer || "تم إنشاء الكشف من نظام صلب ERP"}</div>
+          <PrintFooter profile={printProfile} />
         </div>
       </>}
       <SystemDialog open={dialog.open} type={dialog.type} title={dialog.title} message={dialog.message} onClose={() => setDialog({ ...dialog, open: false })} onConfirm={() => setDialog({ ...dialog, open: false })} />

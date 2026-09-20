@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
 import PrintHeader from "@/components/reports/PrintHeader";
+import PrintFooter from "@/components/reports/PrintFooter";
+import { printWhenReady } from "@/lib/print-branding";
 import { PageHeader, fieldClassName, primaryButtonClassName, secondaryButtonClassName } from "@/components/ui/enterprise";
 import { EnterpriseFilterBar } from "@/components/design-system/EnterpriseWorkspace";
 import { ReportExportBar } from "@/components/design-system/AccountingWorkspace";
@@ -157,7 +159,7 @@ export default function ReportsPage() {
           </EnterpriseFilterBar>
 
           {data && (
-            <ReportExportBar><button onClick={() => window.print()} className={secondaryButtonClassName}>طباعة</button><button onClick={() => void download("pdf")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "pdf" ? "PDF..." : "PDF"}</button><button onClick={() => void download("xls")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "xls" ? "Excel..." : "Excel"}</button><button onClick={() => void download("csv")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "csv" ? "CSV..." : "CSV"}</button></ReportExportBar>
+            <ReportExportBar><button onClick={() => void printWhenReady()} className={secondaryButtonClassName}>طباعة</button><button onClick={() => void download("pdf")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "pdf" ? "PDF..." : "PDF"}</button><button onClick={() => void download("xls")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "xls" ? "Excel..." : "Excel"}</button><button onClick={() => void download("csv")} disabled={!!downloading} className={secondaryButtonClassName}>{downloading === "csv" ? "CSV..." : "CSV"}</button></ReportExportBar>
           )}
         </div>
       </div>
@@ -200,9 +202,7 @@ export default function ReportsPage() {
             </table>
           </div>
 
-          <div className="print-only border-t pt-3 text-center text-xs text-slate-500">
-            {data.print_profile?.report_footer || "تم إنشاء التقرير من نظام صلب ERP"}
-          </div>
+          <PrintFooter profile={data.print_profile} />
         </div>
       )}
 

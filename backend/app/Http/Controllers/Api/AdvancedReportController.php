@@ -184,12 +184,18 @@ class AdvancedReportController extends Controller
             '.header{border-bottom:2px solid #0B2A4A;padding-bottom:10px;margin-bottom:12px}.company{font-size:16px;font-weight:bold;color:#0B2A4A}' .
             '.title{font-size:15px;font-weight:bold;margin-top:6px}.muted{color:#64748b;font-size:9px}.meta{margin-top:5px}' .
             'table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#edf2f7;color:#0B2A4A}th,td{border:1px solid #cbd5e1;padding:5px;text-align:right;vertical-align:top}' .
-            '.summary{margin-top:10px;padding:8px;background:#f8fafc;border:1px solid #dbe3ec}.footer{margin-top:14px;border-top:1px solid #cbd5e1;padding-top:8px;color:#64748b;font-size:8px}' .
+            '.summary{margin-top:10px;padding:8px;background:#f8fafc;border:1px solid #dbe3ec}.footer{margin-top:14px;border-top:1px solid #cbd5e1;padding-top:8px;color:#64748b;font-size:8px;page-break-inside:avoid}' .
+            'thead{display:table-header-group}tr{page-break-inside:avoid}.header{page-break-after:avoid}' .
             '</style></head><body>';
+        $headerImage = !empty($profile['header_image_data_uri'])
+            ? '<img src="' . e($profile['header_image_data_uri']) . '" style="display:block;width:100%;max-height:80px;object-fit:contain;margin-bottom:8px">'
+            : '';
         $logo = !empty($profile['logo_data_uri'])
             ? '<img src="' . e($profile['logo_data_uri']) . '" style="width:54px;height:54px;object-fit:contain;float:right;margin-left:10px">'
             : '';
-        $html .= '<div class="header">' . $logo . '<div class="company">' . e($profile['company_name']) . '</div><div class="title">' . e($data['title']) . '</div>';
+        $headerText = $this->localizedPrintText($profile['print_header_texts'], $profile['print_locale']);
+        $html .= '<div class="header">' . $headerImage . $logo . '<div class="company">' . e($profile['company_name']) . '</div><div class="title">' . e($data['title']) . '</div>';
+        if ($headerText !== '') $html .= '<div class="muted">' . nl2br(e($headerText)) . '</div>';
         $html .= '<div class="meta">' . e($period) . '</div><div class="muted">تاريخ الإصدار: ' . e($data['generated_at']) . ' | الفرع: ' . e($profile['branch_name']) . '</div></div>';
         $html .= '<table><thead><tr>';
         foreach ($data['columns'] as $c) $html .= '<th>' . e($c['label']) . '</th>';
@@ -209,7 +215,11 @@ class AdvancedReportController extends Controller
             foreach ($data['summary'] as $k => $v) $html .= '<span style="margin-left:18px"><b>' . e($this->summaryLabel((string) $k)) . ':</b> ' . e(is_numeric($v) ? number_format((float)$v,3,'.',',') : (string)$v) . '</span>';
             $html .= '</div>';
         }
-        $html .= '<div class="footer">' . e($profile['report_footer']) . '</div></body></html>';
+        $footerText = $this->localizedPrintText($profile['print_footer_texts'], $profile['print_locale']) ?: $profile['report_footer'];
+        $footerImage = !empty($profile['footer_image_data_uri'])
+            ? '<img src="' . e($profile['footer_image_data_uri']) . '" style="display:block;width:100%;max-height:60px;object-fit:contain;margin-top:6px">'
+            : '';
+        $html .= '<div class="footer">' . nl2br(e($footerText)) . $footerImage . '</div></body></html>';
         return $html;
     }
 
@@ -229,8 +239,16 @@ class AdvancedReportController extends Controller
             'commercial_register' => $settings?->commercial_register ?? null,
             'currency_name' => $settings?->currency_name ?? 'ريال',
             'currency_code' => $settings?->base_currency_code ?? $settings?->currency_code ?? 'USD',
-            'logo_url' => !empty($settings?->logo_path) ? asset('storage/' . $settings->logo_path) : null,
-            'logo_data_uri' => $this->logoDataUri($settings?->logo_path),
+            'has_logo' => !empty($settings?->logo_path),
+            'has_header_image' => !empty($settings?->header_image_path),
+            'has_footer_image' => !empty($settings?->footer_image_path),
+            'logo_data_uri' => $this->brandingDataUri($settings?->logo_path),
+            'header_image_data_uri' => $this->brandingDataUri($settings?->header_image_path),
+            'footer_image_data_uri' => $this->brandingDataUri($settings?->footer_image_path),
+            'print_header_texts' => json_decode((string)($settings?->print_header_texts ?? ''), true) ?: [],
+            'print_footer_texts' => json_decode((string)($settings?->print_footer_texts ?? ''), true) ?: [],
+            'print_options' => json_decode((string)($settings?->print_options ?? ''), true) ?: [],
+            'print_locale' => in_array(data_get($company, 'default_language'), ['ar','en','ur','ja'], true) ? data_get($company, 'default_language') : 'ar',
             'report_footer' => $settings?->report_footer ?? 'تم إنشاء هذا التقرير من نظام صلب ERP.',
             'invoice_footer' => $settings?->invoice_footer ?? null,
             'primary_color' => $settings?->primary_color ?? '#0B2A4A',
@@ -255,16 +273,22 @@ class AdvancedReportController extends Controller
         return null;
     }
 
-    private function logoDataUri(?string $path): ?string
+    private function brandingDataUri(?string $path): ?string
     {
         if (!$path) return null;
         try {
-            if (!Storage::disk('public')->exists($path)) return null;
-            $mime = Storage::disk('public')->mimeType($path) ?: 'image/png';
-            return 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($path));
+            $disk = str_starts_with($path, 'print-branding/') ? 'local' : 'public';
+            if (!Storage::disk($disk)->exists($path)) return null;
+            $mime = Storage::disk($disk)->mimeType($path) ?: 'image/png';
+            return 'data:' . $mime . ';base64,' . base64_encode(Storage::disk($disk)->get($path));
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function localizedPrintText(array $texts, string $locale): string
+    {
+        return trim((string)($texts[$locale] ?? $texts['ar'] ?? $texts['en'] ?? ''));
     }
 
     private function summaryLabel(string $key): string
