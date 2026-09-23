@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\{
     PurchaseOrderController,
     ReportController,
     RoleController,
+    RoadWaybillController,
     SalesInvoiceController,
     SalesQuotationController,
     ShipmentController,
@@ -423,6 +424,11 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
         Route::get('/accounting-integrity', [AccountingIntegrityController::class, 'index']);
 
         Route::get('/official-documents', [OfficialDocumentController::class, 'index']);
+        Route::get('/road-waybills/meta', [RoadWaybillController::class, 'meta']);
+        Route::get('/road-waybills', [RoadWaybillController::class, 'index']);
+        Route::post('/road-waybills', [RoadWaybillController::class, 'store']);
+        Route::get('/road-waybills/{id}', [RoadWaybillController::class, 'show']);
+        Route::put('/road-waybills/{id}', [RoadWaybillController::class, 'update']);
         Route::post('/official-documents', [OfficialDocumentController::class, 'store']);
         Route::get(
             '/official-documents/attachments/{attachmentId}/download',

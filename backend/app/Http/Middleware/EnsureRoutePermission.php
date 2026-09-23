@@ -177,6 +177,7 @@ class EnsureRoutePermission
         if (str_starts_with($uri, 'financial-setup')) return in_array($method,['GET','HEAD'],true) ? 'financial_setup.view' : (str_ends_with($uri,'/cost-center') ? 'cost_centers.manage' : 'financial_setup.manage');
         if (str_starts_with($uri, 'opening-balances')) return in_array($method,['GET','HEAD'],true) ? 'opening_balances.view' : 'opening_balances.post';
         if (str_starts_with($uri, 'official-documents')) return 'official_documents.view';
+        if (str_starts_with($uri, 'road-waybills')) return 'official_documents.view';
         if (str_starts_with($uri, 'inventory-operations')) return in_array($method,['GET','HEAD'],true) ? 'inventory.view' : 'inventory.process';
         if (str_starts_with($uri, 'inventory')) return 'inventory.view';
         if (str_starts_with($uri, 'imports/export/')) return 'imports.export';
@@ -205,7 +206,7 @@ class EnsureRoutePermission
 
     private function isCompanyPortalUri(string $uri): bool
     {
-        foreach (['items','cars','suppliers','customers','drivers','workers','vouchers','expenses','company-settings','financial-accounts','financial-setup','opening-balances','accounts','journal-entries','trial-balance','accounting','financial-years','inventory','inventory-operations','weighbridge','imports','purchase-invoices','sales-invoices','quotations','purchase-orders','shipments','shipment-costs','payroll','fixed-assets','fixed-asset','dashboard','reports','statements','official-documents','permission-matrix','tax-reports','commercial-returns','accounting-integrity'] as $prefix) {
+        foreach (['items','cars','suppliers','customers','drivers','workers','vouchers','expenses','company-settings','financial-accounts','financial-setup','opening-balances','accounts','journal-entries','trial-balance','accounting','financial-years','inventory','inventory-operations','weighbridge','imports','purchase-invoices','sales-invoices','quotations','purchase-orders','shipments','shipment-costs','payroll','fixed-assets','fixed-asset','dashboard','reports','statements','official-documents','road-waybills','permission-matrix','tax-reports','commercial-returns','accounting-integrity'] as $prefix) {
             if ($uri === $prefix || str_starts_with($uri, $prefix.'/')) return true;
         }
         return false;

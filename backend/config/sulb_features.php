@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'pdf' => ['chromium_path' => env('SULB_PDF_CHROMIUM_PATH')],
     'features' => [
         'core' => ['name' => 'Core ERP', 'module' => 'core'],
         'weighbridge' => ['name' => 'Weighbridge', 'module' => 'weighbridge'],
@@ -28,5 +29,6 @@ return [
         'reports' => 'reports', 'statements' => 'reports', 'imports' => 'imports',
         'fixed-assets' => 'fixed_assets', 'fixed-asset' => 'fixed_assets', 'payroll' => 'payroll',
         'official-documents' => 'official_documents',
+        'road-waybills' => 'official_documents',
     ],
 ];

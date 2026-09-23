@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\Accounting\AccountingContext;
 use App\Services\ReportCenterService;
+use App\Services\Print\ChromiumPdfRenderer;
 use App\Support\TenantScope;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -168,8 +168,9 @@ class AdvancedReportController extends Controller
     private function pdf(array $data, array $profile, string $name, array $filters)
     {
         $html = $this->reportHtml($data, $profile, $filters);
-        $pdf = Pdf::loadHTML($html)->setPaper('a4', count($data['columns']) > 7 ? 'landscape' : 'portrait');
-        return $pdf->download($name . '.pdf');
+        $orientation = count($data['columns']) > 7 ? 'landscape' : ($profile['print_options']['orientation'] ?? 'portrait');
+        $content = app(ChromiumPdfRenderer::class)->render($html, in_array($orientation, ['portrait','landscape'], true) ? $orientation : 'portrait');
+        return response($content, 200, ['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="'.$name.'.pdf"']);
     }
 
     private function reportHtml(array $data, array $profile, array $filters): string
@@ -187,14 +188,37 @@ class AdvancedReportController extends Controller
             '.summary{margin-top:10px;padding:8px;background:#f8fafc;border:1px solid #dbe3ec}.footer{margin-top:14px;border-top:1px solid #cbd5e1;padding-top:8px;color:#64748b;font-size:8px;page-break-inside:avoid}' .
             'thead{display:table-header-group}tr{page-break-inside:avoid}.header{page-break-after:avoid}' .
             '</style></head><body>';
-        $headerImage = !empty($profile['header_image_data_uri'])
+        $printOptions = $profile['print_options'];
+        $reportTemplate = $printOptions['templates']['report'] ?? [];
+        $variant = $reportTemplate['selected'] ?? 'CLASSIC';
+        $variantOptions = $reportTemplate['variants'][$variant] ?? [];
+        $printOptions['visibility'] = array_merge($printOptions['visibility'] ?? [], $reportTemplate['visibility'] ?? [], $variantOptions['visibility'] ?? []);
+        $printOptions['watermark'] = array_merge($printOptions['watermark'] ?? [], $variantOptions['watermark'] ?? []);
+        if ($variant === 'FULL_HEADER' && empty($printOptions['header_mode'])) $printOptions['header_mode'] = 'FULL_IMAGE';
+        $visible = static fn (string $key): bool => in_array($key, ['signature', 'stamp'], true)
+            ? ($printOptions['visibility'][$key] ?? false) === true
+            : ($printOptions['visibility'][$key] ?? true) !== false;
+        $headerImage = $visible('header_image') && ($printOptions['header_mode'] ?? '') !== 'TEXT' && !empty($profile['header_image_data_uri'])
             ? '<img src="' . e($profile['header_image_data_uri']) . '" style="display:block;width:100%;max-height:80px;object-fit:contain;margin-bottom:8px">'
             : '';
-        $logo = !empty($profile['logo_data_uri'])
+        $logo = $visible('logo') && !in_array(($printOptions['header_mode'] ?? ''), ['TEXT', 'FULL_IMAGE'], true) && !empty($profile['logo_data_uri'])
             ? '<img src="' . e($profile['logo_data_uri']) . '" style="width:54px;height:54px;object-fit:contain;float:right;margin-left:10px">'
             : '';
         $headerText = $this->localizedPrintText($profile['print_header_texts'], $profile['print_locale']);
-        $html .= '<div class="header">' . $headerImage . $logo . '<div class="company">' . e($profile['company_name']) . '</div><div class="title">' . e($data['title']) . '</div>';
+        $mark = $printOptions['watermark'] ?? [];
+        if ($visible('watermark') && !empty($mark['enabled'])) {
+            $opacity = max(.03, min(.3, (float)($mark['opacity'] ?? .12)));
+            $size = max(12, min(160, (int)($mark['size'] ?? 42)));
+            $angle = max(-70, min(70, (int)($mark['angle'] ?? -30)));
+            $color = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($mark['color'] ?? '')) ? $mark['color'] : '#64748b';
+            $position = match ($mark['position'] ?? 'CENTER') {'TOP'=>'22%','BOTTOM'=>'68%',default=>'45%'};
+            $placement = ($mark['pages'] ?? 'ALL') === 'FIRST' ? 'absolute' : 'fixed';
+            $markContent = ($mark['mode'] ?? 'TEXT') === 'IMAGE' && !empty($profile['watermark_data_uri'])
+                ? '<img src="' . e($profile['watermark_data_uri']) . '" style="max-width:140mm;max-height:65mm">'
+                : e((string)($mark['text'] ?? $profile['company_name']));
+            $html .= '<div style="position:' . $placement . ';top:' . $position . ';left:15%;width:70%;text-align:center;opacity:' . $opacity . ';font-size:' . $size . 'px;color:' . $color . ';transform:rotate(' . $angle . 'deg);z-index:-1">' . $markContent . '</div>';
+        }
+        $html .= '<div class="header">' . $headerImage . $logo . '<div class="company">' . ($visible('company_name') && ($printOptions['show_company_name'] ?? true) !== false && ($printOptions['header_mode'] ?? '') !== 'FULL_IMAGE' ? e($profile['company_name']) : '') . '</div><div class="title">' . e($data['title']) . '</div>';
         if ($headerText !== '') $html .= '<div class="muted">' . nl2br(e($headerText)) . '</div>';
         $html .= '<div class="meta">' . e($period) . '</div><div class="muted">تاريخ الإصدار: ' . e($data['generated_at']) . ' | الفرع: ' . e($profile['branch_name']) . '</div></div>';
         $html .= '<table><thead><tr>';
@@ -216,10 +240,14 @@ class AdvancedReportController extends Controller
             $html .= '</div>';
         }
         $footerText = $this->localizedPrintText($profile['print_footer_texts'], $profile['print_locale']) ?: $profile['report_footer'];
-        $footerImage = !empty($profile['footer_image_data_uri'])
+        $footerImage = $visible('footer_image') && ($printOptions['footer_mode'] ?? '') !== 'TEXT' && !empty($profile['footer_image_data_uri'])
             ? '<img src="' . e($profile['footer_image_data_uri']) . '" style="display:block;width:100%;max-height:60px;object-fit:contain;margin-top:6px">'
             : '';
-        $html .= '<div class="footer">' . nl2br(e($footerText)) . $footerImage . '</div></body></html>';
+        $signature = $visible('signature') && !empty($profile['signature_data_uri'])
+            ? '<img src="' . e($profile['signature_data_uri']) . '" style="max-width:35mm;max-height:18mm;object-fit:contain;margin:5px">' : '';
+        $stamp = $visible('stamp') && !empty($profile['stamp_data_uri'])
+            ? '<img src="' . e($profile['stamp_data_uri']) . '" style="max-width:25mm;max-height:25mm;object-fit:contain;margin:5px">' : '';
+        $html .= '<div class="footer">' . $signature . $stamp . ($visible('footer_notes') && ($printOptions['footer_mode'] ?? '') !== 'IMAGE' ? nl2br(e($footerText)) : '') . $footerImage . '</div></body></html>';
         return $html;
     }
 
@@ -230,6 +258,7 @@ class AdvancedReportController extends Controller
         $branch = $branchId ? DB::table('branches')->where('company_id', $companyId)->where('id', $branchId)->first() : null;
 
         return [
+            'company_id' => $companyId,
             'company_name' => $settings?->print_company_name ?? $company->company_name ?? 'صلب ERP',
             'phone' => $settings?->print_phone ?? $company->phone ?? null,
             'email' => $settings?->print_email ?? $company->email ?? null,
@@ -242,9 +271,15 @@ class AdvancedReportController extends Controller
             'has_logo' => !empty($settings?->logo_path),
             'has_header_image' => !empty($settings?->header_image_path),
             'has_footer_image' => !empty($settings?->footer_image_path),
+            'has_signature' => !empty($settings?->signature_path),
+            'has_stamp' => !empty($settings?->stamp_path),
+            'has_watermark' => !empty($settings?->watermark_path),
             'logo_data_uri' => $this->brandingDataUri($settings?->logo_path),
             'header_image_data_uri' => $this->brandingDataUri($settings?->header_image_path),
             'footer_image_data_uri' => $this->brandingDataUri($settings?->footer_image_path),
+            'signature_data_uri' => $this->brandingDataUri($settings?->signature_path),
+            'stamp_data_uri' => $this->brandingDataUri($settings?->stamp_path),
+            'watermark_data_uri' => $this->brandingDataUri($settings?->watermark_path),
             'print_header_texts' => json_decode((string)($settings?->print_header_texts ?? ''), true) ?: [],
             'print_footer_texts' => json_decode((string)($settings?->print_footer_texts ?? ''), true) ?: [],
             'print_options' => json_decode((string)($settings?->print_options ?? ''), true) ?: [],

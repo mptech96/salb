@@ -387,6 +387,12 @@ export const companyNavigation: NavigationGroup[] = [
         permission: "official_documents.view",
       },
       {
+        href: "/road-waybills",
+        label: "طلبات نقل المواد",
+        icon: "🚚",
+        permission: "official_documents.view",
+      },
+      {
         href: "/audit-logs",
         label: "سجل النشاط",
         icon: "🧾",

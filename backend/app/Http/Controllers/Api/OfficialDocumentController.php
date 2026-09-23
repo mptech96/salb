@@ -67,6 +67,17 @@ class OfficialDocumentController extends Controller
             'doc_title' => 'required|string|max:255',
             'doc_type' => 'nullable|string|max:100',
             'doc_content' => 'nullable|string',
+            'print_metadata' => 'nullable|array',
+            'print_metadata.template_key' => 'nullable|in:CLASSIC,MODERN,FULL_HEADER,COMPACT,COMPANY',
+            'print_metadata.reference' => 'nullable|string|max:100',
+            'print_metadata.document_date' => 'nullable|date',
+            'print_metadata.addressee' => 'nullable|string|max:255',
+            'print_metadata.subject' => 'nullable|string|max:255',
+            'print_metadata.attachments_note' => 'nullable|string|max:1000',
+            'print_metadata.signatory_name' => 'nullable|string|max:200',
+            'print_metadata.signatory_title' => 'nullable|string|max:200',
+            'print_metadata.footer_note' => 'nullable|string|max:1000',
+            'print_metadata.auto_branding' => 'nullable|boolean',
         ]);
 
         $id = DB::table('official_documents')->insertGetId([
@@ -76,6 +87,7 @@ class OfficialDocumentController extends Controller
             'doc_title' => $request->doc_title,
             'doc_type' => $request->doc_type ?? 'GENERAL',
             'doc_content' => $request->doc_content,
+            'print_metadata' => $request->has('print_metadata') ? json_encode($request->input('print_metadata'), JSON_UNESCAPED_UNICODE) : null,
             'status' => $request->status ?? 'DRAFT',
             'created_at' => now(),
             'updated_at' => now(),
@@ -139,19 +151,30 @@ class OfficialDocumentController extends Controller
             'doc_title' => 'required|string|max:255',
             'doc_type' => 'nullable|string|max:100',
             'doc_content' => 'nullable|string',
+            'print_metadata' => 'nullable|array',
+            'print_metadata.template_key' => 'nullable|in:CLASSIC,MODERN,FULL_HEADER,COMPACT,COMPANY',
+            'print_metadata.reference' => 'nullable|string|max:100',
+            'print_metadata.document_date' => 'nullable|date',
+            'print_metadata.addressee' => 'nullable|string|max:255',
+            'print_metadata.subject' => 'nullable|string|max:255',
+            'print_metadata.attachments_note' => 'nullable|string|max:1000',
+            'print_metadata.signatory_name' => 'nullable|string|max:200',
+            'print_metadata.signatory_title' => 'nullable|string|max:200',
+            'print_metadata.footer_note' => 'nullable|string|max:1000',
+            'print_metadata.auto_branding' => 'nullable|boolean',
         ]);
 
         $updated = DB::table('official_documents')
             ->where('company_id', $companyId)
             ->when((int) $this->branchId() > 0, fn ($q) => $q->where('branch_id', (int) $this->branchId()))
             ->where('id', $id)
-            ->update([
+            ->update(array_merge([
                 'doc_title' => $request->doc_title,
                 'doc_type' => $request->doc_type ?? 'GENERAL',
                 'doc_content' => $request->doc_content,
                 'status' => $request->status ?? 'DRAFT',
                 'updated_at' => now(),
-            ]);
+            ], $request->has('print_metadata') ? ['print_metadata' => json_encode($request->input('print_metadata'), JSON_UNESCAPED_UNICODE)] : []));
 
         if (!$updated) {
             return response()->json([

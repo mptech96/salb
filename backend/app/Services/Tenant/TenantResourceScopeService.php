@@ -55,6 +55,7 @@ final class TenantResourceScopeService
         'commercial-returns/{commercial_return}' => ['table' => 'commercial_returns', 'param' => 'commercial_return', 'branch' => true],
         'commercial-returns/{id}' => ['table' => 'commercial_returns', 'param' => 'id', 'branch' => true],
         'official-documents/{id}' => ['table' => 'official_documents', 'param' => 'id', 'branch' => true],
+        'road-waybills/{id}' => ['table' => 'road_waybills', 'param' => 'id', 'branch' => true],
         'official-documents/attachments/{attachmentId}' => ['table' => 'official_document_attachments', 'param' => 'attachmentId', 'branch' => false],
         'official-documents/attachments/{attachmentId}/download' => ['table' => 'official_document_attachments', 'param' => 'attachmentId', 'branch' => false],
     ];

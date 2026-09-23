@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../api";
+import Link from "next/link";
 import useSystemFeedback from "@/components/common/useSystemFeedback";
+import { printVisible, resolvePrintOptions } from "@/lib/print-branding";
+
+type PrintMeta = { template_key:string; reference:string; document_date:string; addressee:string; subject:string; attachments_note:string; signatory_name:string; signatory_title:string; footer_note:string; auto_branding:boolean };
+const blankPrintMeta = ():PrintMeta => ({template_key:"CLASSIC",reference:"",document_date:"",addressee:"",subject:"",attachments_note:"",signatory_name:"",signatory_title:"",footer_note:"",auto_branding:true});
+const escapeHtml = (value:unknown) => String(value??"").replace(/[&<>"']/g, character=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[character] || "&#39;"));
 
 type OfficialDoc = {
   id: number;
@@ -48,6 +54,7 @@ export default function OfficialDocumentsPage() {
     doc_type: "GENERAL",
     status: "DRAFT",
   });
+  const [printMeta,setPrintMeta]=useState<PrintMeta>(blankPrintMeta());
 
   const fileUrl = (path?: string) => {
     if (!path) return "";
@@ -91,6 +98,7 @@ export default function OfficialDocumentsPage() {
 
   const openNew = () => {
     setSelected(null);
+    setPrintMeta(blankPrintMeta());
     setForm({ doc_title: "", doc_type: "GENERAL", status: "DRAFT" });
     setAttachments([]);
     setSavedAttachments([]);
@@ -108,6 +116,7 @@ export default function OfficialDocumentsPage() {
     const set = res.data.data.settings;
 
     setSelected(doc);
+    try { setPrintMeta((doc as OfficialDoc & {print_metadata?:string}).print_metadata ? {...blankPrintMeta(),...JSON.parse((doc as OfficialDoc & {print_metadata:string}).print_metadata)} : {...blankPrintMeta(),auto_branding:false}); } catch { setPrintMeta({...blankPrintMeta(),auto_branding:false}); }
     setSettings(set || settings);
     setSavedAttachments(res.data.data.attachments || []);
     setAttachments([]);
@@ -162,6 +171,7 @@ export default function OfficialDocumentsPage() {
       const payload = {
         ...form,
         doc_content: getContentWithFloating(),
+        print_metadata: printMeta,
       };
 
       let docId = selected?.id;
@@ -295,7 +305,23 @@ export default function OfficialDocumentsPage() {
     return temp.innerHTML;
   };
 
-  const buildOfficialPaperHtml = (assets: {logo:string;header:string;footer:string}) => {
+  const buildOfficialPaperHtml = (assets: {logo:string;header:string;footer:string;signature:string;stamp:string;watermark:string}) => {
+    const storedOptions=settings?.print_options || {};
+    const options=resolvePrintOptions({
+      ...storedOptions,
+      templates:{...storedOptions.templates,official:{...storedOptions.templates?.official,
+        selected:printMeta.template_key || storedOptions.templates?.official?.selected}},
+    },"official");
+    const show=(key:Parameters<typeof printVisible>[1])=>printVisible(options,key);
+    const fullHeader=options.header_mode==="FULL_IMAGE";
+    const mark=options.watermark;
+    const markOpacity=Math.max(.03,Math.min(.3,Number(mark?.opacity ?? .12)));
+    const markSize=Math.max(12,Math.min(160,Number(mark?.size ?? 48)));
+    const markAngle=Math.max(-70,Math.min(70,Number(mark?.angle ?? -30)));
+    const markTop=mark?.position==="TOP"?"28%":mark?.position==="BOTTOM"?"72%":"50%";
+    const markColor=/^#[0-9a-f]{6}$/i.test(mark?.color || "")?mark?.color:"#64748b";
+    const markPosition=mark?.pages==="FIRST"?"absolute":"fixed";
+    const automaticApproval=printMeta.auto_branding && Boolean((selected as OfficialDoc & {print_metadata?:string}|null)?.print_metadata || !selected);
     const floatingHtml = floatingItems
       .map(
         (item) => `
@@ -316,19 +342,20 @@ export default function OfficialDocumentsPage() {
     return `
       <html lang="ar" dir="rtl">
         <head>
-          <title>${form.doc_title || "ورقة رسمية"}</title>
+          <title>${escapeHtml(form.doc_title || "ورقة رسمية")}</title>
           <style>
             @page { size: A4; margin: 0; }
             * { box-sizing: border-box; }
             body { margin: 0; background: white; font-family: Arial, Tahoma, sans-serif; color: #111827; }
-            .paper { width: 210mm; min-height: 297mm; background: white; margin: 0 auto; padding: 18mm 18mm 22mm; position: relative; overflow:hidden; }
+            .paper { width: 210mm; min-height: 297mm; background: white; margin: 0 auto; padding: 18mm 18mm 22mm; position: relative; }
             .brand-image { display:block; width:100%; max-height:28mm; object-fit:contain; margin-bottom:8px; }
             .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid ${settings?.primary_color || "#0B2A4A"}; padding-bottom: 14px; page-break-after:avoid; }
             .company h1 { margin: 0 0 8px; color: ${settings?.primary_color || "#0B2A4A"}; font-size: 24px; }
             .company div { font-size: 13px; line-height: 1.8; color: #475569; }
             .logo { max-width: 140px; max-height: 90px; object-fit: contain; }
             .doc-title { text-align: center; margin: 30px 0 20px; font-size: 22px; color: ${settings?.primary_color || "#0B2A4A"}; }
-            .content { min-height: 650px; line-height: 2; font-size: 16px; position:relative; z-index:2; }
+            .content { min-height: 150mm; line-height: 2; font-size: 16px; position:relative; z-index:2; overflow-wrap:anywhere; }
+            .watermark { position:${markPosition}; top:${markTop}; left:15%; width:70%; text-align:center; opacity:${markOpacity}; font-size:${markSize}px; color:${markColor}; transform:rotate(${markAngle}deg); z-index:0; pointer-events:none; }
             .footer { margin-top:12mm; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 12px; color: #64748b; text-align: center; page-break-inside:avoid; }
             .footer img { display:block; width:100%; max-height:20mm; object-fit:contain; margin-top:8px; }
             table thead { display:table-header-group; } tr { page-break-inside:avoid; }
@@ -337,20 +364,27 @@ export default function OfficialDocumentsPage() {
         <body>
           <div class="paper">
             ${floatingHtml}
-            ${assets.header ? `<img class="brand-image" src="${assets.header}" alt="" />` : ""}
+            ${show("watermark")&&options.watermark?.enabled ? `<div class="watermark">${options.watermark.mode==="IMAGE"&&assets.watermark?`<img src="${assets.watermark}" style="max-width:140mm;max-height:65mm"/>`:escapeHtml(options.watermark.text||settings?.print_company_name||"")}</div>`:""}
+            ${show("header_image")&&options.header_mode!=="TEXT"&&assets.header ? `<img class="brand-image" src="${assets.header}" alt="" />` : ""}
             <div class="header">
               <div class="company">
-                <h1>${settings?.print_company_name || "اسم المكتب"}</h1>
-                <div>${settings?.print_address || ""}</div>
-                <div>${settings?.print_phone || ""} - ${settings?.print_email || ""}</div>
-                <div>السجل التجاري: ${settings?.commercial_register || "-"} | الرقم الضريبي: ${settings?.tax_number || "-"}</div>
+                ${!fullHeader&&show("company_name")?`<h1>${escapeHtml(settings?.print_company_name||"اسم المكتب")}</h1>`:""}
+                ${!fullHeader&&show("company_details")?`<div>${escapeHtml(settings?.print_address)}</div><div>${escapeHtml(settings?.print_phone)} - ${escapeHtml(settings?.print_email)}</div>`:""}
+                ${!fullHeader&&show("commercial_register")?`<div>السجل التجاري: ${escapeHtml(settings?.commercial_register)}</div>`:""}
+                ${!fullHeader&&show("tax_number")?`<div>الرقم الضريبي: ${escapeHtml(settings?.tax_number)}</div>`:""}
               </div>
-              ${assets.logo ? `<img class="logo" src="${assets.logo}" alt="" />` : ""}
+              ${!fullHeader&&show("logo")&&options.header_mode!=="TEXT"&&assets.logo ? `<img class="logo" src="${assets.logo}" alt="" />` : ""}
             </div>
-            ${settings?.print_header_texts?.ar ? `<div>${settings.print_header_texts.ar}</div>` : ""}
-            <h2 class="doc-title">${form.doc_title || "ورقة رسمية"}</h2>
+            ${settings?.print_header_texts?.ar ? `<div>${escapeHtml(settings.print_header_texts.ar)}</div>` : ""}
+            <h2 class="doc-title">${escapeHtml(form.doc_title || "ورقة رسمية")}</h2>
+            ${printMeta.reference?`<p>المرجع: ${escapeHtml(printMeta.reference)}</p>`:""}${printMeta.document_date?`<p>التاريخ: ${escapeHtml(printMeta.document_date)}</p>`:""}
+            ${printMeta.addressee?`<p>إلى: ${escapeHtml(printMeta.addressee)}</p>`:""}${printMeta.subject?`<p>الموضوع: ${escapeHtml(printMeta.subject)}</p>`:""}
             <div class="content">${cleanContentForPrint()}</div>
-            <div class="footer">${settings?.print_footer_texts?.ar || settings?.report_footer || ""}${assets.footer ? `<img src="${assets.footer}" alt="" />` : ""}</div>
+            ${printMeta.attachments_note?`<p>المرفقات: ${escapeHtml(printMeta.attachments_note)}</p>`:""}
+            ${printMeta.signatory_name?`<p>${escapeHtml(printMeta.signatory_name)} — ${escapeHtml(printMeta.signatory_title)}</p>`:""}
+            ${automaticApproval&&show("signature")&&assets.signature?`<img src="${assets.signature}" alt="" style="max-width:35mm;max-height:18mm" />`:""}
+            ${automaticApproval&&show("stamp")&&assets.stamp?`<img src="${assets.stamp}" alt="" style="max-width:28mm;max-height:25mm" />`:""}
+            <div class="footer">${show("footer_notes")?escapeHtml(printMeta.footer_note||settings?.print_footer_texts?.ar||settings?.report_footer||""):""}${show("footer_image")&&options.footer_mode!=="TEXT"&&assets.footer ? `<img src="${assets.footer}" alt="" />` : ""}</div>
           </div>
         </body>
       </html>
@@ -360,12 +394,15 @@ export default function OfficialDocumentsPage() {
   const printDoc = async () => {
     const win = window.open("", "_blank");
     if (!win) return;
-    const [logo, header, footer] = await Promise.all([
+    const [logo, header, footer, signature, stamp, watermark] = await Promise.all([
       loadPrivateBrandingAsset("logo", settings?.logo_path),
       loadPrivateBrandingAsset("header_image", settings?.header_image_path),
       loadPrivateBrandingAsset("footer_image", settings?.footer_image_path),
+      loadPrivateBrandingAsset("signature", settings?.signature_path),
+      loadPrivateBrandingAsset("stamp", settings?.stamp_path),
+      loadPrivateBrandingAsset("watermark", settings?.watermark_path),
     ]);
-    win.document.write(buildOfficialPaperHtml({logo, header, footer}));
+    win.document.write(buildOfficialPaperHtml({logo, header, footer, signature, stamp, watermark}));
     win.document.close();
     await waitForPrintWindow(win);
     win.print();
@@ -379,6 +416,7 @@ export default function OfficialDocumentsPage() {
         <p className="mt-2 text-sm text-blue-100">
           محرر مرن مع صور قابلة للسحب، ختم وتوقيع بأي مكان، مرفقات وطباعة رسمية.
         </p>
+        <Link href="/road-waybills" className="mt-3 inline-block rounded-lg border border-white/50 px-3 py-2 text-sm">طلبات نقل المواد — ورقة الطريق</Link>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -441,7 +479,7 @@ export default function OfficialDocumentsPage() {
                     <td className="p-4">
                       <div className="flex flex-wrap gap-2">
                         <button onClick={() => openEdit(doc.id)} className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white">فتح</button>
-                        <button onClick={async () => { await openEdit(doc.id); setTimeout(printDoc, 600); }} className="rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold text-white">طباعة</button>
+                        <button onClick={() => void openEdit(doc.id)} className="rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold text-white">فتح للطباعة</button>
                         <button onClick={() => deleteDoc(doc.id)} className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white">حذف</button>
                       </div>
                     </td>
@@ -491,6 +529,11 @@ export default function OfficialDocumentsPage() {
                   <option value="ARCHIVED">مؤرشفة</option>
                 </select>
               </div>
+              <details className="mt-3 rounded-xl border p-3"><summary className="cursor-pointer font-bold">بيانات وقالب الطباعة الرسمية</summary><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="text-sm">القالب<select className="mt-1 w-full rounded-lg border p-2" value={printMeta.template_key} onChange={e=>setPrintMeta(m=>({...m,template_key:e.target.value}))}>{[["CLASSIC","رسمي"],["MODERN","حديث"],["FULL_HEADER","ترويسة كاملة"],["COMPACT","مختصر"],["COMPANY","مخصص للشركة"]].map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+                {([['reference','رقم المرجع'],['document_date','التاريخ'],['addressee','الجهة الموجه إليها'],['subject','الموضوع'],['attachments_note','بيان المرفقات'],['signatory_name','اسم الموقّع'],['signatory_title','صفة الموقّع'],['footer_note','ملاحظة التذييل']] as [keyof PrintMeta,string][]).map(([key,label])=><label key={key} className="text-sm">{label}<input type={key==='document_date'?'date':'text'} className="mt-1 w-full rounded-lg border p-2" value={String(printMeta[key]||'')} onChange={e=>setPrintMeta(m=>({...m,[key]:e.target.value}))}/></label>)}
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={printMeta.auto_branding} onChange={e=>setPrintMeta(m=>({...m,auto_branding:e.target.checked}))}/> إظهار الختم والتوقيع المحفوظين عند توفرهما (صورة وليست اعتمادًا إلكترونيًا)</label>
+              </div></details>
 
               <Toolbar exec={exec} />
             </div>
@@ -665,7 +708,7 @@ function Toolbar({ exec }: { exec: (cmd: string, value?: string) => void }) {
   );
 }
 
-async function loadPrivateBrandingAsset(asset: "logo" | "header_image" | "footer_image" | "stamp" | "signature", configured: unknown): Promise<string> {
+async function loadPrivateBrandingAsset(asset: "logo" | "header_image" | "footer_image" | "stamp" | "signature" | "watermark", configured: unknown): Promise<string> {
   if (!configured) return "";
   try {
     const response = await api.get(`/company-settings/assets/${asset}`, { responseType: "blob" });

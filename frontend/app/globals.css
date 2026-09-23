@@ -152,7 +152,12 @@ body {
   .print-branding-header { break-after: avoid !important; page-break-after: avoid !important; }
   .print-branding-header > img { max-height: var(--print-header-height, 28mm) !important; }
   .print-branding-footer { break-inside: avoid !important; page-break-inside: avoid !important; }
+  .print-road-footer { break-inside: auto !important; page-break-inside: auto !important; }
   .print-branding-footer img { max-height: var(--print-footer-height, 20mm) !important; }
+  .print-road-footer img { width: auto !important; max-width: 100% !important; max-height: 10mm !important; }
+  .print-approval-boxes { margin-top: 4mm !important; gap: 4mm !important; }
+  .print-approval-box { min-height: 28mm !important; padding: 2mm !important; }
+  .print-approval-box img { max-height: 15mm !important; }
   .no-print { display: none !important; }
   .print-only { display: block !important; visibility: visible !important; }
   table { width: 100% !important; border-collapse: collapse !important; }

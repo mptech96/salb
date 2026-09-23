@@ -21,7 +21,7 @@ const NAVIGATION_FEATURES: Array<[string, string]> = [
   ["/accounting", "accounting"], ["/journal-entries", "accounting"], ["/financial-years", "accounting"],
   ["/accounts", "accounting"], ["/tax-reports", "tax"], ["/reports", "reports"],
   ["/imports", "imports"], ["/fixed-assets", "fixed_assets"], ["/payroll", "payroll"],
-  ["/official-documents", "official_documents"],
+  ["/official-documents", "official_documents"], ["/road-waybills", "official_documents"],
 ];
 
 function featureAllowed(href: string, entitlements: Record<string, boolean>): boolean {
