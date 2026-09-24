@@ -358,7 +358,7 @@ export default function OfficialDocumentsPage() {
             .company div { font-size: 13px; line-height: 1.8; color: #475569; }
             .logo { width:${logoWidth}mm; max-height:${Math.max(12,Math.min(45,logoWidth))}mm; object-fit: contain; }
             .doc-title { text-align: center; margin: 30px 0 20px; font-size: 22px; color: ${settings?.primary_color || "#0B2A4A"}; }
-            .content { min-height: 150mm; line-height: 2; font-size: 16px; position:relative; z-index:2; overflow-wrap:anywhere; }
+            .content { min-height: 80mm; line-height: 2; font-size: 16px; position:relative; z-index:2; overflow-wrap:anywhere; }
             .watermark { position:${markPosition}; top:${markTop}; left:15%; width:70%; text-align:center; opacity:${markOpacity}; font-size:${markSize}px; color:${markColor}; transform:rotate(${markAngle}deg); z-index:0; pointer-events:none; }
             .footer { margin-top:12mm; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 12px; color: #64748b; text-align: center; page-break-inside:avoid; }
             .footer img { display:block; width:100%; max-height:20mm; object-fit:contain; margin-top:8px; }

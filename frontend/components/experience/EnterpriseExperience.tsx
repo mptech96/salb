@@ -72,7 +72,7 @@ export default function EnterpriseExperience({ pathname, user, groups, isPlatfor
   }, [helpOpen, tourOpen, welcomeOpen]);
 
   return <>
-    {welcomeOpen ? <div className="fixed inset-0 z-[210] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="sulb-welcome-title">
+    {welcomeOpen ? <div className="no-print fixed inset-0 z-[210] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="sulb-welcome-title">
       <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--sulb-primary)] text-lg font-black text-white">ص</div>
         <h2 id="sulb-welcome-title" className="mt-4 text-xl font-bold text-slate-950">مرحبًا بك في صلب</h2>
@@ -83,7 +83,7 @@ export default function EnterpriseExperience({ pathname, user, groups, isPlatfor
       </div>
     </div> : null}
 
-    {tourOpen ? <div className="fixed inset-0 z-[220] pointer-events-none" dir="rtl" aria-live="polite">
+    {tourOpen ? <div className="no-print fixed inset-0 z-[220] pointer-events-none" dir="rtl" aria-live="polite">
       <div className="absolute inset-0 bg-slate-950/55" />
       {targetRect ? <div className="absolute rounded-lg ring-4 ring-sky-400 ring-offset-4 ring-offset-white/90 transition-[inset,width,height] motion-reduce:transition-none" style={{ top: Math.max(8, targetRect.top), left: Math.max(8, targetRect.left), width: Math.min(targetRect.width, window.innerWidth - 16), height: Math.min(targetRect.height, window.innerHeight - 16) }} /> : null}
       <div className="pointer-events-auto absolute inset-x-3 bottom-3 mx-auto w-auto max-w-lg rounded-xl border border-slate-200 bg-white p-4 shadow-2xl sm:bottom-6">
@@ -93,7 +93,7 @@ export default function EnterpriseExperience({ pathname, user, groups, isPlatfor
       </div>
     </div> : null}
 
-    {helpOpen ? <div className="fixed inset-0 z-[215]" dir="rtl"><button type="button" aria-label="إغلاق المساعدة" onClick={() => setHelpOpen(false)} className="absolute inset-0 bg-slate-950/45" /><aside className="absolute inset-y-0 left-0 flex w-full max-w-md flex-col bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="context-help-title">
+    {helpOpen ? <div className="no-print fixed inset-0 z-[215]" dir="rtl"><button type="button" aria-label="إغلاق المساعدة" onClick={() => setHelpOpen(false)} className="absolute inset-0 bg-slate-950/45" /><aside className="absolute inset-y-0 left-0 flex w-full max-w-md flex-col bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="context-help-title">
       <header className="flex items-start justify-between border-b border-slate-200 p-4"><div><div className="text-[10px] font-bold text-sky-700">مساعدة سياقية</div><h2 id="context-help-title" className="mt-1 text-lg font-bold text-slate-950">{currentHelp?.title || "مساعدة صلب"}</h2></div><button type="button" onClick={() => setHelpOpen(false)} className="enterprise-icon-button" aria-label="إغلاق">×</button></header>
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 text-sm leading-7 text-slate-600">{currentHelp ? <><HelpSection title="ما وظيفة الشاشة؟" text={currentHelp.purpose} /><HelpSection title="متى تستخدمها؟" text={currentHelp.when} /><div><h3 className="text-xs font-bold text-slate-900">أهم الإجراءات</h3><ul className="mt-1 list-inside list-disc text-xs">{currentHelp.actions.map((action) => <li key={action}>{action}</li>)}</ul></div>{currentHelp.outcome ? <HelpSection title="ماذا يحدث بعد الإجراء؟" text={currentHelp.outcome} /> : null}{currentHelp.caution ? <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"><strong>تنبيه:</strong> {currentHelp.caution}</div> : null}</> : <p>افتح مركز المساعدة للوصول إلى الأدلة المتاحة ضمن صلاحياتك.</p>}</div>
       <footer className="grid gap-2 border-t border-slate-200 p-4 sm:grid-cols-2"><Link href="/help" onClick={() => setHelpOpen(false)} className="enterprise-button enterprise-button-primary">مركز المساعدة</Link>{!isSupportMode ? <button type="button" onClick={startTour} className="enterprise-button enterprise-button-secondary">إعادة الجولة</button> : null}</footer>
