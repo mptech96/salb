@@ -142,7 +142,7 @@ export default function SalarySlipPage() {
           </button>
         </div>
 
-        <section className="sulb-print-area overflow-hidden rounded-3xl bg-white p-5 shadow-xl print:rounded-none print:shadow-none sm:p-8">
+        <section className="sulb-print-area overflow-hidden rounded-3xl bg-white p-5 shadow-xl print:overflow-visible print:rounded-none print:shadow-none sm:p-8">
           <PrintHeader profile={printProfile} title="كشف راتب موظف" />
           <div className="mb-6 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-3">
             <div><span className="text-slate-500">رقم المسير: </span><b>{salary.run_number || `PAY-${runId}`}</b></div>
@@ -204,8 +204,8 @@ export default function SalarySlipPage() {
                 </h2>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-right">
+              <div className="overflow-x-auto print:overflow-visible">
+                <table className="w-full min-w-[760px] text-right print:min-w-0">
                   <thead className="bg-slate-100">
                     <tr>
                       <th className="p-4">البند</th>
