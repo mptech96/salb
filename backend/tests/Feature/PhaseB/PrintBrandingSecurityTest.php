@@ -4,6 +4,7 @@ namespace Tests\Feature\PhaseB;
 
 use App\Http\Controllers\Api\CompanySettingController;
 use App\Services\Accounting\AccountingContext;
+use App\Services\EntityAddressService;
 use App\Http\Controllers\Api\AdvancedReportController;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
@@ -33,7 +34,11 @@ class PrintBrandingSecurityTest extends TestCase
             $table->json('print_header_texts')->nullable(); $table->json('print_footer_texts')->nullable(); $table->json('print_options')->nullable();
             $table->timestamps();
         });
-        Schema::create('companies', function (Blueprint $table): void {$table->id();$table->string('company_name');});
+        Schema::create('companies', function (Blueprint $table): void {
+            $table->id();$table->string('company_name');$table->string('legal_name')->nullable();$table->string('registration_number')->nullable();
+            $table->string('tax_number')->nullable();$table->string('country_code',2)->nullable();$table->string('default_language')->nullable();
+            $table->string('timezone')->nullable();$table->string('city')->nullable();$table->string('address')->nullable();$table->timestamps();
+        });
         Schema::create('entity_addresses', function (Blueprint $table): void {
             $table->id();$table->unsignedBigInteger('company_id');$table->string('entity_type');$table->unsignedBigInteger('entity_id');
             $table->boolean('is_default')->default(true);$table->boolean('is_active')->default(true);
@@ -226,6 +231,31 @@ class PrintBrandingSecurityTest extends TestCase
         self::assertStringContainsString('<PrintFooter profile={profile} family="road"', $roadWaybill);
         self::assertStringContainsString('break-inside-avoid', $approvalBoxes);
         self::assertStringContainsString('scopeKey={profile?.company_id}', $approvalBoxes);
+    }
+
+    public function test_company_print_visibility_preferences_are_persisted(): void
+    {
+        $request=Request::create('/api/company-settings','POST',[
+            'print_options'=>[
+                'paper'=>'A4','orientation'=>'landscape','margin_mm'=>16,'logo_width_mm'=>30,
+                'header_height_mm'=>25,'footer_height_mm'=>18,'show_company_name'=>false,'show_company_details'=>true,
+                'company_fields'=>['phone'=>false,'email'=>true,'city'=>false,'address'=>true,'commercial_register'=>false,'tax_number'=>true],
+            ],
+        ]);
+        $request->attributes->set('tenant_company_id',1);
+
+        $addresses=$this->mock(EntityAddressService::class);
+        $addresses->shouldReceive('upsertDefault')->once();
+        $this->controller()->update($request,app(AccountingContext::class),$addresses);
+
+        $stored=json_decode((string)DB::table('company_settings')->where('company_id',1)->value('print_options'),true);
+        self::assertSame('landscape',$stored['orientation']);
+        self::assertFalse($stored['show_company_name']);
+        self::assertTrue($stored['show_company_details']);
+        self::assertFalse($stored['company_fields']['phone']);
+        self::assertTrue($stored['company_fields']['email']);
+        self::assertFalse($stored['company_fields']['city']);
+        self::assertTrue($stored['company_fields']['tax_number']);
     }
 
     private function controller(): CompanySettingController { return app(CompanySettingController::class); }

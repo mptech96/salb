@@ -313,7 +313,11 @@ export default function OfficialDocumentsPage() {
         selected:printMeta.template_key || storedOptions.templates?.official?.selected}},
     },"official");
     const show=(key:Parameters<typeof printVisible>[1])=>printVisible(options,key);
+    const showCompanyField=(key:string)=>options.company_fields?.[key]!==false;
     const fullHeader=options.header_mode==="FULL_IMAGE";
+    const pageOrientation=options.orientation==="landscape"?"landscape":"portrait";
+    const pageMargin=Math.max(0,Math.min(35,Number(options.margin_mm)||10));
+    const logoWidth=Math.max(10,Math.min(70,Number(options.logo_width_mm)||32));
     const mark=options.watermark;
     const markOpacity=Math.max(.03,Math.min(.3,Number(mark?.opacity ?? .12)));
     const markSize=Math.max(12,Math.min(160,Number(mark?.size ?? 48)));
@@ -344,15 +348,15 @@ export default function OfficialDocumentsPage() {
         <head>
           <title>${escapeHtml(form.doc_title || "ورقة رسمية")}</title>
           <style>
-            @page { size: A4; margin: 0; }
+            @page { size: A4 ${pageOrientation}; margin: ${pageMargin}mm; }
             * { box-sizing: border-box; }
             body { margin: 0; background: white; font-family: Arial, Tahoma, sans-serif; color: #111827; }
-            .paper { width: 210mm; min-height: 297mm; background: white; margin: 0 auto; padding: 18mm 18mm 22mm; position: relative; }
+            .paper { width: 100%; min-height: 100%; background: white; margin: 0 auto; padding: 8mm; position: relative; }
             .brand-image { display:block; width:100%; max-height:28mm; object-fit:contain; margin-bottom:8px; }
             .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid ${settings?.primary_color || "#0B2A4A"}; padding-bottom: 14px; page-break-after:avoid; }
             .company h1 { margin: 0 0 8px; color: ${settings?.primary_color || "#0B2A4A"}; font-size: 24px; }
             .company div { font-size: 13px; line-height: 1.8; color: #475569; }
-            .logo { max-width: 140px; max-height: 90px; object-fit: contain; }
+            .logo { width:${logoWidth}mm; max-height:${Math.max(12,Math.min(45,logoWidth))}mm; object-fit: contain; }
             .doc-title { text-align: center; margin: 30px 0 20px; font-size: 22px; color: ${settings?.primary_color || "#0B2A4A"}; }
             .content { min-height: 150mm; line-height: 2; font-size: 16px; position:relative; z-index:2; overflow-wrap:anywhere; }
             .watermark { position:${markPosition}; top:${markTop}; left:15%; width:70%; text-align:center; opacity:${markOpacity}; font-size:${markSize}px; color:${markColor}; transform:rotate(${markAngle}deg); z-index:0; pointer-events:none; }
@@ -369,9 +373,10 @@ export default function OfficialDocumentsPage() {
             <div class="header">
               <div class="company">
                 ${!fullHeader&&show("company_name")?`<h1>${escapeHtml(settings?.print_company_name||"اسم المكتب")}</h1>`:""}
-                ${!fullHeader&&show("company_details")?`<div>${escapeHtml(settings?.print_address)}</div><div>${escapeHtml(settings?.print_phone)} - ${escapeHtml(settings?.print_email)}</div>`:""}
-                ${!fullHeader&&show("commercial_register")?`<div>السجل التجاري: ${escapeHtml(settings?.commercial_register)}</div>`:""}
-                ${!fullHeader&&show("tax_number")?`<div>الرقم الضريبي: ${escapeHtml(settings?.tax_number)}</div>`:""}
+                ${!fullHeader&&show("company_details")&&showCompanyField("address")?`<div>${escapeHtml(settings?.print_address)}</div>`:""}
+                ${!fullHeader&&show("company_details")?`<div>${[showCompanyField("phone")?settings?.print_phone:"",showCompanyField("email")?settings?.print_email:"",showCompanyField("city")?settings?.print_city:""].filter(Boolean).map(escapeHtml).join(" - ")}</div>`:""}
+                ${!fullHeader&&show("commercial_register")&&showCompanyField("commercial_register")?`<div>السجل التجاري: ${escapeHtml(settings?.commercial_register)}</div>`:""}
+                ${!fullHeader&&show("tax_number")&&showCompanyField("tax_number")?`<div>الرقم الضريبي: ${escapeHtml(settings?.tax_number)}</div>`:""}
               </div>
               ${!fullHeader&&show("logo")&&options.header_mode!=="TEXT"&&assets.logo ? `<img class="logo" src="${assets.logo}" alt="" />` : ""}
             </div>
