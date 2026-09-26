@@ -143,6 +143,29 @@ body {
    SULB ERP - Professional print mode
    ========================================================= */
 .print-only { display: none !important; }
+
+/* Dense document layouts: scoped to invoices and road waybills only. */
+.invoice-print { font-size: 0.78rem; }
+.invoice-lines th,
+.invoice-lines td { border-inline-start: 1px solid #cbd5e1; padding: 0.38rem 0.3rem; vertical-align: middle; line-height: 1.25; }
+.invoice-lines th:first-child,
+.invoice-lines td:first-child { border-inline-start: 0; }
+.invoice-lines tbody tr { border-top: 1px solid #cbd5e1; }
+.invoice-lines th { font-size: 0.68rem; font-weight: 800; text-align: center; }
+.invoice-lines th span { color: #64748b; font-size: 0.58rem; font-weight: 600; }
+.invoice-lines td { text-align: center; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.invoice-lines .invoice-item { width: 25%; text-align: right; }
+.invoice-totals > div { padding-block: 0.14rem; }
+
+.sulb-print-area:has(.print-road-footer) > .print-branding-header { margin-bottom: 0.5rem; padding-bottom: 0.4rem; }
+.sulb-print-area:has(.print-road-footer) > .print-branding-header > div:last-child { margin-top: 0.4rem; }
+.sulb-print-area:has(.print-road-footer) > .print-branding-header h1 { font-size: 1.25rem; line-height: 1.4; }
+.sulb-print-area:has(.print-road-footer) > .print-branding-header + div { gap: 0.4rem; margin-bottom: 0.55rem; }
+.sulb-print-area:has(.print-road-footer) > .print-branding-header + div > div { border-radius: 0.4rem; padding: 0.38rem 0.55rem; line-height: 1.25; }
+.sulb-print-area:has(.print-road-footer) > table th,
+.sulb-print-area:has(.print-road-footer) > table td { padding: 0.32rem 0.45rem; line-height: 1.25; overflow-wrap: anywhere; }
+.sulb-print-area:has(.print-road-footer) > p { margin-top: 0.5rem; }
+
 @media print {
   @page { size: A4; margin: 10mm; }
   html, body { background: #fff !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -166,4 +189,37 @@ body {
   tr { break-inside: avoid !important; page-break-inside: avoid !important; }
   h1, h2, h3 { break-after: avoid !important; page-break-after: avoid !important; }
   a { color: inherit !important; text-decoration: none !important; }
+
+  .invoice-print { font-size: 8.5pt !important; }
+  .invoice-print-page .print-branding-header,
+  .sulb-print-area:has(.invoice-print) > .print-branding-header { margin-bottom: 2.5mm !important; padding-bottom: 2mm !important; }
+  .sulb-print-area:has(.invoice-print) > .print-branding-header > div:last-child { margin-top: 2mm !important; }
+  .sulb-print-area:has(.invoice-print) > .print-branding-header h1 { font-size: 15pt !important; line-height: 1.2 !important; }
+  .invoice-meta-grid { gap: 1.5mm !important; }
+  .invoice-meta-field { border-radius: 1.5mm !important; padding: 1mm 1.5mm !important; }
+  .invoice-party, .invoice-shipments, .invoice-tax-summary { padding: 1.5mm 2mm !important; }
+  .invoice-lines-wrap { overflow: visible !important; }
+  .invoice-lines { table-layout: fixed !important; font-size: 7.7pt !important; }
+  .invoice-lines th, .invoice-lines td { padding: 1.25mm 1mm !important; line-height: 1.18 !important; }
+  .invoice-lines th { font-size: 7.2pt !important; }
+  .invoice-lines th span { font-size: 6.3pt !important; }
+  .invoice-lines .invoice-item { width: 25% !important; }
+  .invoice-summary-row { gap: 2mm !important; break-inside: avoid !important; page-break-inside: avoid !important; }
+  .invoice-totals { padding: 1.5mm 2mm !important; font-size: 8pt !important; }
+  .invoice-totals > div { padding-block: 0.4mm !important; }
+
+  .sulb-print-area:has(.print-road-footer) { font-size: 8.5pt !important; }
+  .sulb-print-area:has(.print-road-footer) > .print-branding-header { margin-bottom: 2mm !important; padding-bottom: 1.5mm !important; }
+  .sulb-print-area:has(.print-road-footer) > .print-branding-header > div:last-child { margin-top: 1.5mm !important; }
+  .sulb-print-area:has(.print-road-footer) > .print-branding-header h1 { font-size: 14pt !important; line-height: 1.2 !important; }
+  .sulb-print-area:has(.print-road-footer) > .print-branding-header + div { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 1.5mm !important; margin-bottom: 2mm !important; }
+  .sulb-print-area:has(.print-road-footer) > .print-branding-header + div > div { padding: 1.2mm 1.8mm !important; line-height: 1.15 !important; }
+  .sulb-print-area:has(.print-road-footer) > table { table-layout: fixed !important; font-size: 8pt !important; }
+  .sulb-print-area:has(.print-road-footer) > table th,
+  .sulb-print-area:has(.print-road-footer) > table td { padding: 1.2mm 1.5mm !important; line-height: 1.15 !important; }
+  .sulb-print-area:has(.print-road-footer) > p { margin-top: 2mm !important; font-size: 7.5pt !important; }
+  .sulb-print-area:has(.print-road-footer) .print-approval-boxes { margin-top: 2.5mm !important; gap: 3mm !important; }
+  .sulb-print-area:has(.print-road-footer) .print-approval-box { min-height: 22mm !important; padding: 1.5mm !important; }
+  .sulb-print-area:has(.print-road-footer) .print-approval-box img { max-height: 12mm !important; }
+  .sulb-print-area:has(.print-road-footer) .print-road-footer { margin-top: 2mm !important; padding-top: 1.5mm !important; }
 }
