@@ -157,6 +157,67 @@ body {
 .invoice-lines .invoice-item { width: 25%; text-align: right; }
 .invoice-totals > div { padding-block: 0.14rem; }
 
+/* Complete sales/purchase tax invoice workspace. */
+.tax-invoice-document { position: relative; z-index: 1; color: #172033; font-size: 0.76rem; }
+.tax-invoice-branding { border-bottom: 2px solid var(--print-primary, #0b2a4a); padding-bottom: 0.55rem; }
+.tax-invoice-header-image { margin-bottom: 0.35rem; width: 100%; max-height: var(--print-header-height, 28mm); object-fit: contain; }
+.tax-invoice-brand-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(11rem, .8fr) minmax(0, .8fr); align-items: center; gap: .75rem; }
+.tax-invoice-company { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.tax-invoice-logo { max-height: 22mm; object-fit: contain; }
+.tax-invoice-company strong, .tax-invoice-company span { display: block; font-weight: 900; color: #0b2a4a; }
+.tax-invoice-company strong { font-size: 1rem; }
+.tax-invoice-company small { display: block; margin-top: .2rem; color: #526176; }
+.tax-invoice-title { text-align: center; }
+.tax-invoice-title h1 { margin: 0; color: #0b2a4a; font-size: 1.22rem; font-weight: 950; line-height: 1.1; }
+.tax-invoice-title b { display: block; margin-top: .15rem; letter-spacing: .08em; font-size: .68rem; color: #526176; }
+.tax-invoice-legal { display: flex; flex-direction: column; gap: .2rem; text-align: left; color: #45546a; font-size: .68rem; }
+.tax-invoice-header-note { margin-top: .3rem; white-space: pre-line; font-size: .67rem; color: #526176; }
+.tax-invoice-meta { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid #aeb9c8; border-top: 0; }
+.tax-invoice-meta > div { min-width: 0; padding: .35rem .42rem; border-inline-start: 1px solid #d3dae3; }
+.tax-invoice-meta > div:first-child { border-inline-start: 0; }
+.tax-invoice-meta span, .tax-invoice-meta b { display: block; overflow-wrap: anywhere; }
+.tax-invoice-meta span { color: #68778b; font-size: .58rem; }
+.tax-invoice-meta b { margin-top: .08rem; color: #1e2c40; font-size: .69rem; }
+.tax-invoice-parties { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; margin-top: .45rem; }
+.tax-party-box { border: 1px solid #aeb9c8; border-radius: .25rem; overflow: hidden; }
+.tax-party-box h2 { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: .28rem .5rem; background: #eef3f8; color: #0b2a4a; font-size: .72rem; }
+.tax-party-box h2 small { color: #526176; font-size: .56rem; letter-spacing: .06em; }
+.tax-party-box dl { display: grid; grid-template-columns: 1fr 1fr; margin: 0; }
+.tax-party-box dl > div { display: grid; grid-template-columns: 4.9rem minmax(0,1fr); gap: .25rem; padding: .2rem .42rem; border-top: 1px solid #e3e8ef; }
+.tax-party-box dl > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.tax-party-box dt { color: #68778b; font-size: .58rem; }
+.tax-party-box dd { margin: 0; overflow-wrap: anywhere; font-weight: 650; font-size: .64rem; }
+.tax-invoice-lines-wrap { margin-top: .5rem; overflow-x: auto; border: 1px solid #8f9caf; }
+.tax-invoice-lines { width: 100%; min-width: 49rem; border-collapse: collapse; table-layout: fixed; }
+.tax-invoice-lines th, .tax-invoice-lines td { padding: .28rem .2rem; border-inline-start: 1px solid #cbd4df; border-top: 1px solid #d9e0e8; text-align: center; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tax-invoice-lines th:first-child, .tax-invoice-lines td:first-child { border-inline-start: 0; }
+.tax-invoice-lines th { border-top: 0; background: #0b2a4a; color: #fff; font-size: .59rem; font-weight: 850; }
+.tax-invoice-lines th small { color: #d8e4ef; font-size: .48rem; font-weight: 600; }
+.tax-invoice-lines td { font-size: .62rem; }
+.tax-invoice-lines th:nth-child(1) { width: 3%; }
+.tax-invoice-lines th:nth-child(2) { width: 8%; }
+.tax-invoice-lines th:nth-child(3) { width: 23%; }
+.tax-invoice-lines th:nth-child(4) { width: 6%; }
+.tax-invoice-lines th:nth-child(5) { width: 8%; }
+.tax-invoice-lines th:nth-child(6) { width: 9%; }
+.tax-invoice-lines th:nth-child(7) { width: 8%; }
+.tax-invoice-lines th:nth-child(8) { width: 10%; }
+.tax-invoice-lines th:nth-child(9) { width: 7%; }
+.tax-invoice-lines th:nth-child(10) { width: 8%; }
+.tax-invoice-lines th:nth-child(11) { width: 10%; }
+.tax-invoice-lines .tax-invoice-description { text-align: right; overflow-wrap: anywhere; font-weight: 700; }
+.tax-invoice-summary { display: grid; grid-template-columns: minmax(0,1fr) 19rem; align-items: start; gap: .7rem; margin-top: .5rem; break-inside: avoid; }
+.tax-invoice-notes { min-height: 2.5rem; padding: .45rem; border: 1px solid #d3dae3; font-size: .65rem; }
+.tax-invoice-notes b { color: #0b2a4a; }
+.tax-invoice-notes p { margin: .18rem 0 0; white-space: pre-wrap; }
+.tax-invoice-totals { margin: 0; border: 1px solid #aeb9c8; }
+.tax-invoice-totals > div { display: flex; justify-content: space-between; gap: 1rem; padding: .23rem .45rem; border-top: 1px solid #dbe1e9; }
+.tax-invoice-totals > div:first-child { border-top: 0; }
+.tax-invoice-totals dt, .tax-invoice-totals dd { margin: 0; }
+.tax-invoice-totals dd { font-weight: 800; font-variant-numeric: tabular-nums; }
+.tax-invoice-totals .grand { background: #0b2a4a; color: #fff; font-size: .77rem; font-weight: 900; }
+.tax-invoice-totals .grand small { font-size: .55rem; }
+
 .sulb-print-area:has(.print-road-footer) > .print-branding-header { margin-bottom: 0.5rem; padding-bottom: 0.4rem; }
 .sulb-print-area:has(.print-road-footer) > .print-branding-header > div:last-child { margin-top: 0.4rem; }
 .sulb-print-area:has(.print-road-footer) > .print-branding-header h1 { font-size: 1.25rem; line-height: 1.4; }
@@ -208,6 +269,28 @@ body {
   .invoice-totals { padding: 1.5mm 2mm !important; font-size: 8pt !important; }
   .invoice-totals > div { padding-block: 0.4mm !important; }
 
+  .tax-invoice-document { font-size: 8pt !important; }
+  .tax-invoice-branding { padding-bottom: 1.5mm !important; break-after: avoid !important; }
+  .tax-invoice-brand-row { gap: 2mm !important; }
+  .tax-invoice-logo { max-height: 18mm !important; }
+  .tax-invoice-company strong { font-size: 10pt !important; }
+  .tax-invoice-title h1 { font-size: 13pt !important; }
+  .tax-invoice-meta > div { padding: 1mm 1.2mm !important; }
+  .tax-invoice-parties { gap: 1.5mm !important; margin-top: 1.5mm !important; break-inside: avoid !important; }
+  .tax-party-box h2 { padding: .8mm 1.3mm !important; }
+  .tax-party-box dl > div { padding: .55mm 1.1mm !important; }
+  .tax-invoice-lines-wrap { margin-top: 1.5mm !important; overflow: visible !important; }
+  .tax-invoice-lines { min-width: 0 !important; table-layout: fixed !important; }
+  .tax-invoice-lines thead { display: table-header-group !important; }
+  .tax-invoice-lines th { font-size: 6.1pt !important; }
+  .tax-invoice-lines th small { font-size: 5.1pt !important; }
+  .tax-invoice-lines td { padding: 1mm .55mm !important; font-size: 6.5pt !important; line-height: 1.15 !important; }
+  .tax-invoice-summary { grid-template-columns: minmax(0,1fr) 60mm !important; gap: 2mm !important; margin-top: 1.5mm !important; }
+  .tax-invoice-notes, .tax-invoice-totals { font-size: 7pt !important; }
+  .tax-invoice-document .print-approval-boxes { margin-top: 2mm !important; }
+  .tax-invoice-document .print-approval-box { min-height: 20mm !important; }
+  .tax-invoice-document .print-branding-footer { margin-top: 2mm !important; padding-top: 1mm !important; }
+
   .sulb-print-area:has(.print-road-footer) { font-size: 8.5pt !important; }
   .sulb-print-area:has(.print-road-footer) > .print-branding-header { margin-bottom: 2mm !important; padding-bottom: 1.5mm !important; }
   .sulb-print-area:has(.print-road-footer) > .print-branding-header > div:last-child { margin-top: 1.5mm !important; }
@@ -220,6 +303,6 @@ body {
   .sulb-print-area:has(.print-road-footer) > p { margin-top: 2mm !important; font-size: 7.5pt !important; }
   .sulb-print-area:has(.print-road-footer) .print-approval-boxes { margin-top: 2.5mm !important; gap: 3mm !important; }
   .sulb-print-area:has(.print-road-footer) .print-approval-box { min-height: 22mm !important; padding: 1.5mm !important; }
-  .sulb-print-area:has(.print-road-footer) .print-approval-box img { max-height: 12mm !important; }
+  .sulb-print-area:has(.print-road-footer) .print-approval-box img { max-height: 15mm !important; }
   .sulb-print-area:has(.print-road-footer) .print-road-footer { margin-top: 2mm !important; padding-top: 1.5mm !important; }
 }
