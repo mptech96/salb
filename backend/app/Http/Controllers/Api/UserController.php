@@ -393,6 +393,15 @@ class UserController extends Controller
             ], 404);
         }
 
+        // Editing a user is not an organizational transfer operation.
+        if ((int) $existingUser->company_id !== $companyId) {
+            return response()->json([
+                'status' => false,
+                'code' => 'USER_COMPANY_CHANGE_BLOCKED',
+                'message' => 'لا يمكن نقل المستخدم إلى شركة أخرى من شاشة التعديل. لتغيير كلمة مرور حسابك استخدم الحساب وكلمة المرور.',
+            ], 422);
+        }
+
         $request->merge([
             'company_id' => $companyId,
             'branch_id' => $branchId,

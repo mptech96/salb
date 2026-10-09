@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import SystemDialog from "../../components/common/SystemDialog";
 import api from "../api";
 import {
@@ -516,6 +517,12 @@ export default function UsersPage() {
         ) : undefined}
       />
 
+      <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+        لتغيير كلمة مرور حسابك دون تغيير الشركة أو الفرع، استخدم{" "}
+        <Link href="/profile/security" className="font-bold text-blue-700 underline">الحساب وكلمة المرور</Link>.
+        {isSuper && " قائمة مدير المنصة تشمل جميع الشركات خارج وضع الدعم. الوصول داخل الدعم يخضع لنطاق الشركة والصلاحيات المسموحة."}
+      </div>
+
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <Summary label="إجمالي المستخدمين" value={users.length} />
         <Summary label="المستخدمون النشطون" value={users.filter((user) => Number(user.is_active) === 1).length} tone="success" />
@@ -626,6 +633,7 @@ export default function UsersPage() {
                   <select
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4"
                     value={form.company_id}
+                    disabled={editId !== null}
                     onChange={(event) =>
                       setForm((previous) => ({
                         ...previous,
