@@ -10,6 +10,18 @@ class FinancialAccountService
     public function list(int $companyId, ?int $branchId = null, array $filters = [])
     {
         $perPage = min(100, max(25, (int)($filters['per_page'] ?? 25)));
+        return $this->listQuery($companyId, $branchId, $filters)
+            ->paginate($perPage,['*'],'page',(int)($filters['page']??1));
+    }
+
+    /** Complete scoped options for document forms, independent of list pagination. */
+    public function selectionList(int $companyId, ?int $branchId = null)
+    {
+        return $this->listQuery($companyId, $branchId)->get();
+    }
+
+    private function listQuery(int $companyId, ?int $branchId, array $filters = [])
+    {
         $search = trim((string)($filters['search'] ?? ''));
         return DB::table('financial_accounts as f')
             ->join('accounts as a','a.id','=','f.gl_account_id')
@@ -22,8 +34,7 @@ class FinancialAccountService
             ->when(isset($filters['is_active']) && $filters['is_active'] !== '', fn($q) => $q->where('f.is_active',(int)$filters['is_active']))
             ->when($search !== '', function($q) use($search){$like='%'.$search.'%';$q->where(function($x)use($like){$x->where('f.account_code','like',$like)->orWhere('f.account_name','like',$like)->orWhere('a.account_code','like',$like)->orWhere('a.account_name','like',$like);});})
             ->select('f.*','a.account_code as gl_account_code','a.account_name as gl_account_name','b.branch_name')
-            ->orderByRaw('CASE WHEN f.branch_id IS NULL THEN 0 ELSE 1 END')->orderBy('b.branch_name')->orderBy('f.account_type')->orderBy('f.account_name')->orderBy('f.id')
-            ->paginate($perPage,['*'],'page',(int)($filters['page']??1));
+            ->orderByRaw('CASE WHEN f.branch_id IS NULL THEN 0 ELSE 1 END')->orderBy('b.branch_name')->orderBy('f.account_type')->orderBy('f.account_name')->orderBy('f.id');
     }
 
     public function save(int $companyId, array $data, ?int $id = null): int

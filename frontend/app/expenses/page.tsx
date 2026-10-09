@@ -6,6 +6,7 @@ import ServerPagination, {
   PaginationMeta,
 } from "@/components/finance/ServerPagination";
 import Link from "next/link";
+import { expensePaymentAccounts, normalizeExpenseMeta } from "@/lib/expense-meta";
 const n = (v: any) => Number(v || 0),
   money = (v: any) =>
     n(v).toLocaleString("en-US", {
@@ -28,6 +29,8 @@ export default function ExpensesPage() {
       currencies: [],
     });
   const [show, setShow] = useState(false),
+    [loadError, setLoadError] = useState(""),
+    [metaReady, setMetaReady] = useState(false),
     [saving, setSaving] = useState(false),
     [loading, setLoading] = useState(true),
     [filters, setFilters] = useState<any>({
@@ -80,6 +83,7 @@ export default function ExpensesPage() {
     e?.response?.data?.message || e?.message || "تعذر إكمال العملية.";
   async function load(next = filters) {
     setLoading(true);
+    setLoadError("");
     try {
       const [r, m] = await Promise.all([
         api.get("/expenses", {
@@ -89,12 +93,16 @@ export default function ExpensesPage() {
         }),
         api.get("/expenses/meta"),
       ]);
-      const md = m.data.data || {},
+      const md = normalizeExpenseMeta(m.data),
         pg = r.data.data || {};
+      if (r.data.status !== true || !Array.isArray(pg.data)) {
+        throw new Error(r.data.message || "استجابة قائمة المصروفات غير صالحة.");
+      }
       setRows(pg.data || []);
       setPagination(pg);
       setSummary(r.data.summary || {});
       setMeta(md);
+      setMetaReady(true);
       setForm((f: any) => ({
         ...f,
         branch_id:
@@ -107,6 +115,8 @@ export default function ExpensesPage() {
           "",
       }));
     } catch (e: any) {
+      setLoadError(apiMsg(e));
+      setMetaReady(false);
       say("error", "تعذر تحميل المصروفات", apiMsg(e));
     } finally {
       setLoading(false);
@@ -118,12 +128,7 @@ export default function ExpensesPage() {
   }, [filters]);
   const branch = String(form.branch_id || "");
   const financial = useMemo(
-    () =>
-      meta.financial_accounts?.filter(
-        (x: any) =>
-          (!x.branch_id || String(x.branch_id) === branch) &&
-          Number(x.is_active) === 1,
-      ) || [],
+    () => expensePaymentAccounts(meta.financial_accounts, branch),
     [meta.financial_accounts, branch],
   );
   const refOptions = useMemo(() => {
@@ -164,6 +169,7 @@ export default function ExpensesPage() {
   const doc = n(form.amount),
     base = doc * n(form.exchange_rate || 1);
   function openNew() {
+    if (!metaReady) return;
     setForm({
       ...blank(),
       branch_id: String(meta.scoped_branch_id || meta.branches?.[0]?.id || ""),
@@ -192,6 +198,7 @@ export default function ExpensesPage() {
     });
   }
   async function save() {
+    if (saving || !metaReady) return;
     if (
       !form.branch_id ||
       !form.expense_type_id ||
@@ -260,12 +267,14 @@ export default function ExpensesPage() {
           </div>
           <button
             onClick={openNew}
-            className="rounded-2xl bg-white px-5 py-3 font-black text-[#0B2A4A]"
+            disabled={loading || !metaReady}
+            className="rounded-2xl bg-white px-5 py-3 font-black text-[#0B2A4A] disabled:opacity-50"
           >
             + مصروف جديد
           </button>
         </div>
       </div>
+      {loadError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{loadError}</div>}
       <div className="grid gap-3 md:grid-cols-4">
         <Card t="نتائج الفلتر" v={pagination.total} />
         <Card t="إجمالي نتائج الفلتر" v={money(summary.filtered_total)} />
@@ -330,7 +339,7 @@ export default function ExpensesPage() {
         )}
         <select className="rounded-xl border p-3" value={filters.financial_account_id} onChange={(e)=>setFilters({...filters,financial_account_id:e.target.value,page:1})}>
           <option value="">كل الخزائن والبنوك</option>
-          {meta.financial_accounts?.map((account:any)=><option key={account.id} value={account.id}>{account.account_name}</option>)}
+          {meta.financial_accounts.map((account:any)=><option key={account.id} value={account.id}>{account.account_name}</option>)}
         </select>
       </div>
       <div className="overflow-hidden rounded-3xl border bg-white">
@@ -360,7 +369,7 @@ export default function ExpensesPage() {
               {!rows.length ? (
                 <tr>
                   <td colSpan={10} className="p-8 text-center text-slate-500">
-                    {loading ? "جاري التحميل..." : "لا توجد مصروفات"}
+                    {loading ? "جاري التحميل..." : loadError ? "تعذر تحميل المصروفات؛ راجع رسالة الخطأ." : "لا توجد مصروفات"}
                   </td>
                 </tr>
               ) : (
@@ -574,7 +583,7 @@ export default function ExpensesPage() {
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
           <button
-            disabled={saving}
+            disabled={saving || !metaReady}
             onClick={save}
             className="w-full rounded-2xl bg-[#0B2A4A] p-4 font-black text-white disabled:opacity-50"
           >

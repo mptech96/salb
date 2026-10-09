@@ -69,6 +69,35 @@ class DailyFinancePaginationTest extends TestCase
         $response=app(FinancialAccountController::class)->transactions($this->request(['page'=>2,'per_page'=>25]),$fa,$this->context)->getData(true);self::assertSame(250.0,(float)$response['summary']['opening_balance']);self::assertSame(300.0,(float)$response['summary']['closing_balance']);self::assertSame(260.0,(float)$response['data']['data'][0]['running_balance']);
     }
 
+    public function test_expense_account_options_are_complete_scoped_arrays_without_financial_writes(): void
+    {
+        Schema::table('expense_types', function (Blueprint $t) { $t->unsignedBigInteger('account_id')->nullable(); $t->boolean('is_active')->default(true); });
+        Schema::table('cars', function (Blueprint $t) { $t->string('plate_number')->nullable(); $t->boolean('is_active')->default(true); });
+        foreach (['drivers', 'workers'] as $table) Schema::table($table, fn (Blueprint $t) => $t->boolean('is_active')->default(true));
+        Schema::create('company_settings', fn (Blueprint $t) => [$t->id(), $t->unsignedBigInteger('company_id'), $t->string('base_currency_code'), $t->string('currency_code')]);
+        Schema::create('currencies', fn (Blueprint $t) => [$t->string('currency_code'), $t->string('currency_name')]);
+        Schema::create('company_currencies', fn (Blueprint $t) => [$t->unsignedBigInteger('company_id'), $t->string('currency_code'), $t->boolean('is_active'), $t->boolean('is_base')]);
+        DB::table('company_settings')->insert(['company_id'=>1, 'base_currency_code'=>'SAR', 'currency_code'=>'SAR']);
+        $gl=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'1110','account_name'=>'Cash','account_type'=>'ASSET']);
+        $otherBranch=DB::table('branches')->insertGetId(['company_id'=>1, 'branch_name'=>'Other', 'is_active'=>1]);
+        for ($i=1; $i<=31; $i++) DB::table('financial_accounts')->insert(['company_id'=>1,'branch_id'=>$this->branchA,'gl_account_id'=>$gl,'account_code'=>'A'.$i,'account_name'=>'Account '.$i,'account_type'=>$i===31?'PETTY_CASH':'CASH','currency_code'=>'SAR','is_active'=>1]);
+        foreach ([['company_id'=>1,'branch_id'=>null,'account_type'=>'OTHER'], ['company_id'=>1,'branch_id'=>$otherBranch,'account_type'=>'CASH'], ['company_id'=>2,'branch_id'=>$this->branchB,'account_type'=>'CASH']] as $i=>$values) DB::table('financial_accounts')->insert($values+['gl_account_id'=>$gl,'account_code'=>'S'.$i,'account_name'=>'Special '.$i,'currency_code'=>'SAR','is_active'=>1]);
+        $service=app(FinancialAccountService::class);
+        $payload=app(ExpenseController::class)->meta($this->request([], $this->branchA), $this->context, $service)->getData(true);
+        $options=$payload['data']['financial_accounts'];
+        self::assertTrue(array_is_list($options));
+        self::assertCount(32, $options);
+        self::assertContains('PETTY_CASH', array_column($options, 'account_type'));
+        self::assertContains('OTHER', array_column($options, 'account_type'));
+        foreach ($options as $account) {
+            self::assertSame(1, $account['company_id']);
+            self::assertTrue($account['branch_id']===null || $account['branch_id']===$this->branchA);
+        }
+        self::assertCount(25, $service->list(1, $this->branchA)->items());
+        self::assertSame(32, $service->list(1, $this->branchA)->total());
+        foreach (['expenses', 'vouchers', 'journal_entries', 'journal_entry_lines'] as $table) self::assertSame(0, DB::table($table)->count());
+    }
+
     public function test_voucher_number_is_truly_optional_and_is_generated(): void
     {
         $request=Request::create('/api/vouchers','POST',['branch_id'=>$this->branchA,'voucher_type_id'=>1,'voucher_date'=>'2026-08-01','reference_type'=>'ACCOUNT','reference_id'=>10,'amount'=>10,'payment_method'=>'CASH','financial_account_id'=>5,'currency_code'=>'SAR','exchange_rate'=>1]);
@@ -77,6 +106,34 @@ class DailyFinancePaginationTest extends TestCase
         $engine=Mockery::mock(AccountingEngine::class);$engine->shouldReceive('voucher')->andReturn(PostingResult::success('ok',77));
         $response=app(VoucherController::class)->store($request,$engine,$context,Mockery::mock(PartyBranchScopeService::class),$money);
         self::assertSame(201,$response->getStatusCode());self::assertStringStartsWith('REC-2026-',DB::table('vouchers')->value('voucher_number'));
+    }
+
+    public function test_expense_creation_uses_selected_petty_cash_and_posted_edit_remains_rejected(): void
+    {
+        Schema::table('expense_types', function (Blueprint $t) { $t->unsignedBigInteger('account_id')->nullable(); $t->boolean('is_active')->default(true); });
+        Schema::table('expenses', function (Blueprint $t) {
+            $t->string('scope_type')->nullable(); $t->string('reference_type')->nullable(); $t->unsignedBigInteger('reference_id')->nullable();
+            $t->string('payment_method')->nullable(); $t->string('currency_code')->nullable(); $t->decimal('exchange_rate',18,8)->nullable();
+            $t->decimal('foreign_amount',18,3)->nullable(); $t->string('expense_effect')->nullable(); $t->timestamps();
+        });
+        DB::table('expense_types')->where('id',1)->update(['account_id'=>10]);
+        $gl=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'1111','account_name'=>'Petty cash','account_type'=>'ASSET']);
+        $fa=DB::table('financial_accounts')->insertGetId(['company_id'=>1,'branch_id'=>$this->branchA,'gl_account_id'=>$gl,'account_code'=>'P1','account_name'=>'عهد','account_type'=>'PETTY_CASH','currency_code'=>'SAR','is_active'=>1]);
+        $request=Request::create('/api/expenses','POST',['branch_id'=>$this->branchA,'expense_type_id'=>1,'expense_date'=>'2026-08-01','scope_type'=>'GENERAL','amount'=>10,'payment_status'=>'PAID','payment_method'=>'CASH','financial_account_id'=>$fa,'currency_code'=>'SAR','exchange_rate'=>1]);
+        $context=Mockery::mock(AccountingContext::class);
+        $context->shouldReceive('companyId')->andReturn(1); $context->shouldReceive('branchForOperation')->andReturn($this->branchA); $context->shouldReceive('userId')->andReturn(1);
+        $engine=Mockery::mock(AccountingEngine::class);
+        $engine->shouldReceive('expense')->once()->with(Mockery::on(fn(array $values) => $values['company_id']===1 && $values['branch_id']===$this->branchA && $values['financial_account_id']===$fa && $values['expense_account_id']===10 && $values['amount']===10))->andReturn(PostingResult::success('ok',77));
+        $controller=app(ExpenseController::class);
+        $response=$controller->store($request, $engine, $context, app(FinancialAccountService::class));
+        self::assertSame(201,$response->getStatusCode());
+        self::assertSame($fa,DB::table('expenses')->value('financial_account_id'));
+        $id=(int)$response->getData(true)['id'];
+        DB::table('expenses')->where('id',$id)->update(['journal_entry_id'=>77]);
+        $before=(array)DB::table('expenses')->where('id',$id)->first();
+        $edit=$controller->update($this->request(['amount'=>999]),$id,$this->context);
+        self::assertSame(422,$edit->getStatusCode());
+        self::assertSame($before,(array)DB::table('expenses')->where('id',$id)->first());
     }
 
     public function test_branch_scoped_reads_never_include_another_branch(): void
