@@ -20,6 +20,17 @@ class FinancialAccountService
         return $this->listQuery($companyId, $branchId)->get();
     }
 
+    /** Operational IDs only; GL IDs remain explicit, never interchangeable. */
+    public function selectionPage(int $companyId, ?int $branchId, array $filters = [])
+    {
+        $query = $this->listQuery($companyId, $branchId, $filters)
+            ->where('a.company_id', $companyId)->where('f.is_active', 1)
+            ->where('a.is_active', 1)->where('a.is_group', 0)->where('a.allow_posting', 1)
+            ->where('a.account_type', 'ASSET');
+        if (!empty($filters['selected_id'])) $query->where('f.id', (int)$filters['selected_id']);
+        return $query->paginate(min(100, max(25, (int)($filters['per_page'] ?? 25))), ['*'], 'page', (int)($filters['page'] ?? 1));
+    }
+
     private function listQuery(int $companyId, ?int $branchId, array $filters = [])
     {
         $search = trim((string)($filters['search'] ?? ''));

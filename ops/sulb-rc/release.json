@@ -1,0 +1,26 @@
+{
+  "release_id": "sulb-complete-rc-20261027",
+  "source_base": "db2b9d63ccda67aadaa0f49e087cc9e0137b42e7",
+  "release_decision": "NO-GO",
+  "deployment_authorized": false,
+  "vps_schema_verified": false,
+  "approved_history_verified": false,
+  "staging_passed": false,
+  "complete_security_review": false,
+  "production_backup_restore_rehearsed": false,
+  "backward_compatible_schema_proven": false,
+  "expected_production_schema_sha256": null,
+  "approved_migration_paths": [],
+  "feature_flags_to_enable": [],
+  "minimum_php": "8.3.0",
+  "minimum_node": "20.9.0",
+  "required_php_extensions": ["bcmath", "pdo_mysql", "mbstring", "openssl", "fileinfo", "xml", "ctype", "tokenizer", "filter", "session", "dom"],
+  "paths": {
+    "checkout": "/home/sulb-release",
+    "backend": "/home/mgye-api-sulb/htdocs/api.sulb.mgye.tech",
+    "frontend": "/home/mgye-sulb/htdocs/sulb.mgye.tech",
+    "service": "sulb-frontend.service",
+    "database": "sulbprod"
+  },
+  "rollback_policy": "Never restore a pre-release database over live customer transactions. Code rollback only after demonstrated schema compatibility; otherwise keep write fence and perform reviewed forward repair."
+}

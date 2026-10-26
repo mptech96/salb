@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 
 class VoucherPosting
 {
-    public function __construct(private JournalService $journals,private PostingSupport $support){}
+    public function __construct(private JournalService $journals,private PostingSupport $support,private ItemAccountingResolver $accounts){}
 
     public function post(array $data): PostingResult
     {
@@ -20,8 +20,8 @@ class VoucherPosting
             $amount=round((float)$v->amount,3);$bid=(int)$v->branch_id;$isReceipt=strtoupper((string)$v->type_code)==='RECEIPT'||(int)$v->voucher_type_id===1;
             $fa=$this->support->financialAccount($cid,$bid,$v->payment_method,$v->financial_account_id?(int)$v->financial_account_id:null,$isReceipt?'RECEIPT':'PAYMENT');
             $cash=(int)$fa->gl_account_id;$ref=strtoupper((string)$v->reference_type);$partyType=null;$partyId=null;$counter=null;
-            if($ref==='CUSTOMER'){$counter=$this->support->setting($cid,'CUSTOMER_ACCOUNT');$partyType='CUSTOMER';$partyId=(int)$v->reference_id;}
-            elseif($ref==='SUPPLIER'){$counter=$this->support->setting($cid,'SUPPLIER_ACCOUNT');$partyType='SUPPLIER';$partyId=(int)$v->reference_id;}
+            if($ref==='CUSTOMER'){$counter=$this->accounts->receivable($cid,(int)$v->reference_id);$partyType='CUSTOMER';$partyId=(int)$v->reference_id;}
+            elseif($ref==='SUPPLIER'){$counter=$this->accounts->payable($cid,(int)$v->reference_id);$partyType='SUPPLIER';$partyId=(int)$v->reference_id;}
             elseif($ref==='WORKER'){$counter=$this->support->setting($cid,$isReceipt?'WORKER_LOAN_ACCOUNT':'WORKER_PAYABLE_ACCOUNT');$partyType='WORKER';$partyId=(int)$v->reference_id;}
             elseif($ref==='DRIVER'){$counter=$this->support->setting($cid,'DRIVER_ADVANCE_ACCOUNT');$partyType='DRIVER';$partyId=(int)$v->reference_id;}
             elseif($ref==='ACCOUNT'){$counter=(int)$v->reference_id;$ok=DB::table('accounts')->where('company_id',$cid)->where('id',$counter)->where('is_group',0)->where('allow_posting',1)->where('is_active',1)->exists();if(!$ok)throw new \RuntimeException('الحساب المقابل للسند غير صالح.');}

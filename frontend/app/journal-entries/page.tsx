@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import AccountSearchSelect from "@/components/finance/AccountSearchSelect";
 import {PageHeader,primaryButtonClassName} from "@/components/ui/enterprise";
 import {FinancialNotice} from "@/components/design-system/AccountingWorkspace";
 import SystemDialog from "@/components/common/SystemDialog";
+import { manualJournalAccess } from "@/lib/manual-journal";
 import { readSession } from "@/lib/session";
 import ServerPagination,{PaginationMeta} from "@/components/finance/ServerPagination";
 
@@ -46,7 +48,6 @@ export default function JournalEntriesPage() {
   const [reverseTarget, setReverseTarget] = useState<any>(null);
   const [reverseReason, setReverseReason] = useState("");
   const [reverseDate, setReverseDate] = useState(today());
-  const [accountSearch, setAccountSearch] = useState("");
 
   const [filters, setFilters] = useState({
     q: "",
@@ -83,6 +84,7 @@ export default function JournalEntriesPage() {
   });
 
   const session = readSession();
+  const journalAccess = manualJournalAccess(session);
   const role = String(session?.user?.role?.role_code || "").toUpperCase();
   const companyWide =
     [
@@ -107,17 +109,6 @@ export default function JournalEntriesPage() {
 
   const difference = Number((totals.debit - totals.credit).toFixed(3));
 
-  const visibleAccounts = useMemo(() => {
-    const q = accountSearch.trim().toLowerCase();
-
-    if (!q) return accounts;
-
-    return accounts.filter((account) =>
-      `${account.account_code} ${account.account_name} ${account.account_type}`
-        .toLowerCase()
-        .includes(q)
-    );
-  }, [accounts, accountSearch]);
 
   async function loadEntries(nextFilters = filters) {
     setLoading(true);
@@ -187,7 +178,6 @@ export default function JournalEntriesPage() {
       description: "",
     });
 
-    setAccountSearch("");
   }
 
   function updateLine(index: number, key: string, value: any) {
@@ -425,7 +415,7 @@ export default function JournalEntriesPage() {
 
   return (
     <section dir="rtl" className="space-y-5">
-      <PageHeader title="دفتر اليومية" description="القيود اليدوية للحركات الاستثنائية، بينما عمليات النظام ترحّل من مساراتها التشغيلية." breadcrumbs={[{label:"المحاسبة",href:"/accounting"},{label:"دفتر اليومية"}]} actions={<button onClick={()=>{resetForm();setShowForm(true)}} className={primaryButtonClassName}>+ قيد يومي</button>}/>
+      <PageHeader title="دفتر اليومية" description="القيود اليدوية للحركات الاستثنائية، بينما عمليات النظام ترحّل من مساراتها التشغيلية." breadcrumbs={[{label:"المحاسبة",href:"/accounting"},{label:"دفتر اليومية"}]} actions={journalAccess.post&&<button onClick={()=>{resetForm();setShowForm(true)}} className={primaryButtonClassName}>+ قيد يومي</button>}/>
       <FinancialNotice tone="info">التوازن والسنة المالية وقواعد العكس يتحقق منها الخادم. تعرض الواجهة الفرق بوضوح ولا تصلح القيود تلقائيًا.</FinancialNotice>
 
       <div className="grid gap-3 rounded-3xl border bg-white p-4 shadow-sm md:grid-cols-4 xl:grid-cols-8">
@@ -463,7 +453,7 @@ export default function JournalEntriesPage() {
         </button>
       </div>
 
-      {showForm && (
+      {showForm && journalAccess.post && (
         <div className="space-y-5 rounded-3xl border bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -553,41 +543,9 @@ export default function JournalEntriesPage() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-5">
-              <select
-                value={quick.debit_account_id}
-                onChange={(e) =>
-                  setQuick({
-                    ...quick,
-                    debit_account_id: e.target.value,
-                  })
-                }
-                className="rounded-2xl border bg-white p-3"
-              >
-                <option value="">الحساب المدين</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.account_code} - {account.account_name}
-                  </option>
-                ))}
-              </select>
+<AccountSearchSelect endpoint="/accounts/options" label="الحساب المدين" value={quick.debit_account_id} onChange={value => setQuick({ ...quick, debit_account_id: value })} />
 
-              <select
-                value={quick.credit_account_id}
-                onChange={(e) =>
-                  setQuick({
-                    ...quick,
-                    credit_account_id: e.target.value,
-                  })
-                }
-                className="rounded-2xl border bg-white p-3"
-              >
-                <option value="">الحساب الدائن</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.account_code} - {account.account_name}
-                  </option>
-                ))}
-              </select>
+<AccountSearchSelect endpoint="/accounts/options" label="الحساب الدائن" value={quick.credit_account_id} onChange={value => setQuick({ ...quick, credit_account_id: value })} />
 
               <input
                 type="number"
@@ -631,12 +589,6 @@ export default function JournalEntriesPage() {
                 </div>
               </div>
 
-              <input
-                value={accountSearch}
-                onChange={(e) => setAccountSearch(e.target.value)}
-                placeholder="تصفية الحسابات بالكود أو الاسم..."
-                className="rounded-2xl border p-2.5"
-              />
             </div>
 
             <div className="overflow-x-auto rounded-2xl border">
@@ -653,17 +605,6 @@ export default function JournalEntriesPage() {
                 </thead>
                 <tbody>
                   {form.lines.map((line: any, index: number) => {
-                    const options = visibleAccounts.some(
-                      (a) => String(a.id) === String(line.account_id)
-                    )
-                      ? visibleAccounts
-                      : [
-                          ...accounts.filter(
-                            (a) =>
-                              String(a.id) === String(line.account_id)
-                          ),
-                          ...visibleAccounts,
-                        ];
 
                     return (
                       <tr key={index} className="border-t">
@@ -671,25 +612,7 @@ export default function JournalEntriesPage() {
                           {index + 1}
                         </td>
                         <td className="p-2">
-                          <select
-                            value={line.account_id}
-                            onChange={(e) =>
-                              updateLine(
-                                index,
-                                "account_id",
-                                e.target.value
-                              )
-                            }
-                            className="w-full min-w-[280px] rounded-xl border p-2.5"
-                          >
-                            <option value="">اختر الحساب</option>
-                            {options.map((account) => (
-                              <option key={account.id} value={account.id}>
-                                {account.account_code} -{" "}
-                                {account.account_name}
-                              </option>
-                            ))}
-                          </select>
+                          <AccountSearchSelect endpoint="/accounts/options" label="حساب الأستاذ" value={line.account_id} onChange={value => updateLine(index, "account_id", value)} />
                         </td>
 
                         <td className="p-2">
@@ -885,7 +808,7 @@ export default function JournalEntriesPage() {
                         عرض
                       </button>
 
-                      {String(entry.source_type).toUpperCase() ===
+                      {journalAccess.reverse && String(entry.source_type).toUpperCase() ===
                         "MANUAL" &&
                         !entry.reversed_at &&
                         !entry.reversal_of_id && (

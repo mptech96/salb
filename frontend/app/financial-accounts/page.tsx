@@ -1,4 +1,5 @@
 "use client";
+import AccountSearchSelect from "@/components/finance/AccountSearchSelect";
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import SystemDialog from "@/components/common/SystemDialog";
@@ -95,7 +96,7 @@ export default function FinancialAccountsPage() {
     setLoading(true);
     try {
       const [m, r] = await Promise.all([
-        api.get("/financial-accounts/meta"),
+        api.get("/financial-accounts/meta", { params: { include_accounts: false } }),
         api.get("/financial-accounts",{params:{page,per_page:perPage,search:search||undefined,branch_id:branchFilter!=="ALL"&&branchFilter!=="CENTRAL"?branchFilter:undefined,scope:branchFilter==="CENTRAL"?"CENTRAL":undefined}}),
       ]);
       const md = m.data?.data || {};
@@ -513,20 +514,7 @@ export default function FinancialAccountsPage() {
                 />
               </Field>
               <Field t="حساب الأستاذ *">
-                <select
-                  value={form.gl_account_id}
-                  onChange={(e) =>
-                    setForm({ ...form, gl_account_id: e.target.value })
-                  }
-                  className="input"
-                >
-                  <option value="">اختر الحساب</option>
-                  {meta.accounts.map((a: any) => (
-                    <option key={a.id} value={a.id}>
-                      {a.account_code} - {a.account_name}
-                    </option>
-                  ))}
-                </select>
+                <AccountSearchSelect endpoint="/financial-accounts/gl-options?account_type=ASSET" label="حساب الأستاذ" value={String(form.gl_account_id||"")} onChange={value=>setForm({...form,gl_account_id:value})}/>
               </Field>
               <Field t="العملة *">
                 <select

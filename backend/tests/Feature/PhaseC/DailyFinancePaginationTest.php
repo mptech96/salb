@@ -29,7 +29,10 @@ class DailyFinancePaginationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (['journal_entry_lines','journal_entries','expenses','vouchers','expense_types','voucher_types','financial_accounts','accounts','branches','users','shipments','cars','drivers','workers','purchase_invoices','sales_invoices'] as $table) Schema::dropIfExists($table);
+        foreach (['journal_entry_lines','journal_entries','expenses','vouchers','expense_types','voucher_types','financial_accounts','accounts','branches','users','shipments','cars','drivers','workers','purchase_invoices','sales_invoices','sulb_document_sequences','companies'] as $table) Schema::dropIfExists($table);
+        Schema::create('companies',fn(Blueprint$t)=>[$t->id(),$t->string('company_name')]);
+        DB::table('companies')->insert([['id'=>1,'company_name'=>'TEST A'],['id'=>2,'company_name'=>'TEST B']]);
+        Schema::create('sulb_document_sequences',function(Blueprint$t){$t->id();$t->unsignedBigInteger('company_id');$t->unsignedBigInteger('branch_id')->default(0);$t->string('document_type');$t->integer('document_year');$t->unsignedBigInteger('next_number');$t->timestamps();$t->unique(['company_id','branch_id','document_type','document_year']);});
         Schema::create('branches',fn(Blueprint$t)=>[$t->id(),$t->unsignedBigInteger('company_id'),$t->string('branch_name'),$t->boolean('is_active')->default(true)]);
         Schema::create('users',fn(Blueprint$t)=>[$t->id(),$t->string('name')]);
         Schema::create('accounts',fn(Blueprint$t)=>[$t->id(),$t->unsignedBigInteger('company_id'),$t->string('account_code'),$t->string('account_name'),$t->string('account_type'),$t->boolean('is_active')->default(true),$t->boolean('is_group')->default(false),$t->boolean('allow_posting')->default(true)]);
@@ -108,6 +111,43 @@ class DailyFinancePaginationTest extends TestCase
         self::assertSame(201,$response->getStatusCode());self::assertStringStartsWith('REC-2026-',DB::table('vouchers')->value('voucher_number'));
     }
 
+    public function test_operational_search_paginates_thousands_and_preserves_identity_and_scope(): void
+    {
+        $gl=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'111','account_name'=>'Custody','account_type'=>'ASSET']);
+        $rows=[];
+        for($i=0;$i<1100;$i++) $rows[]=['company_id'=>1,'branch_id'=>$this->branchA,'gl_account_id'=>$gl,'account_code'=>'P'.$i,'account_name'=>$i===1099?'عهدة عبدالسلام':'Account '.$i,'account_type'=>'PETTY_CASH','currency_code'=>'SAR','is_active'=>1];
+        foreach(array_chunk($rows,100) as $chunk) DB::table('financial_accounts')->insert($chunk);
+        $service=app(FinancialAccountService::class);
+        self::assertSame(1100,$service->selectionPage(1,$this->branchA)->total());
+        self::assertCount(25,$service->selectionPage(1,$this->branchA)->items());
+        $hit=$service->selectionPage(1,$this->branchA,['search'=>'عبدالسلام'])->items();
+        self::assertCount(1,$hit);
+        self::assertSame($gl,(int)$hit[0]->gl_account_id);
+        self::assertSame((int)$hit[0]->id,(int)$service->selectionPage(1,$this->branchA,['selected_id'=>$hit[0]->id])->items()[0]->id);
+        self::assertSame(0,$service->selectionPage(2,null,['selected_id'=>$hit[0]->id])->total());
+        self::assertSame(0,$service->selectionPage(1,$this->branchB)->total());
+        DB::table('accounts')->where('id',$gl)->update(['is_active'=>0]);
+        self::assertSame(0,$service->selectionPage(1,$this->branchA)->total());
+    }
+
+    public function test_gl_selection_searches_deep_paths_and_separates_browse_from_posting(): void
+    {
+        Schema::table('accounts',fn(Blueprint $t)=>$t->unsignedBigInteger('parent_id')->nullable());
+        $parent=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'ROOT','account_name'=>'العهد','account_type'=>'ASSET','is_group'=>1,'allow_posting'=>0]);
+        $deep=$parent;
+        for($i=0;$i<15;$i++) $deep=DB::table('accounts')->insertGetId(['company_id'=>1,'parent_id'=>$deep,'account_code'=>'G'.$i,'account_name'=>'Group','account_type'=>'ASSET','is_group'=>1,'allow_posting'=>0]);
+        $id=DB::table('accounts')->insertGetId(['company_id'=>1,'parent_id'=>$deep,'account_code'=>'LEAF','account_name'=>'عبدالسلام','account_type'=>'ASSET']);
+        $repo=app(\App\Domain\Accounting\Repositories\AccountRepository::class);
+        $page=$repo->selectionPage(1,['search'=>'العهد']);
+        self::assertSame(1,$page->total());
+        self::assertSame($id,(int)$page->items()[0]->id);
+        self::assertStringContainsString('العهد',$page->items()[0]->account_path);
+        DB::table('accounts')->where('id',$id)->update(['is_active'=>0]);
+        self::assertSame(0,$repo->selectionPage(1)->total());
+        self::assertSame(17,$repo->selectionPage(1,['mode'=>'BROWSE'])->total());
+        self::assertSame(0,$repo->selectionPage(2,['selected_id'=>$id,'mode'=>'BROWSE'])->total());
+    }
+
     public function test_expense_creation_uses_selected_petty_cash_and_posted_edit_remains_rejected(): void
     {
         Schema::table('expense_types', function (Blueprint $t) { $t->unsignedBigInteger('account_id')->nullable(); $t->boolean('is_active')->default(true); });
@@ -146,4 +186,39 @@ class DailyFinancePaginationTest extends TestCase
     }
 
     private function request(array$query,?int$branch=null):Request{$r=Request::create('/api/test','GET',$query);$r->attributes->set('tenant_company_id',$this->companyA);$r->attributes->set('tenant_branch_id',$branch);$r->attributes->set('effective_role_code',$branch?'BRANCH_MANAGER':'MANAGER');app()->instance('request',$r);return$r;}
+
+    public function test_gl_options_enforce_asset_eligibility_and_restore_selected_identity(): void
+    {
+        Schema::table('accounts',fn(Blueprint $t)=>$t->unsignedBigInteger('parent_id')->nullable());
+        $asset=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'A','account_name'=>'Custody','account_type'=>'ASSET']);
+        DB::table('accounts')->insert(['company_id'=>1,'account_code'=>'R','account_name'=>'Revenue','account_type'=>'REVENUE']);
+        $controller=app(\App\Http\Controllers\Api\AccountController::class);
+        $repo=app(\App\Domain\Accounting\Repositories\AccountRepository::class);
+        $data=$controller->options($this->request(['account_type'=>'ASSET','selected_id'=>$asset]),$repo)->getData(true)['data'];
+        self::assertSame(1,$data['total']);
+        self::assertSame($asset,$data['data'][0]['id']);
+        self::assertSame('A — Custody',$data['data'][0]['account_path']);
+        self::assertSame(0,$repo->selectionPage(2,['selected_id'=>$asset])->total());
+        DB::table('accounts')->where('id',$asset)->update(['is_group'=>1]);
+        self::assertSame(0,$repo->selectionPage(1,['account_type'=>'ASSET'])->total());
+    }
+
+    public function test_gl_large_chart_database_pagination_benchmark(): void
+    {
+        Schema::table('accounts',fn(Blueprint $t)=>$t->unsignedBigInteger('parent_id')->nullable());
+        $root=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'ROOT','account_name'=>'العهد','account_type'=>'ASSET','is_group'=>1,'allow_posting'=>0]);
+        $rows=[];
+        for($i=0;$i<5000;$i++)$rows[]=['company_id'=>1,'parent_id'=>$root,'account_code'=>sprintf('A%05d',$i),'account_name'=>'عهدة '.$i,'account_type'=>'ASSET','is_active'=>1,'is_group'=>0,'allow_posting'=>1];
+        foreach(array_chunk($rows,100)as$chunk)DB::table('accounts')->insert($chunk);
+        $repo=app(\App\Domain\Accounting\Repositories\AccountRepository::class);
+        foreach(['','A04999','العهد']as$search){
+            $start=hrtime(true);
+            $page=$repo->selectionPage(1,['search'=>$search,'per_page'=>25]);
+            $milliseconds=(hrtime(true)-$start)/1e6;
+            $bytes=strlen(json_encode($page->toArray(),JSON_UNESCAPED_UNICODE));
+            self::assertLessThanOrEqual(25,count($page->items()));
+            self::assertSame($search==='A04999'?1:5000,$page->total());
+            fwrite(STDERR,sprintf("GL_BENCH search=%s rows=5000 response_bytes=%d milliseconds=%.3f\n",$search?:'PAGE',$bytes,$milliseconds));
+        }
+    }
 }

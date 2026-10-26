@@ -63,6 +63,8 @@ class SystemBaselineSeeder extends Seeder
             foreach ($data['permissions'] as $row) {
                 DB::table('permissions')->insertOrIgnore([...$row, 'created_at' => now()]);
             }
+            foreach(config('manual_journal.permissions',[]) as $row)DB::table('permissions')->insertOrIgnore([...$row,'created_at'=>now()]);
+            foreach(config('release_write_permissions.permissions',[]) as $row)DB::table('permissions')->insertOrIgnore([...$row,'created_at'=>now()]);
             foreach ($data['feature_catalog'] as $row) {
                 DB::table('feature_catalog')->insertOrIgnore([...$row, 'created_at' => now(), 'updated_at' => now()]);
             }

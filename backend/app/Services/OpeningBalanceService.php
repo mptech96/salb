@@ -42,6 +42,11 @@ class OpeningBalanceService
     public function lookup(int $companyId,string $type,string $search='',?int $branchId=null)
     {
         $like='%'.trim($search).'%';
+        if($type==='items'){
+            $items=DB::table('items')->where('company_id',$companyId)->where('is_active',1)->when($search!=='',fn($q)=>$q->where(fn($x)=>$x->where('item_code','like',$like)->orWhere('item_name','like',$like)))->orderBy('item_name')->limit(25)
+                ->get(['id','item_code','item_name',...(Schema::hasColumn('items','base_unit_code')?['base_unit_code']:[])]);
+            \App\Services\Uom\OperationalDocument::enrichItems($companyId,$items,false,true);return $items;
+        }
         return match($type){
             'accounts'=>DB::table('accounts')->where('company_id',$companyId)->where('is_active',1)->where('is_group',0)->where('allow_posting',1)->when($search!=='',fn($q)=>$q->where(fn($x)=>$x->where('account_code','like',$like)->orWhere('account_name','like',$like)))->orderBy('account_code')->limit(25)->get(),
             'financial_accounts'=>DB::table('financial_accounts')->where('company_id',$companyId)->where('is_active',1)->when($branchId!==null,fn($q)=>$q->where(fn($x)=>$x->where('branch_id',$branchId)->orWhereNull('branch_id')))->when($search!=='',fn($q)=>$q->where(fn($x)=>$x->where('account_code','like',$like)->orWhere('account_name','like',$like)))->orderBy('account_name')->limit(25)->get(),
@@ -90,6 +95,7 @@ class OpeningBalanceService
 
             foreach($inventoryLines as $i=>$r){
                 $branch=$this->branch($companyId,$forcedBranchId?:($r['branch_id']??null),true);$item=DB::table('items')->where('company_id',$companyId)->where('id',(int)($r['item_id']??0))->where('is_active',1)->first();if(!$item)throw new \RuntimeException('صنف المخزون الافتتاحي رقم '.($i+1).' غير صالح.');
+                if(($item->inventory_quantity_version??'LEGACY_KG')==='BASE_V1'){\App\Services\Uom\BaseOpeningLine::save($companyId,$batchId,$branch,$item,$r);continue;}
                 $kg=round((float)($r['qty_kg']??0),3);$cost=round((float)($r['total_cost']??0),3);if($kg<=0||$cost<0)throw new \RuntimeException('كمية/تكلفة المخزون الافتتاحي غير صحيحة.');
                 DB::table('opening_inventory_lines')->insert(['company_id'=>$companyId,'batch_id'=>$batchId,'branch_id'=>$branch,'item_id'=>$item->id,'qty_kg'=>$kg,'total_cost'=>$cost,'unit_cost_per_kg'=>$kg>0?round($cost/$kg,6):0,'lot_number'=>$r['lot_number']??null,'notes'=>$r['notes']??null,'created_at'=>now(),'updated_at'=>now()]);
             }
@@ -126,27 +132,44 @@ class OpeningBalanceService
 
     public function post(int $companyId,int $batchId,?int $userId=null,bool $confirmBalancing=false,?int $forcedBranchId=null): array
     {
-        return DB::transaction(function()use($companyId,$batchId,$userId,$confirmBalancing,$forcedBranchId){
+        $base=Schema::hasColumn('opening_inventory_lines','uom_version')&&DB::table('opening_inventory_lines')->where('company_id',$companyId)->where('batch_id',$batchId)->where('uom_version','BASE_V1')->exists();
+        $owned=$base&&app(\App\Services\Uom\OperationalTransactionOwner::class)->owns($companyId,$batchId,(int)$userId,'OPENING_POST');
+        if($base&&!$owned&&(DB::transactionLevel()>0||DB::connection()->getPdo()->inTransaction()))throw new \RuntimeException('UOM_TRUSTED_OPENING_ROOT_REQUIRED');
+        try { return DB::transaction(function()use($companyId,$batchId,$userId,$confirmBalancing,$forcedBranchId,$owned){
             $this->assertBatchMutationScope($companyId,$batchId,$forcedBranchId);
             $b=DB::table('opening_balance_batches')->where('company_id',$companyId)->where('id',$batchId)->lockForUpdate()->first();if(!$b)throw new \RuntimeException('دفعة الأرصدة الافتتاحية غير موجودة.');if($b->status==='POSTED')return['batch_id'=>$batchId,'journal_entry_id'=>(int)$b->journal_entry_id,'message'=>'الدفعة مرحلة مسبقًا.'];
             if($b->status!=='DRAFT')throw new \RuntimeException('حالة دفعة الافتتاح لا تسمح بالترحيل.');
             $fy=DB::table('financial_years')->where('company_id',$companyId)->where('id',$b->financial_year_id)->first();if(!$fy||$fy->is_closed)throw new \RuntimeException('السنة المالية غير صالحة للترحيل.');
             $lines=DB::table('opening_balance_lines')->where('company_id',$companyId)->where('batch_id',$batchId)->get()->map(fn($r)=>(array)$r)->all();
             $inventory=DB::table('opening_inventory_lines')->where('company_id',$companyId)->where('batch_id',$batchId)->get();
+            if($inventory->contains(fn($line)=>\App\Services\Uom\OperationalDocument::isBase($line))&&DB::transactionLevel()!==1&&!$owned)throw new \RuntimeException('UOM_TRUSTED_OPENING_ROOT_REQUIRED');
             $assets=DB::table('opening_fixed_asset_lines')->where('company_id',$companyId)->where('batch_id',$batchId)->get();
+            if($inventory->isNotEmpty()){
+                $lotSequence=InventoryPostingLocks::reserveLotScope($companyId,(string)$b->opening_date);
+                // Explicit LOT numbers in this same namespace also consume the reservation.
+                $next=(int)$lotSequence->next_number;$year=(new \DateTimeImmutable((string)$b->opening_date))->format('Y');
+                foreach($inventory as $r){
+                    if(preg_match('/^LOT-'.$year.'-([0-9]+)$/D',(string)$r->lot_number,$match)){
+                        if(strlen($match[1])>18)throw new \RuntimeException('رقم دفعة المخزون يتجاوز نطاق التسلسل.');
+                        $next=max($next,(int)$match[1]+1);
+                    }
+                }
+                if($next!==(int)$lotSequence->next_number)DB::table('sulb_document_sequences')->where('id',$lotSequence->id)->update(['next_number'=>$next,'updated_at'=>now()]);
+                InventoryPostingLocks::lockItems($companyId,$inventory->pluck('item_id'));
+            }
             if($forcedBranchId!==null){foreach([$lines,$inventory->map(fn($x)=>(array)$x)->all(),$assets->map(fn($x)=>(array)$x)->all()]as$set)foreach($set as$row)if((int)($row['branch_id']??0)!==$forcedBranchId)throw new \RuntimeException('تحتوي الدفعة على بيانات خارج نطاق الفرع ولا يمكن ترحيلها بهذا المستخدم.');}
             $inventoryAcc=$this->posting->setting($companyId,'INVENTORY_ACCOUNT');
-            foreach($inventory as $r)$lines[]=['account_id'=>$inventoryAcc,'branch_id'=>(int)$r->branch_id,'cost_center_id'=>$this->posting->branchCostCenter($companyId,(int)$r->branch_id),'debit'=>round((float)$r->total_cost,3),'credit'=>0,'description'=>'مخزون افتتاحي - '.$r->lot_number];
+            foreach($inventory as $r)$lines[]=['account_id'=>\App\Services\Uom\OperationalDocument::isBase($r)?app(\App\Services\Accounting\ItemAccountingResolver::class)->inventory($companyId,(int)$r->item_id):$inventoryAcc,'branch_id'=>(int)$r->branch_id,'cost_center_id'=>$this->posting->branchCostCenter($companyId,(int)$r->branch_id),'debit'=>round((float)$r->total_cost,3),'credit'=>0,'description'=>'مخزون افتتاحي - '.$r->lot_number];
             foreach($assets as $r){$assetAcc=(int)($r->asset_account_id?:0);$accum=(int)($r->accumulated_account_id?:0);if(!$assetAcc||!$accum)throw new \RuntimeException('حسابات الأصل الافتتاحي '.$r->asset_code.' غير مكتملة.');$lines[]=['account_id'=>$assetAcc,'branch_id'=>$r->branch_id?(int)$r->branch_id:null,'cost_center_id'=>$this->posting->branchCostCenter($companyId,$r->branch_id?(int)$r->branch_id:null),'debit'=>round((float)$r->historical_cost,3),'credit'=>0,'description'=>'تكلفة أصل افتتاحي - '.$r->asset_name];if((float)$r->opening_accumulated_depreciation>0)$lines[]=['account_id'=>$accum,'branch_id'=>$r->branch_id?(int)$r->branch_id:null,'cost_center_id'=>$this->posting->branchCostCenter($companyId,$r->branch_id?(int)$r->branch_id:null),'debit'=>0,'credit'=>round((float)$r->opening_accumulated_depreciation,3),'description'=>'مجمع إهلاك افتتاحي - '.$r->asset_name];}
             $td=round(array_sum(array_map(fn($l)=>(float)($l['debit']??0),$lines)),3);$tc=round(array_sum(array_map(fn($l)=>(float)($l['credit']??0),$lines)),3);$diff=round($td-$tc,3);
             if(abs($diff)>0.0001){if(!$confirmBalancing)throw new \RuntimeException('يجب تأكيد استخدام حساب موازنة الأرصدة الافتتاحية صراحةً.');$openingAcc=$this->posting->setting($companyId,'OPENING_BALANCE_ACCOUNT');$lines[]=['account_id'=>$openingAcc,'branch_id'=>null,'cost_center_id'=>null,'debit'=>$diff<0?abs($diff):0,'credit'=>$diff>0?$diff:0,'description'=>'موازنة الأرصدة الافتتاحية'];$td=round($td+($diff<0?abs($diff):0),3);$tc=round($tc+($diff>0?$diff:0),3);}
             $journal=$this->journals->post(['company_id'=>$companyId,'branch_id'=>null,'allow_company_level'=>true,'entry_date'=>$b->opening_date,'source_type'=>'OPENING_BALANCE','source_id'=>$batchId,'description'=>'الأرصدة الافتتاحية - '.$b->batch_number,'lines'=>$lines,'is_system_generated'=>1,'created_by'=>$userId]);
 
-            foreach($inventory as $r){$lotId=$this->lots->createInboundLot(['company_id'=>$companyId,'branch_id'=>(int)$r->branch_id,'item_id'=>(int)$r->item_id,'qty_kg'=>(float)$r->qty_kg,'base_cost'=>(float)$r->total_cost,'lot_number'=>$r->lot_number?:null,'source_type'=>'OPENING_BALANCE','source_id'=>$batchId,'received_at'=>$b->opening_date.' 00:00:00','notes'=>'رصيد افتتاحي '.$b->batch_number,'created_by'=>$userId]);DB::table('inventory_lots')->where('id',$lotId)->update(['opening_balance_batch_id'=>$batchId,'updated_at'=>now()]);DB::table('opening_inventory_lines')->where('id',$r->id)->update(['inventory_lot_id'=>$lotId,'updated_at'=>now()]);$kg=(float)$r->qty_kg;$cost=(float)$r->total_cost;$unit=$kg>0?round($cost/$kg,6):0;DB::table('stock_movements')->insert(['company_id'=>$companyId,'branch_id'=>$r->branch_id,'item_id'=>$r->item_id,'inventory_lot_id'=>$lotId,'movement_type'=>'IN','source_type'=>'OPENING_BALANCE','source_id'=>$batchId,'journal_entry_id'=>$journal,'movement_date'=>$b->opening_date,'qty'=>round($kg/1000,6),'qty_kg'=>$kg,'unit_cost'=>round($unit*1000,3),'unit_cost_per_kg'=>$unit,'total_cost'=>$cost,'notes'=>'رصيد مخزون افتتاحي '.$b->batch_number,'created_by'=>$userId,'created_at'=>now(),'updated_at'=>now()]);}
+            foreach($inventory as $r){if(\App\Services\Uom\OperationalDocument::isBase($r)){\App\Services\Uom\BaseOpeningLine::receive($companyId,$b,$r,(int)$userId,$journal);continue;}$lotId=$this->lots->createInboundLot(['company_id'=>$companyId,'branch_id'=>(int)$r->branch_id,'item_id'=>(int)$r->item_id,'qty_kg'=>(float)$r->qty_kg,'base_cost'=>(float)$r->total_cost,'lot_number'=>$r->lot_number?:null,'source_type'=>'OPENING_BALANCE','source_id'=>$batchId,'received_at'=>$b->opening_date.' 00:00:00','notes'=>'رصيد افتتاحي '.$b->batch_number,'created_by'=>$userId]);DB::table('inventory_lots')->where('id',$lotId)->update(['opening_balance_batch_id'=>$batchId,'updated_at'=>now()]);DB::table('opening_inventory_lines')->where('id',$r->id)->update(['inventory_lot_id'=>$lotId,'updated_at'=>now()]);$kg=(float)$r->qty_kg;$cost=(float)$r->total_cost;$unit=$kg>0?round($cost/$kg,6):0;DB::table('stock_movements')->insert(['company_id'=>$companyId,'branch_id'=>$r->branch_id,'item_id'=>$r->item_id,'inventory_lot_id'=>$lotId,'movement_type'=>'IN','source_type'=>'OPENING_BALANCE','source_id'=>$batchId,'journal_entry_id'=>$journal,'movement_date'=>$b->opening_date,'qty'=>round($kg/1000,6),'qty_kg'=>$kg,'unit_cost'=>round($unit*1000,3),'unit_cost_per_kg'=>$unit,'total_cost'=>$cost,'notes'=>'رصيد مخزون افتتاحي '.$b->batch_number,'created_by'=>$userId,'created_at'=>now(),'updated_at'=>now()]);}
             foreach($assets as $r){$book=round((float)$r->historical_cost-(float)$r->opening_accumulated_depreciation,3);$assetId=DB::table('fixed_assets')->insertGetId(['company_id'=>$companyId,'branch_id'=>$r->branch_id,'category_id'=>$r->category_id,'asset_code'=>$r->asset_code,'asset_name'=>$r->asset_name,'description'=>$r->notes,'purchase_date'=>$r->acquisition_date,'purchase_cost'=>$r->historical_cost,'salvage_value'=>$r->salvage_value,'current_book_value'=>$book,'depreciation_method'=>$r->depreciation_method,'useful_life_months'=>$r->useful_life_months,'annual_depreciation_rate'=>$r->annual_depreciation_rate,'accumulated_depreciation'=>$r->opening_accumulated_depreciation,'depreciation_start_date'=>$r->depreciation_start_date,'last_depreciation_date'=>null,'asset_account_id'=>$r->asset_account_id,'accumulated_account_id'=>$r->accumulated_account_id,'expense_account_id'=>$r->expense_account_id,'journal_entry_id'=>$journal,'asset_status'=>'ACTIVE','is_active'=>1,'acquisition_type'=>'OPENING_BALANCE','opening_accumulated_depreciation'=>$r->opening_accumulated_depreciation,'opening_balance_batch_id'=>$batchId,'created_by'=>$userId,'updated_by'=>$userId,'created_at'=>now(),'updated_at'=>now()]);DB::table('opening_fixed_asset_lines')->where('id',$r->id)->update(['fixed_asset_id'=>$assetId,'updated_at'=>now()]);}
             DB::table('opening_balance_batches')->where('id',$batchId)->update(['status'=>'POSTED','journal_entry_id'=>$journal,'total_debit'=>$td,'total_credit'=>$tc,'posted_by'=>$userId,'posted_at'=>now(),'updated_at'=>now()]);
             return['batch_id'=>$batchId,'journal_entry_id'=>$journal,'total_debit'=>$td,'total_credit'=>$tc,'balancing_amount'=>abs($diff),'message'=>'تم ترحيل الأرصدة الافتتاحية والمخزون والأصول بنجاح.'];
-        });
+        }); } catch(\Throwable $failure){if($owned)throw app(\App\Services\Uom\OperationalTransactionOwner::class)->markRollbackOnly($failure);throw $failure;}
     }
 
     private function assertBatchMutationScope(int $companyId,int $batchId,?int $branchId):void

@@ -1,4 +1,6 @@
 "use client";
+import AccountSearchSelect from "@/components/finance/AccountSearchSelect";
+import { transferLinePayload, operationLineQuantity, isBaseLot } from "@/lib/inventory-uom";
 
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
@@ -24,7 +26,7 @@ const types = [
 ];
 
 const typeMap = Object.fromEntries(types);
-const emptyLine = () => ({ item_id: "", qty_kg: "", market_value_per_kg: "", allocation_percent: "", total_cost: "", notes: "" });
+const emptyLine = () => ({ item_id: "", qty_kg: "", quantity: "", unit_code: "", market_value_per_kg: "", allocation_percent: "", total_cost: "", notes: "" });
 const emptyCost = () => ({ cost_type: "عمالة تشغيل", amount: "", currency_code: "", exchange_rate: "1", payment_status: "UNPAID", financial_account_id: "", notes: "" });
 
 export default function InventoryOperationsPage() {
@@ -32,7 +34,6 @@ export default function InventoryOperationsPage() {
   const [branches, setBranches] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [inventoryRows, setInventoryRows] = useState<any[]>([]);
-  const [financialAccounts, setFinancialAccounts] = useState<any[]>([]);
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [baseCurrency, setBaseCurrency] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -55,13 +56,12 @@ export default function InventoryOperationsPage() {
 
   async function load() {
     setLoading(true);
-    const [a, meta] = await Promise.allSettled([api.get("/inventory-operations"), api.get("/inventory-operations-meta")]);
+    const [a, meta] = await Promise.allSettled([api.get("/inventory-operations"), api.get("/inventory-operations-meta",{params:{include_accounts:false}})]);
     if (a.status === "fulfilled") setRows(a.value.data.data || []);
     if (meta.status === "fulfilled") {
       setBranches(meta.value.data.data?.branches || []);
       setItems(meta.value.data.data?.items || []);
       setInventoryRows(meta.value.data.data?.inventory || []);
-      setFinancialAccounts(meta.value.data.data?.financial_accounts || []);
       setCurrencies(meta.value.data.data?.currencies || []);
       setBaseCurrency(meta.value.data.data?.base_currency || "");
     }
@@ -94,10 +94,13 @@ export default function InventoryOperationsPage() {
   async function save() {
     if (!form.from_branch_id) return setDialog({ open: true, type: "warning", title: "اختر الفرع", message: "اختر فرع المصدر." });
     if (isTransfer && !form.to_branch_id) return setDialog({ open: true, type: "warning", title: "اختر الوجهة", message: "اختر الفرع المستلم." });
-    if (!form.from_lines.some((x: any) => x.item_id && Number(x.qty_kg) > 0)) return setDialog({ open: true, type: "warning", title: "المدخلات", message: "أضف صنف مصدر واحدًا على الأقل." });
+    const base = (line: any) => items.find((i: any) => String(i.id) === String(line.item_id))?.inventory_quantity_version === "BASE_V1";
+    if (!isTransfer && form.from_lines.some((x: any) => base(x))) return setDialog({ open: true, type: "warning", title: "معالجة غير وزنية", message: "هذه العملية تحتاج سياسة معالجة غير وزنية معتمدة؛ التحويل بين الفروع متاح." });
+    if (!form.from_lines.some((x: any) => x.item_id && Number(base(x) ? x.quantity : x.qty_kg) > 0)) return setDialog({ open: true, type: "warning", title: "المدخلات", message: "أضف صنف مصدر واحدًا على الأقل." });
 
     const requestedByItem = new Map<string, number>();
     for (const line of form.from_lines) {
+      if (base(line)) continue; // The server converts and checks BASE quantities under its posting locks.
       if (!line.item_id || Number(line.qty_kg || 0) <= 0) continue;
       const key = String(line.item_id);
       requestedByItem.set(key, (requestedByItem.get(key) || 0) + Number(line.qty_kg || 0));
@@ -129,7 +132,7 @@ export default function InventoryOperationsPage() {
         ...form,
         from_branch_id: Number(form.from_branch_id),
         to_branch_id: form.to_branch_id ? Number(form.to_branch_id) : null,
-        from_lines: form.from_lines.filter((x: any) => x.item_id && Number(x.qty_kg) > 0).map((x: any) => ({ ...x, item_id: Number(x.item_id), qty_kg: Number(x.qty_kg) })),
+        from_lines: form.from_lines.filter((x: any) => x.item_id && Number(base(x) ? x.quantity : x.qty_kg) > 0).map((x: any) => transferLinePayload(x, items.find((i: any) => String(i.id) === String(x.item_id)))),
         to_lines: isTransfer || isScrap ? [] : form.to_lines.filter((x: any) => x.item_id && Number(x.qty_kg) > 0).map((x: any) => ({ ...x, item_id: Number(x.item_id), qty_kg: Number(x.qty_kg), market_value_per_kg: x.market_value_per_kg ? Number(x.market_value_per_kg) : null, allocation_percent: x.allocation_percent ? Number(x.allocation_percent) : null, total_cost: x.total_cost ? Number(x.total_cost) : null })),
       };
       await api.post("/inventory-operations", payload);
@@ -158,7 +161,7 @@ export default function InventoryOperationsPage() {
 
   return (
     <section dir="rtl" className="space-y-4">
-      <PageHeader title="عمليات المخزون والتحويل" description="مسودات تشغيلية للفرز والمعالجة والتحويل بين الفروع مع مراجعة مستقلة قبل الترحيل." breadcrumbs={[{label:"المخزون"},{label:"العمليات"}]} actions={<button onClick={() => { reset(); setShowForm(true); }} className={primaryButtonClassName}>+ عملية مخزنية</button>}/>
+      <PageHeader title="عمليات المخزون والتحويل" description="مسودات تشغيلية للفرز والمعالجة والتحويل بين الفروع مع مراجعة مستقلة قبل الترحيل." breadcrumbs={[{label:"المخزون"},{label:"العمليات"}]} actions={<><a href="/inventory-operations/recipes" className={primaryButtonClassName}>وصفات المعالجة</a><button onClick={() => { reset(); setShowForm(true); }} className={primaryButtonClassName}>+ عملية مخزنية</button></>}/>
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4"><StatCard label="إجمالي العمليات" value={rows.length}/><StatCard label="مسودات" value={rows.filter((r:any)=>r.status==="DRAFT").length} tone="accent"/><StatCard label="مرحلة" value={rows.filter((r:any)=>r.status==="POSTED").length} tone="positive"/><StatCard label="تحويلات الفروع" value={rows.filter((r:any)=>r.operation_type==="TRANSFER").length}/></div>
 
       <div className="rounded-3xl border bg-white p-4 shadow-sm"><ListToolbar query={list.query} setQuery={list.setQuery} total={list.total} page={list.page} pageSize={list.pageSize} setPageSize={list.setPageSize} placeholder="ابحث برقم العملية، النوع، الفرع أو الحالة..."/><TableScroll><table className="w-full min-w-[1200px] text-right text-sm"><thead className="bg-slate-100"><tr><th className="p-3">العملية</th><th>التاريخ</th><th>النوع</th><th>من فرع</th><th>إلى فرع</th><th>مدخل كجم</th><th>مخرج كجم</th><th>فاقد</th><th>تكلفة المدخل</th><th>الحالة</th><th className={stickyActionHead}>إجراء</th></tr></thead><tbody>{loading?<tr><td colSpan={11} className="p-8 text-center text-slate-500">جاري التحميل...</td></tr>:list.paged.length===0?<tr><td colSpan={11} className="p-8 text-center text-slate-500">لا توجد عمليات مطابقة.</td></tr>:list.paged.map((r:any)=><tr key={r.id} className="group border-t hover:bg-slate-50"><td className="p-3 font-black text-[#0B2A4A]">{r.operation_number}</td><td>{r.operation_date}</td><td>{typeMap[r.operation_type]||r.operation_type}</td><td>{r.from_branch_name||"—"}</td><td>{r.to_branch_name||"—"}</td><td>{fmt(r.input_weight_kg)}</td><td>{fmt(r.output_weight_kg)}</td><td>{fmt(r.loss_qty_kg)}</td><td>{fmt(r.input_cost)}</td><td><span className={`rounded-full px-3 py-1 text-xs font-black ${r.status==="POSTED"?"bg-emerald-100 text-emerald-700":"bg-amber-100 text-amber-700"}`}>{r.status==="POSTED"?"مرحلة":"مسودة"}</span></td><td className={stickyActionCell}><div className="flex flex-wrap gap-2 whitespace-nowrap"><button onClick={()=>void openDetail(r.id)} className="rounded-lg border px-3 py-1.5 font-bold">عرض</button><a href={`/print/inventory-operation/${r.id}`} className="rounded-lg border px-3 py-1.5 font-bold text-[#0B2A4A]">طباعة</a>{r.status==="DRAFT"&&<button onClick={()=>void approve(r.id)} disabled={saving} className="rounded-lg bg-emerald-700 px-3 py-1.5 font-bold text-white disabled:opacity-50">ترحيل</button>}</div></td></tr>)}</tbody></table></TableScroll><Pager page={list.page} totalPages={list.totalPages} setPage={list.setPage}/></div>
@@ -203,7 +206,7 @@ export default function InventoryOperationsPage() {
                     <input type="number" value={c.amount??""} onChange={e=>setForm((f:any)=>({...f,costs:f.costs.map((x:any,n:number)=>n===i?{...x,amount:e.target.value}:x)}))} placeholder="المبلغ" className="rounded-xl border bg-white p-2.5"/>
                     <select value={c.currency_code||baseCurrency} onChange={e=>setForm((f:any)=>({...f,costs:f.costs.map((x:any,n:number)=>n===i?{...x,currency_code:e.target.value}:x)}))} className="rounded-xl border bg-white p-2.5">{currencies.map((x:any)=><option key={x.currency_code} value={x.currency_code}>{x.currency_code}</option>)}</select>
                     <select value={c.payment_status??"UNPAID"} onChange={e=>setForm((f:any)=>({...f,costs:f.costs.map((x:any,n:number)=>n===i?{...x,payment_status:e.target.value}:x)}))} className="rounded-xl border bg-white p-2.5"><option value="UNPAID">غير مدفوعة</option><option value="PAID">مدفوعة</option></select>
-                    <select disabled={c.payment_status!=="PAID"} value={c.financial_account_id??""} onChange={e=>setForm((f:any)=>({...f,costs:f.costs.map((x:any,n:number)=>n===i?{...x,financial_account_id:e.target.value}:x)}))} className="rounded-xl border bg-white p-2.5 disabled:bg-slate-100"><option value="">الخزينة / البنك</option>{financialAccounts.map((x:any)=><option key={x.id} value={x.id}>{x.account_name}</option>)}</select>
+                    <AccountSearchSelect endpoint="/inventory-operations/account-options" branch={String(form.from_branch_id||"")} disabled={c.payment_status!=="PAID"} label="الخزينة / البنك" value={String(c.financial_account_id??"")} onChange={value=>setForm((f:any)=>({...f,costs:f.costs.map((x:any,n:number)=>n===i?{...x,financial_account_id:value}:x)}))}/>
                     <button onClick={()=>setForm((f:any)=>({...f,costs:f.costs.filter((_:any,n:number)=>n!==i)}))} className="rounded-xl border px-3 py-2 text-rose-700">حذف</button>
                   </div>)}
                 </div>
@@ -236,7 +239,7 @@ function Lines({ title, kind, lines, items, setLine, setForm, form, showAllocati
   return <div className="rounded-3xl border p-4"><div className="mb-3 flex items-center justify-between"><div className="font-black text-[#0B2A4A]">{title}</div><button onClick={() => setForm((f: any) => ({ ...f, [kind]: [...f[kind], emptyLine()] }))} className="rounded-lg border px-3 py-1.5 text-sm font-bold">+ سطر</button></div>
     <div className="space-y-2">{lines.map((line: any, index: number) => <div key={index} className="grid gap-2 rounded-2xl bg-slate-50 p-3 md:grid-cols-[1.5fr_1fr_1fr_auto]">
       <select value={line.item_id} onChange={(e) => setLine(kind, index, "item_id", e.target.value)} className="rounded-xl border bg-white p-2.5"><option value="">اختر الصنف</option>{items.map((i: any) => <option key={i.id} value={i.id}>{i.item_code ? `${i.item_code} - ` : ""}{i.item_name}</option>)}</select>
-      <div><input type="number" min="0" step="0.001" value={line.qty_kg} onChange={(e) => setLine(kind, index, "qty_kg", e.target.value)} placeholder="الكمية كجم" className="w-full rounded-xl border bg-white p-2.5" />{availableFor && line.item_id ? <div className={`mt-1 text-xs font-bold ${Number(line.qty_kg || 0) > Number(availableFor(line.item_id) || 0) ? "text-rose-600" : "text-slate-500"}`}>المتوفر: {fmt(availableFor(line.item_id))} كجم</div> : null}</div>
+      {items.find((i:any)=>String(i.id)===String(line.item_id))?.inventory_quantity_version === "BASE_V1" ? <div><select aria-label="وحدة التحويل" value={line.unit_code} onChange={(e)=>setLine(kind,index,"unit_code",e.target.value)} className="w-full rounded-xl border p-2"><option value="">اختر الوحدة</option>{(items.find((i:any)=>String(i.id)===String(line.item_id))?.uom_units || []).map((u:any)=><option key={u.code} value={u.code}>{u.code}</option>)}</select><input aria-label="كمية التحويل" inputMode="decimal" value={line.quantity} onChange={(e)=>setLine(kind,index,"quantity",e.target.value)} placeholder="الكمية بالوحدة المختارة" className="mt-1 w-full rounded-xl border p-2.5"/><div className="text-xs text-slate-500">يُتحقق من الرصيد الأساسي عند الترحيل.</div></div> : <div><input type="number" min="0" step="0.001" value={line.qty_kg} onChange={(e) => setLine(kind, index, "qty_kg", e.target.value)} placeholder="الكمية كجم" className="w-full rounded-xl border bg-white p-2.5" />{availableFor && line.item_id ? <div className={`mt-1 text-xs font-bold ${Number(line.qty_kg || 0) > Number(availableFor(line.item_id) || 0) ? "text-rose-600" : "text-slate-500"}`}>المتوفر: {fmt(availableFor(line.item_id))} كجم</div> : null}</div>}
       {showAllocation ? allocationMethod === "RELATIVE_VALUE" ? <input type="number" min="0" step="0.000001" value={line.market_value_per_kg} onChange={(e) => setLine(kind, index, "market_value_per_kg", e.target.value)} placeholder="القيمة السوقية/كجم" className="rounded-xl border bg-white p-2.5" /> : allocationMethod === "MANUAL_PERCENT" ? <input type="number" min="0" max="100" step="0.01" value={line.allocation_percent} onChange={(e) => setLine(kind, index, "allocation_percent", e.target.value)} placeholder="نسبة التكلفة %" className="rounded-xl border bg-white p-2.5" /> : allocationMethod === "MANUAL_COST" ? <input type="number" min="0" step="0.001" value={line.total_cost} onChange={(e) => setLine(kind, index, "total_cost", e.target.value)} placeholder="التكلفة" className="rounded-xl border bg-white p-2.5" /> : <div className="rounded-xl border bg-white p-2.5 text-sm text-slate-500">حسب الوزن</div> : <input value={line.notes} onChange={(e) => setLine(kind, index, "notes", e.target.value)} placeholder="ملاحظة" className="rounded-xl border bg-white p-2.5" />}
       <button disabled={lines.length <= 1} onClick={() => setForm((f: any) => ({ ...f, [kind]: f[kind].filter((_: any, n: number) => n !== index) }))} className="rounded-xl border px-3 py-2 text-rose-700 disabled:opacity-30">حذف</button>
     </div>)}</div></div>;
@@ -248,6 +251,6 @@ function OperationDetail({ data, onClose }: any) {
     <div className="mt-4 grid gap-3 sm:grid-cols-4"><Metric label="من" value={o.from_branch_name || "—"}/><Metric label="إلى" value={o.to_branch_name || o.from_branch_name || "—"}/><Metric label="مدخل" value={`${fmt(o.input_weight_kg)} كجم`}/><Metric label="مخرج" value={`${fmt(o.output_weight_kg)} كجم`}/></div>
     {o.loss_gain_reason && <div className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800"><b>سبب فرق الوزن:</b> {o.loss_gain_reason}</div>}
     {(data.operation_costs||[]).length>0 && <div className="mt-4 rounded-2xl border p-4"><div className="mb-2 font-black text-[#0B2A4A]">تكاليف التشغيل</div><div className="grid gap-2 md:grid-cols-2">{data.operation_costs.map((c:any)=><div key={c.id} className="rounded-xl bg-slate-50 p-3 text-sm"><b>{c.cost_type}</b><div>{fmt(c.amount)} {c.currency_code||""} — {c.payment_status==="PAID"?"مدفوعة":"غير مدفوعة"}</div></div>)}</div></div>}
-    <div className="mt-5 overflow-x-auto rounded-2xl border"><table className="w-full min-w-[900px] text-right text-sm"><thead className="bg-slate-100"><tr><th className="p-3">طرف</th><th>الصنف</th><th>كجم</th><th>تكلفة الكجم</th><th>التكلفة</th><th>دفعة داخلة</th><th>دفعة ناتجة</th></tr></thead><tbody>{data.lines.map((l: any) => <tr key={l.id} className="border-t"><td className="p-3 font-bold">{l.line_type === "FROM" ? "مصدر" : "ناتج"}</td><td>{l.item_code ? `${l.item_code} - ` : ""}{l.item_name}</td><td>{fmt(l.qty_kg)}</td><td>{fmt(l.unit_cost_per_kg)}</td><td>{fmt(l.total_cost)}</td><td>{l.input_lot_number || "—"}</td><td>{l.output_lot_number || "—"}</td></tr>)}</tbody></table></div>
+    <div className="mt-5 overflow-x-auto rounded-2xl border"><table className="w-full min-w-[900px] text-right text-sm"><thead className="bg-slate-100"><tr><th className="p-3">طرف</th><th>الصنف</th><th>الكمية / الوحدة</th><th>تكلفة الكجم (وزني)</th><th>التكلفة</th><th>دفعة داخلة</th><th>دفعة ناتجة</th></tr></thead><tbody>{data.lines.map((l: any) => <tr key={l.id} className="border-t"><td className="p-3 font-bold">{l.line_type === "FROM" ? "مصدر" : "ناتج"}</td><td>{l.item_code ? `${l.item_code} - ` : ""}{l.item_name}</td><td>{operationLineQuantity(l)}</td><td>{isBaseLot(l)?"—":fmt(l.unit_cost_per_kg)}</td><td>{fmt(l.total_cost)}</td><td>{l.input_lot_number || "—"}</td><td>{l.output_lot_number || "—"}</td></tr>)}</tbody></table></div>
   </div></div>;
 }

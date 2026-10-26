@@ -120,7 +120,8 @@ class SystemBaselineSeederTest extends TestCase
         $this->seed(SystemBaselineSeeder::class);
 
         self::assertSame(8, DB::table('roles')->count());
-        self::assertSame(109, DB::table('permissions')->count());
+        self::assertSame(114, DB::table('permissions')->count());
+        self::assertSame(0,DB::table('role_permissions as rp')->join('permissions as p','p.id','=','rp.permission_id')->whereIn('p.permission_code',['journals.post','journals.reverse','fixed_assets.manage','workers.manage','payroll.manage'])->count());
         self::assertSame(231, DB::table('role_permissions')->count());
         self::assertSame(231, DB::table('role_permissions')->whereNull('company_id')->count());
         self::assertSame(0, DB::table('role_permissions')->whereNotNull('company_id')->count());

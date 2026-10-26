@@ -12,13 +12,15 @@ class ShipmentCostService
 
     public function storeDraft(array $d): int
     {
+        $d=ShipmentCostPayee::normalize($d);
         return DB::transaction(function()use($d){
             $cid=(int)$d['company_id'];$sid=(int)$d['shipment_id'];$bid=(int)$d['branch_id'];
             $s=DB::table('shipments')->where('company_id',$cid)->where('id',$sid)->lockForUpdate()->first();
             if(!$s||((int)$s->branch_id!==$bid))throw new \RuntimeException('الشحنة غير موجودة ضمن الفرع.');
             if(!in_array(($s->commercial_status??'DRAFT'),['DRAFT','READY'],true))throw new \RuntimeException('لا يمكن إضافة تكلفة لشحنة مفوترة.');
             $type=DB::table('expense_types')->where('id',(int)$d['expense_type_id'])->where('is_active',1)->where(fn($q)=>$q->where('company_id',$cid)->orWhereNull('company_id'))->first();
-            if(!$type)throw new \RuntimeException('نوع التكلفة غير صالح.');
+            if(!$type || !in_array($type->usage_type,['SHIPMENT','BOTH','GENERAL'],true))throw new \RuntimeException('نوع التكلفة غير صالح للشحنات.');
+            ShipmentCostPayee::assertAccessible($cid,$bid,$d['payee_type']??null,isset($d['payee_id'])?(int)$d['payee_id']:null);
             $baseCurrency=$this->money->baseCurrency($cid);$currency=strtoupper((string)($d['currency_code']??$baseCurrency));$foreign=round((float)$d['amount'],3);if($foreign<=0)throw new \RuntimeException('مبلغ التكلفة يجب أن يكون أكبر من صفر.');
             $rate=isset($d['exchange_rate'])&&$d['exchange_rate']!==''?(float)$d['exchange_rate']:$this->money->rate($cid,$currency,$d['expense_date']);if($rate<=0)throw new \RuntimeException('سعر الصرف غير صالح.');$base=round($foreign*$rate,3);
             $paid=strtoupper((string)($d['payment_status']??'UNPAID'))==='PAID';$faId=isset($d['financial_account_id'])&&(int)$d['financial_account_id']>0?(int)$d['financial_account_id']:null;
@@ -28,42 +30,70 @@ class ShipmentCostService
                 'company_id'=>$cid,'branch_id'=>$bid,'shipment_id'=>$sid,'expense_type_id'=>(int)$d['expense_type_id'],'expense_date'=>$d['expense_date'],
                 'amount'=>$base,'foreign_amount'=>$foreign,'currency_code'=>$currency,'exchange_rate'=>$rate,'payment_status'=>$paid?'PAID':'UNPAID','payment_method'=>$d['payment_method']??null,'financial_account_id'=>$faId,
                 'capitalizable'=>isset($d['capitalizable'])?(int)(bool)$d['capitalizable']:(int)($type->affects_cost??1),'payee_type'=>$d['payee_type']??null,'payee_id'=>$d['payee_id']??null,'cost_code'=>$type->type_code??null,'cost_status'=>'DRAFT','distributed'=>0,
-                'notes'=>$d['notes']??null,'created_by'=>$d['created_by']??null,'created_at'=>now(),'updated_at'=>now(),
+                'beneficiary_name'=>$d['beneficiary_name']??null,'notes'=>$d['notes']??null,'created_by'=>$d['created_by']??null,'created_at'=>now(),'updated_at'=>now(),
             ]);
         });
     }
 
     public function updateDraft(int $cid,int $id,array $d,?int $branchFilter=null): void
     {
+        $d=ShipmentCostPayee::normalize($d);
         DB::transaction(function()use($cid,$id,$d,$branchFilter){
-            $c=DB::table('shipment_costs')->where('company_id',$cid)->where('id',$id)->lockForUpdate()->first();if(!$c)throw new \RuntimeException('التكلفة غير موجودة.');if($branchFilter!==null&&(int)$c->branch_id!==$branchFilter)throw new \RuntimeException('التكلفة خارج نطاق فرعك.');if(($c->cost_status??'DRAFT')!=='DRAFT')throw new \RuntimeException('التكلفة المرحلة لا تعدل مباشرة.');
-            $typeId=(int)($d['expense_type_id']??$c->expense_type_id);$type=DB::table('expense_types')->where('id',$typeId)->where('is_active',1)->where(fn($q)=>$q->where('company_id',$cid)->orWhereNull('company_id'))->first();if(!$type)throw new \RuntimeException('نوع التكلفة غير صالح.');
+            $c=$this->lockedDraft($cid,$id,$branchFilter);
+            $typeId=(int)($d['expense_type_id']??$c->expense_type_id);$type=DB::table('expense_types')->where('id',$typeId)->where('is_active',1)->where(fn($q)=>$q->where('company_id',$cid)->orWhereNull('company_id'))->first();if(!$type || !in_array($type->usage_type,['SHIPMENT','BOTH','GENERAL'],true))throw new \RuntimeException('نوع التكلفة غير صالح للشحنات.');
+            $payeeType=array_key_exists('payee_type',$d)?$d['payee_type']:$c->payee_type;
+            $payeeId=array_key_exists('payee_id',$d)?$d['payee_id']:$c->payee_id;
+            ShipmentCostPayee::assertAccessible($cid,(int)$c->branch_id,$payeeType,$payeeId!==null?(int)$payeeId:null);
             $baseCurrency=$this->money->baseCurrency($cid);$currency=strtoupper((string)($d['currency_code']??$c->currency_code??$baseCurrency));$foreign=round((float)($d['amount']??$c->foreign_amount??$c->amount),3);$date=$d['expense_date']??$c->expense_date;$rate=isset($d['exchange_rate'])&&$d['exchange_rate']!==''?(float)$d['exchange_rate']:$this->money->rate($cid,$currency,$date);$base=round($foreign*$rate,3);if($base<=0)throw new \RuntimeException('المبلغ غير صالح.');
             $status=strtoupper((string)($d['payment_status']??$c->payment_status??'UNPAID'));$faId=isset($d['financial_account_id'])&&$d['financial_account_id']!==''?(int)$d['financial_account_id']:(int)($c->financial_account_id??0);if($status==='PAID'&&!$faId)throw new \RuntimeException('اختر الصندوق/البنك عند تسجيل تكلفة مدفوعة.');
             if($faId){$fa=DB::table('financial_accounts')->where('company_id',$cid)->where('id',$faId)->where('is_active',1)->where(fn($q)=>$q->where('branch_id',(int)$c->branch_id)->orWhereNull('branch_id'))->first();if(!$fa)throw new \RuntimeException('الحساب المالي غير صالح لهذا الفرع.');$this->money->assertCurrency($fa,$currency);}
-            DB::table('shipment_costs')->where('id',$id)->update(['expense_type_id'=>$typeId,'cost_code'=>$type->type_code??$c->cost_code,'expense_date'=>$date,'amount'=>$base,'foreign_amount'=>$foreign,'currency_code'=>$currency,'exchange_rate'=>$rate,'payment_status'=>$status,'payment_method'=>$d['payment_method']??$c->payment_method,'financial_account_id'=>$faId?:null,'capitalizable'=>isset($d['capitalizable'])?(int)(bool)$d['capitalizable']:$c->capitalizable,'payee_type'=>$d['payee_type']??$c->payee_type,'payee_id'=>$d['payee_id']??$c->payee_id,'notes'=>$d['notes']??$c->notes,'updated_at'=>now()]);
+            DB::table('shipment_costs')->where('id',$id)->update(['expense_type_id'=>$typeId,'cost_code'=>$type->type_code??$c->cost_code,'expense_date'=>$date,'amount'=>$base,'foreign_amount'=>$foreign,'currency_code'=>$currency,'exchange_rate'=>$rate,'payment_status'=>$status,'payment_method'=>$d['payment_method']??$c->payment_method,'financial_account_id'=>$faId?:null,'capitalizable'=>isset($d['capitalizable'])?(int)(bool)$d['capitalizable']:$c->capitalizable,'payee_type'=>$payeeType,'payee_id'=>$payeeId,'beneficiary_name'=>$d['beneficiary_name']??$c->beneficiary_name,'notes'=>$d['notes']??$c->notes,'updated_at'=>now()]);
         });
     }
 
     public function deleteDraft(int $cid,int $id,?int $branchFilter=null): void
-    {$c=DB::table('shipment_costs')->where('company_id',$cid)->where('id',$id)->first();if(!$c)throw new \RuntimeException('التكلفة غير موجودة.');if($branchFilter!==null&&(int)$c->branch_id!==$branchFilter)throw new \RuntimeException('التكلفة خارج نطاق فرعك.');if(($c->cost_status??'DRAFT')!=='DRAFT')throw new \RuntimeException('لا يمكن حذف تكلفة مرحلة.');DB::table('shipment_costs')->where('id',$id)->delete();}
+    {DB::transaction(function()use($cid,$id,$branchFilter){$this->lockedDraft($cid,$id,$branchFilter);DB::table('shipment_costs')->where('company_id',$cid)->where('id',$id)->delete();});}
+
+    private function lockedDraft(int $cid,int $id,?int $branchFilter): object
+    {
+        $source=DB::table('shipment_costs')->where('company_id',$cid)->where('id',$id)->first();
+        if(!$source)throw new \RuntimeException('التكلفة غير موجودة.');
+        // Same parent-before-child lock order as posting; reread status after acquiring locks.
+        $shipment=DB::table('shipments')->where('company_id',$cid)->where('id',$source->shipment_id)->lockForUpdate()->first();
+        $cost=DB::table('shipment_costs')->where('company_id',$cid)->where('id',$id)->lockForUpdate()->first();
+        if(!$shipment||!$cost)throw new \RuntimeException('التكلفة أو الشحنة غير موجودة.');
+        if($branchFilter!==null&&(int)$cost->branch_id!==$branchFilter)throw new \RuntimeException('التكلفة خارج نطاق فرعك.');
+        if(($cost->cost_status??'DRAFT')!=='DRAFT'||$cost->journal_entry_id||$cost->voucher_id
+            ||DB::table('journal_entries')->where('company_id',$cid)->where('source_type','SHIPMENT_COST')->where('source_id',$id)->exists())
+            throw new \RuntimeException('التكلفة المرحلة لا تعدل أو تحذف مباشرة.');
+        return $cost;
+    }
 
     public function postPendingForShipment(int $cid,int $sid,int $uid): array
     {
-        return DB::transaction(function()use($cid,$sid,$uid){
+        $nested=DB::transactionLevel()>0;
+        if($nested)app(ShipmentInventoryLockScope::class)->assertPrepared($cid,$sid);
+        elseif(DB::connection()->getPdo()->inTransaction())throw new \RuntimeException('SHIPMENT_SCOPE_FOREIGN_PDO');
+        return DB::transaction(function()use($cid,$sid,$uid,$nested){
+            $this->sequences->lockVoucherCompany($cid);
             $s=DB::table('shipments')->where('company_id',$cid)->where('id',$sid)->lockForUpdate()->first();if(!$s)throw new \RuntimeException('الشحنة غير موجودة.');
-            $costs=DB::table('shipment_costs')->where('company_id',$cid)->where('shipment_id',$sid)->where('cost_status','DRAFT')->orderBy('id')->lockForUpdate()->get();$posted=[];
+            if(!$nested)app(ShipmentInventoryLockScope::class)->prepare($cid,[$sid]);
+            $costs=app(ShipmentPurchaseCostRead::class)->draftsForCurrentPurchase($cid,$sid)
+                ??DB::table('shipment_costs')->where('company_id',$cid)->where('shipment_id',$sid)->where('cost_status','DRAFT')->orderBy('id')->lockForUpdate()->get();$posted=[];
             foreach($costs as$c){
                 $base=round((float)$c->amount,3);if($base<=0)continue;$paid=strtoupper((string)$c->payment_status)==='PAID';$fa=null;
                 if($paid){$fa=DB::table('financial_accounts')->where('company_id',$cid)->where('id',$c->financial_account_id)->where('is_active',1)->where(fn($q)=>$q->where('branch_id',(int)$s->branch_id)->orWhereNull('branch_id'))->first();if(!$fa)throw new \RuntimeException('الحساب المالي لتكلفة الشحنة غير صالح لهذا الفرع.');$this->money->assertCurrency($fa,(string)($c->currency_code?:$this->money->baseCurrency($cid)));}
                 $creditAcc=$paid?(int)$fa->gl_account_id:$this->support->setting($cid,'ACCRUED_EXPENSE_ACCOUNT');$baseCurrency=$this->money->baseCurrency($cid);$foreign=(float)($c->foreign_amount??$c->amount);$currency=$c->currency_code?:$baseCurrency;$rate=(float)($c->exchange_rate?:1);
-                $debits=(int)$c->capitalizable===1?$this->capitalizedDebitLines($cid,$sid,$base,$foreign,$currency,$baseCurrency,$rate):[
+                $debits=(int)$c->capitalizable===1?(config('shipment_allocation.enabled')
+                    ?app(ShipmentAllocationLedger::class)->debitLines($cid,$sid,$c,$currency,$baseCurrency,$rate)
+                    :$this->capitalizedDebitLines($cid,$sid,$base,$foreign,$currency,$baseCurrency,$rate)):[
                     ['account_id'=>(int)(DB::table('expense_types')->where('id',$c->expense_type_id)->value('account_id')?:$this->support->setting($cid,'GENERAL_EXPENSE_ACCOUNT')),'debit'=>$base,'credit'=>0,'description'=>'مصروف تشغيلي للشحنة','currency_code'=>$currency,'exchange_rate'=>$rate,'foreign_debit'=>$currency!==$baseCurrency?$foreign:0,'foreign_credit'=>0]
                 ];
                 $credit=['account_id'=>$creditAcc,'debit'=>0,'credit'=>$base,'description'=>$paid?'سداد تكلفة شحنة':'تكلفة شحنة مستحقة','currency_code'=>$currency,'exchange_rate'=>$rate,'foreign_debit'=>0,'foreign_credit'=>$currency!==$baseCurrency?$foreign:0];if($fa)$credit['financial_account_id']=(int)$fa->id;if($c->payee_type&&$c->payee_id){$credit['party_type']=$c->payee_type;$credit['party_id']=$c->payee_id;}
                 $jid=app(AccountingService::class)->post(['company_id'=>$cid,'branch_id'=>(int)$s->branch_id,'entry_date'=>$c->expense_date,'source_type'=>'SHIPMENT_COST','source_id'=>$c->id,'description'=>((int)$c->capitalizable===1?'رسملة':'مصروف').' تكلفة الشحنة '.$s->shipment_number,'currency_code'=>$currency,'exchange_rate'=>$rate,'lines'=>array_merge($debits,[$credit]), 'is_system_generated'=>1,'created_by'=>$uid]);
-                $voucher=$paid?$this->voucher((object)$c,$s,$uid,(int)$fa->id,(int)$fa->gl_account_id,$currency,$rate,$foreign):null;
+                $voucher=$paid?$this->voucher((object)$c,$s,$uid,(int)$fa->id,(int)$fa->gl_account_id,$currency,$rate,$foreign,$jid):null;
                 DB::table('shipment_costs')->where('id',$c->id)->update(['cost_status'=>'POSTED','journal_entry_id'=>$jid,'voucher_id'=>$voucher,'posted_at'=>now(),'posted_by'=>$uid,'distributed'=>(int)$c->capitalizable===1?0:1,'updated_at'=>now()]);$posted[]=['id'=>(int)$c->id,'journal_entry_id'=>$jid,'voucher_id'=>$voucher];
+                if((int)$c->capitalizable===1&&config('shipment_allocation.enabled'))app(ShipmentAllocationLedger::class)->record($cid,$sid,$c,$jid,$uid);
             }
             $dist=$this->distribution->distributeByShipmentId($cid,$sid);
             return ['posted'=>$posted,'distribution'=>$dist];
@@ -95,9 +125,10 @@ class ShipmentCostService
         return $lines;
     }
 
-    private function voucher(object $c,object $s,int $uid,int $faId,int $glId,string $currency,float $rate,float $foreign): int
+    private function voucher(object $c,object $s,int $uid,int $faId,int $glId,string $currency,float $rate,float $foreign,int $journalId): int
     {
-        $voucherTypeId=DB::table('voucher_types')->where('type_code','PAYMENT')->value('id')?:DB::table('voucher_types')->where('id',2)->value('id');if(!$voucherTypeId)throw new \RuntimeException('نوع سند الصرف غير معرف.');$voucherNo=$this->sequences->next((int)$c->company_id,(int)$s->branch_id,'PAYMENT_VOUCHER',(string)$c->expense_date,'PAY');
-        return DB::table('vouchers')->insertGetId(['company_id'=>$c->company_id,'branch_id'=>$s->branch_id,'voucher_type_id'=>$voucherTypeId,'voucher_number'=>$voucherNo,'voucher_date'=>$c->expense_date,'reference_type'=>'SHIPMENT_COST','reference_id'=>$c->id,'amount'=>$c->amount,'foreign_amount'=>$foreign,'payment_method'=>$c->payment_method,'financial_account_id'=>$faId,'cash_account_id'=>$glId,'currency_code'=>$currency,'exchange_rate'=>$rate,'notes'=>'تكلفة الشحنة '.$s->shipment_number,'created_by'=>$uid,'created_at'=>now(),'updated_at'=>now()]);
+        if(!DB::table('journal_entries')->where('id',$journalId)->where('company_id',$c->company_id)->where('branch_id',$s->branch_id)->where('source_type','SHIPMENT_COST')->where('source_id',$c->id)->where('status','POSTED')->exists())throw new \RuntimeException('قيد تكلفة الشحنة غير متوافق مع المصدر.');
+        $voucherTypeId=DB::table('voucher_types')->where('type_code','PAYMENT')->value('id')?:DB::table('voucher_types')->where('id',2)->value('id');if(!$voucherTypeId)throw new \RuntimeException('نوع سند الصرف غير معرف.');$voucherNo=$this->sequences->reserveVoucher((int)$c->company_id,'PAYMENT',(string)$c->expense_date);
+        return DB::table('vouchers')->insertGetId(['company_id'=>$c->company_id,'branch_id'=>$s->branch_id,'voucher_type_id'=>$voucherTypeId,'voucher_number'=>$voucherNo,'voucher_date'=>$c->expense_date,'journal_entry_id'=>$journalId,'reference_type'=>'SHIPMENT_COST','reference_id'=>$c->id,'amount'=>$c->amount,'foreign_amount'=>$foreign,'payment_method'=>$c->payment_method,'financial_account_id'=>$faId,'cash_account_id'=>$glId,'currency_code'=>$currency,'exchange_rate'=>$rate,'notes'=>'تكلفة الشحنة '.$s->shipment_number,'created_by'=>$uid,'created_at'=>now(),'updated_at'=>now()]);
     }
 }

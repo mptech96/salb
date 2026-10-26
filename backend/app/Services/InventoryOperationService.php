@@ -25,6 +25,7 @@ class InventoryOperationService
 
     public function create(array $data): int
     {
+        if(!empty($data['recipe_id']))return app(\App\Services\Uom\BaseProcessingService::class)->create((int)$data['company_id'],(int)$data['from_branch_id'],(int)$data['created_by'],$data);
         return DB::transaction(function () use ($data) {
             $companyId = (int) $data['company_id'];
             $type = strtoupper(trim((string) $data['operation_type']));
@@ -53,11 +54,11 @@ class InventoryOperationService
 
             $fromLines = array_values(array_filter(
                 $data['from_lines'] ?? [],
-                fn ($r) => (int) ($r['item_id'] ?? 0) > 0 && (float) ($r['qty_kg'] ?? 0) > 0
+                fn ($r) => (int) ($r['item_id'] ?? 0) > 0 && ((float) ($r['qty_kg'] ?? 0) > 0 || (float)($r['quantity']??0)>0)
             ));
             $toLines = array_values(array_filter(
                 $data['to_lines'] ?? [],
-                fn ($r) => (int) ($r['item_id'] ?? 0) > 0 && (float) ($r['qty_kg'] ?? 0) > 0
+                fn ($r) => (int) ($r['item_id'] ?? 0) > 0 && ((float) ($r['qty_kg'] ?? 0) > 0 || (float)($r['quantity']??0)>0)
             ));
 
             if (!$fromLines) {
@@ -74,12 +75,14 @@ class InventoryOperationService
 
             foreach ($fromLines as $i => $line) {
                 $this->assertItem($companyId, (int) $line['item_id'], $i + 1);
+                if($type!=='TRANSFER'&&(DB::table('items')->where('company_id',$companyId)->where('id',$line['item_id'])->first()->inventory_quantity_version??'LEGACY_KG')==='BASE_V1')throw new \RuntimeException('UOM_PROCESSING_WEIGHT_POLICY_REQUIRED');
             }
             foreach ($toLines as $i => $line) {
                 $this->assertItem($companyId, (int) $line['item_id'], $i + 1);
+                \App\Services\Uom\LegacyWeightGuard::item($companyId,(int)$line['item_id']);
             }
 
-            $inputKg = round(array_sum(array_map(fn ($r) => (float) $r['qty_kg'], $fromLines)), 3);
+            $inputKg = round(array_sum(array_map(fn ($r) => (float) ($r['qty_kg']??0), $fromLines)), 3);
             $outputKg = $type === 'TRANSFER'
                 ? $inputKg
                 : round(array_sum(array_map(fn ($r) => (float) $r['qty_kg'], $toLines)), 3);
@@ -138,7 +141,18 @@ class InventoryOperationService
 
     public function approve(int $companyId, int $operationId, int $userId, ?int $scopedBranchId = null): array
     {
-        return DB::transaction(function () use ($companyId, $operationId, $userId, $scopedBranchId) {
+        if(DB::getSchemaBuilder()->hasTable('uom_processing_commands')&&DB::table('uom_processing_commands')->where('company_id',$companyId)->where('operation_id',$operationId)->exists()){
+            $branch=(int)DB::table('inventory_operations')->where('company_id',$companyId)->where('id',$operationId)->value('from_branch_id');
+            if($scopedBranchId!==null&&$branch!==$scopedBranchId)throw new \RuntimeException('العملية خارج نطاق فرعك.');
+            return app(\App\Services\Uom\BaseProcessingService::class)->post($companyId,$branch,$operationId,$userId);
+        }
+        $owner=app(InventoryTransferTransactionOwner::class);
+        $protocol=(bool)config('inventory_transfer.root_protocol_enabled');
+        $owned=$protocol&&$owner->owns($companyId,$operationId,$userId);
+        if($protocol&&!$owned&&DB::table('inventory_operations')->useWritePdo()->where('company_id',$companyId)->where('id',$operationId)->value('operation_type')==='TRANSFER') {
+            return $owner->run($companyId,$operationId,$userId,fn()=>$this->approve($companyId,$operationId,$userId,$scopedBranchId));
+        }
+        try { return DB::transaction(function () use ($companyId, $operationId, $userId, $scopedBranchId) {
             $operation = DB::table('inventory_operations')
                 ->where('company_id', $companyId)
                 ->where('id', $operationId)
@@ -177,11 +191,15 @@ class InventoryOperationService
                 'operation_number' => $operation->operation_number,
                 'status' => 'POSTED',
             ];
-        });
+        }); } catch(\Throwable $failure) {
+            if($owned)throw $owner->markRollbackOnly($failure);
+            throw $failure;
+        }
     }
 
     public function deleteDraft(int $companyId, int $operationId, ?int $scopedBranchId = null): void
     {
+        if(DB::getSchemaBuilder()->hasTable('uom_processing_commands')&&DB::table('uom_processing_commands')->where('company_id',$companyId)->where('operation_id',$operationId)->exists())throw new \RuntimeException('UOM_PROCESS_HISTORY_PRESERVED');
         DB::transaction(function () use ($companyId, $operationId, $scopedBranchId) {
             $q = DB::table('inventory_operations')
                 ->where('company_id', $companyId)
@@ -264,10 +282,15 @@ class InventoryOperationService
             ->get();
 
         $costs = DB::table('inventory_operation_costs as c')
-            ->leftJoin('financial_accounts as fa','fa.id','=','c.financial_account_id')
+            ->leftJoin('financial_accounts as fa',fn($j)=>$j->on('fa.id','=','c.financial_account_id')->on('fa.company_id','=','c.company_id'))
             ->where('c.company_id',$companyId)->where('c.operation_id',$operationId)
             ->select('c.*','fa.account_name as financial_account_name')
             ->orderBy('c.id')->get();
+
+        if(DB::getSchemaBuilder()->hasTable('uom_processing_commands')){
+            $command=DB::table('uom_processing_commands')->where('company_id',$companyId)->where('operation_id',$operationId)->first();
+            if($command){if(!hash_equals($command->payload_hash,hash('sha256',$command->payload)))throw new \RuntimeException('UOM_PROCESS_COMMAND_SCOPE');$payload=json_decode($command->payload,true,512,JSON_THROW_ON_ERROR);$operation->recipe_id=$command->recipe_id;foreach($costs as $i=>$cost)$cost->source_reference=$payload['costs'][$i]['source_reference']??null;}
+        }
 
         return ['operation' => $operation, 'lines' => $lines, 'lot_links' => $links, 'operation_costs' => $costs];
     }
@@ -276,9 +299,29 @@ class InventoryOperationService
     {
         $companyId=(int)$operation->company_id;$fromBranch=(int)$operation->from_branch_id;$toBranch=(int)$operation->to_branch_id;
         $fromLines=DB::table('inventory_operation_lines')->where('company_id',$companyId)->where('operation_id',$operation->id)->where('line_type','FROM')->orderBy('id')->lockForUpdate()->get();
+        // Match purchase receipt ordering before FIFO/stock writes. The source
+        // operation and its lines are already locked in this same transaction.
+        InventoryPostingLocks::reserveLotScope($companyId, (string) $operation->operation_date);
+        InventoryPostingLocks::lockItems($companyId, $fromLines->pluck('item_id')->all());
         $totalCost=0.0;$totalKg=0.0;$costByItem=[];
         foreach($fromLines as$line){
             $kg=round((float)$line->qty_kg,3);$itemId=(int)$line->item_id;
+            if(\App\Services\Uom\OperationalDocument::isBase($line)){
+                $consumption=\App\Services\Uom\BaseInventory::consume($companyId,$fromBranch,$itemId,$line->base_quantity,'TRANSFER',(int)$operation->id,$userId);
+                foreach($consumption['allocations'] as $allocation){
+                    $sourceLot=DB::table('inventory_lots')->where('company_id',$companyId)->where('id',$allocation['inventory_lot_id'])->first();
+                    $newLot=$this->lots->createInboundLot(['company_id'=>$companyId,'branch_id'=>$toBranch,'item_id'=>$itemId,
+                        ...\App\Services\Uom\OperationalDocument::columns($sourceLot,$allocation['base_quantity']),
+                        'base_cost'=>$allocation['total_cost'],'source_type'=>'TRANSFER','source_id'=>$operation->id,'parent_lot_id'=>$sourceLot->id,
+                        'origin_lot_id'=>$sourceLot->origin_lot_id?:$sourceLot->id,'received_at'=>$operation->operation_date.' 00:00:00','created_by'=>$userId]);
+                    DB::table('inventory_operation_lot_links')->insert(['company_id'=>$companyId,'operation_id'=>$operation->id,'operation_line_id'=>$line->id,'direction'=>'FROM','source_lot_id'=>$sourceLot->id,'produced_lot_id'=>$newLot,'item_id'=>$itemId,'branch_id'=>$toBranch,'qty_kg'=>0,'unit_cost_per_kg'=>0,'total_cost'=>$allocation['total_cost'],...\App\Services\Uom\OperationalDocument::columns($sourceLot,$allocation['base_quantity']),'created_at'=>now(),'updated_at'=>now()]);
+                    \App\Services\Uom\BaseInventory::stock($sourceLot,$companyId,$fromBranch,'OUT',$allocation['base_quantity'],$allocation['total_cost'],'TRANSFER',(int)$operation->id,$userId,$operation->operation_date,(int)$sourceLot->id);
+                    \App\Services\Uom\BaseInventory::stock($sourceLot,$companyId,$toBranch,'IN',$allocation['base_quantity'],$allocation['total_cost'],'TRANSFER',(int)$operation->id,$userId,$operation->operation_date,(int)$newLot);
+                }
+                $cost=(float)$consumption['total_cost'];DB::table('inventory_operation_lines')->where('id',$line->id)->update(['total_cost'=>$consumption['total_cost'],'updated_at'=>now()]);
+                $costByItem[$itemId]=round(($costByItem[$itemId]??0)+$cost,3);$totalCost+=$cost;
+                continue;
+            }
             $consumption=$this->lots->consumeFifo($companyId,$fromBranch,$itemId,$kg,'TRANSFER',(int)$operation->id,null,$userId);
             DB::table('inventory_operation_lines')->where('id',$line->id)->update(['unit_cost_per_kg'=>$consumption['unit_cost_per_kg'],'unit_cost'=>round($consumption['unit_cost_per_kg']*1000,3),'total_cost'=>$consumption['total_cost'],'updated_at'=>now()]);
             $this->stockMovement($operation,$fromBranch,$itemId,'OUT',$kg,$consumption['total_cost'],$userId,null);
@@ -350,6 +393,15 @@ class InventoryOperationService
 
     private function insertLine(int $companyId, int $operationId, int $branchId, string $type, array $line): void
     {
+        $item=DB::table('items')->where('company_id',$companyId)->where('id',$line['item_id'])->first();
+        if(($item->inventory_quantity_version??'LEGACY_KG')==='BASE_V1'){
+            $snapshot=\App\Services\Uom\OperationalDocument::prepare($companyId,$item,[...$line,'unit_price'=>'0'],false,true);
+            $columns=$snapshot['columns'];unset($columns['uom_price_snapshot']);
+            DB::table('inventory_operation_lines')->insert(['company_id'=>$companyId,'branch_id'=>$branchId,'operation_id'=>$operationId,'line_type'=>$type,'item_id'=>$item->id,
+                'quantity'=>$snapshot['quantity'],'unit_code'=>$snapshot['unit_code'],...$columns,'qty'=>0,'qty_kg'=>0,'unit_cost'=>0,'unit_cost_per_kg'=>0,'total_cost'=>0,'created_at'=>now(),'updated_at'=>now()]);
+            return;
+        }
+        if(!isset($line['qty_kg'])||(float)$line['qty_kg']<=0)throw new \RuntimeException('LEGACY_WEIGHT_QUANTITY_REQUIRED');
         $kg = round((float) $line['qty_kg'], 3);
         DB::table('inventory_operation_lines')->insert([
             'company_id' => $companyId,
@@ -452,7 +504,8 @@ class InventoryOperationService
         $financialAccountId = isset($row['financial_account_id']) && (int) $row['financial_account_id'] > 0 ? (int) $row['financial_account_id'] : null;
         if ($paymentStatus === 'PAID' && !$financialAccountId) throw new \RuntimeException('اختر الصندوق/البنك لتكلفة التشغيل المدفوعة.');
         if ($financialAccountId) {
-            $fa = DB::table('financial_accounts')->where('company_id',$companyId)->where('id',$financialAccountId)->where('is_active',1)->first();
+            $fa = DB::table('financial_accounts')->where('company_id',$companyId)->where('id',$financialAccountId)->where('is_active',1)
+                ->where(fn($q)=>$q->whereNull('branch_id')->orWhere('branch_id',$branchId))->first();
             if (!$fa) throw new \RuntimeException('الحساب المالي لتكلفة التشغيل غير صالح.');
             if (!empty($fa->currency_code) && strtoupper((string)$fa->currency_code) !== $currency) throw new \RuntimeException('عملة تكلفة التشغيل لا تطابق عملة الحساب المالي.');
         }

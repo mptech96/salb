@@ -29,13 +29,16 @@ final class ChromiumPdfRenderer
             $process = new Process([
                 $binary, '--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
                 '--disable-extensions', '--disable-sync', '--disable-background-networking',
-                '--allow-file-access-from-files', '--print-to-pdf-no-header',
+                '--allow-file-access-from-files', '--no-pdf-header-footer', '--print-to-pdf-no-header',
                 '--user-data-dir='.$profilePath, '--print-to-pdf='.$pdfPath, $this->fileUrl($htmlPath),
             ]);
             $process->setTimeout(60);
             $process->run();
             if (! $process->isSuccessful() || ! is_file($pdfPath)) {
-                throw new RuntimeException('تعذر إنشاء PDF بمحرك Chromium: '.trim($process->getErrorOutput()));
+                throw new RuntimeException('تعذر إنشاء PDF بمحرك Chromium: '
+                    .basename($binary).' exit='.($process->getExitCode() ?? 'unknown')
+                    .' output='.(is_file($pdfPath) ? 'present' : 'missing')
+                    .' '.trim($process->getErrorOutput()));
             }
             $pdf = file_get_contents($pdfPath);
             if (! is_string($pdf) || ! str_starts_with($pdf, '%PDF-')) {
@@ -53,9 +56,11 @@ final class ChromiumPdfRenderer
     {
         $configured = trim((string) config('sulb_features.pdf.chromium_path', ''));
         $candidates = array_filter([$configured,
+            // Prefer Chrome on Windows: an installed Edge launcher can exit 0
+            // without producing headless output. An explicit deployment setting wins.
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
             'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
             'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
             '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome',
         ]);
         foreach ($candidates as $candidate) if (is_file($candidate) && is_executable($candidate)) return $candidate;

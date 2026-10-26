@@ -350,6 +350,7 @@ class WeighbridgeService
     public function syncShipmentItemsFromCards(int $shipmentId): void
     {
         if($shipmentId<=0)return;
+        $identityEnabled=app(ShipmentLineIdentity::class)->enabled();
         $shipment=DB::table('shipments')->where('id',$shipmentId)->first();
         if(!$shipment || strtoupper((string)($shipment->commercial_status??'DRAFT'))!=='DRAFT')return;
         $cid=(int)$shipment->company_id;
@@ -363,6 +364,14 @@ class WeighbridgeService
             if($gross<=0)continue;
             $item=DB::table('items')->where('company_id',$cid)->where('id',$itemId)->first();
             if(!$item)continue;
+            if(($item->inventory_quantity_version??'')==='BASE_V1'){
+                if(!DB::getSchemaBuilder()->hasColumn('shipment_items','actual_weight_kg'))throw new \RuntimeException('UOM_SHIPMENT_SCHEMA_REQUIRED');
+                $baseRows=DB::table('shipment_items')->where('company_id',$cid)->where('shipment_id',$shipmentId)->where('item_id',$itemId)->where('uom_version','BASE_V1')->get();
+                // Closing a physical card must not invent or require inventory
+                // quantities. Ambiguous/missing lines stay for explicit preparation.
+                if($baseRows->count()!==1)continue;
+                DB::table('shipment_items')->where('company_id',$cid)->where('id',$baseRows[0]->id)->update(['actual_weight_kg'=>bcadd((string)$g->gross_kg,'0',3),'updated_at'=>now()]);continue;
+            }
             $row=DB::table('shipment_items')->where('company_id',$cid)->where('shipment_id',$shipmentId)->where('item_id',$itemId)->first();
             $ded=min($gross,max(0,round((float)($row->deduction_qty_kg??0),3)));
             $accepted=max(0,round($gross-$ded,3));
@@ -389,7 +398,7 @@ class WeighbridgeService
                     'average_cost'=>0,'distributed_cost'=>0,'profit'=>0,'inventory_created'=>0,'sorting_order'=>$sort,'status'=>'OPEN',
                     'notes'=>'أُنشئ تلقائيًا من كرت/كروت الميزان للمادة '.$item->item_name.'. الخصم والتسعير يتمان في تجهيز الشحنة.',
                     'created_at'=>now(),'updated_at'=>now(),
-                ]);
+                ]+app(ShipmentLineIdentity::class)->newAttributes($identityEnabled));
             }
         }
 

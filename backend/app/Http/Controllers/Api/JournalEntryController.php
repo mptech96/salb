@@ -115,7 +115,7 @@ class JournalEntryController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\ApiExceptionMessage::for($e),
             ], 422);
         }
     }
@@ -183,14 +183,15 @@ class JournalEntryController extends Controller
         ]);
 
         try {
-            $reversalEntryId = $service->reverse(
+            $reversalEntryId = $service->reverseManual(
                 $companyId,
                 $id,
                 [
                     'entry_date' => $validated['entry_date'],
                     'reason' => $validated['reason'],
                     'created_by' => $context->userId($request),
-                ]
+                ],
+                $branchFilter
             );
 
             return response()->json([
@@ -201,7 +202,7 @@ class JournalEntryController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\ApiExceptionMessage::for($e),
             ], 422);
         }
     }

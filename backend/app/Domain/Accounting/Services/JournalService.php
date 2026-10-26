@@ -70,6 +70,16 @@ class JournalService
         });
     }
 
+    /** Manual API root: serialize source approval before reading its reversal state. */
+    public function reverseManual(int $companyId,int $entryId,array $context=[],?int $branchId=null):int
+    {
+        return DB::transaction(function()use($companyId,$entryId,$context,$branchId){
+            $entry=DB::table('journal_entries')->where('company_id',$companyId)->where('id',$entryId)->when($branchId!==null,fn($q)=>$q->where('branch_id',$branchId))->lockForUpdate()->first();
+            if(!$entry||strtoupper((string)$entry->source_type)!=='MANUAL')throw new \RuntimeException('MANUAL_REVERSAL_SOURCE_REQUIRED');
+            if($entry->reversed_at){$reversal=DB::table('journal_entries')->where('company_id',$companyId)->where('id',$entry->reversed_by_id)->where('reversal_of_id',$entryId)->where('status','POSTED')->first();if(!$reversal||(string)$reversal->branch_id!==(string)$entry->branch_id)throw new \RuntimeException('MANUAL_REVERSAL_EVIDENCE_REQUIRED');return (int)$reversal->id;}
+            return $this->reverse($companyId,$entryId,$context);
+        });
+    }
     public function reverse(int $companyId,int $entryId,array $context=[]): int
     {
         return DB::transaction(function()use($companyId,$entryId,$context){

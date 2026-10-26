@@ -53,6 +53,17 @@ class RoutePermissionNormalizationTest extends TestCase
         self::assertSame('PERMISSION_DENIED', $response->getData(true)['code']);
         self::assertSame('inventory.view', $response->getData(true)['required_permission']);
     }
+    public function test_statement_view_does_not_authorize_manual_journal_post_or_reversal():void
+    {
+        foreach(['api/journal-entries','api/journal-entries/{id}/reverse'] as $uri)self::assertSame(403,$this->runMiddleware($uri,['statements.view'],'POST')->getStatusCode());
+        self::assertSame(204,$this->runMiddleware('api/journal-entries',['journals.post'],'POST')->getStatusCode());
+        self::assertSame(204,$this->runMiddleware('api/journal-entries/{id}/reverse',['journals.reverse'],'POST')->getStatusCode());
+    }
+    public function test_read_permissions_do_not_authorize_asset_worker_or_payroll_mutations():void
+    {
+        foreach([['api/fixed-assets','fixed_assets.manage'],['api/fixed-assets/{id}/sell','fixed_assets.manage'],['api/fixed-asset-maintenance/{id}/approve','fixed_assets.manage'],['api/workers','workers.manage'],['api/workers/{id}/loans','workers.manage'],['api/payroll/{id}/approve','payroll.manage']] as [$uri,$write]){self::assertSame(403,$this->runMiddleware($uri,['dashboard.view','workers.view','vouchers.create'],'POST')->getStatusCode());self::assertSame(204,$this->runMiddleware($uri,[$write],'POST')->getStatusCode());}
+        self::assertSame(403,$this->runMiddleware('api/workers',['workers.view'],'POST','workers.store')->getStatusCode());self::assertSame(204,$this->runMiddleware('api/workers',['workers.manage'],'POST','workers.store')->getStatusCode());
+    }
 
     public function test_genuinely_unknown_route_remains_fail_closed(): void
     {

@@ -13,6 +13,7 @@ class ExpensePosting
         try {
             return DB::transaction(function()use($data){
             $cid=(int)$data['company_id'];$bid=(int)$data['branch_id'];$eid=(int)$data['expense_id'];$amount=round((float)$data['amount'],3);$paid=strtoupper($data['payment_status']??'PAID')==='PAID';
+            if($paid)app(\App\Services\SulbDocumentSequenceService::class)->lockVoucherCompany($cid);
             $expense=DB::table('expenses')->where('company_id',$cid)->where('id',$eid)->lockForUpdate()->first();
             if(!$expense)throw new \RuntimeException('المصروف غير موجود.');
             if($expense->journal_entry_id)return PostingResult::success('المصروف مرحل مسبقًا',(int)$expense->journal_entry_id,$expense->voucher_id?(int)$expense->voucher_id:null);
@@ -25,8 +26,8 @@ class ExpensePosting
             $voucherId=null;
             if($paid){
                 $voucherTypeId=DB::table('voucher_types')->where('type_code','PAYMENT')->value('id')?:DB::table('voucher_types')->where('id',2)->value('id');if(!$voucherTypeId)throw new \RuntimeException('نوع سند الصرف غير معرف.');
-                $last=DB::table('vouchers')->where('company_id',$cid)->max('id')??0;
-                $voucherId=DB::table('vouchers')->insertGetId(['company_id'=>$cid,'branch_id'=>$bid,'voucher_type_id'=>$voucherTypeId,'voucher_number'=>'PAY-'.date('Y').'-'.str_pad($last+1,5,'0',STR_PAD_LEFT),'voucher_date'=>$data['expense_date'],'reference_type'=>'EXPENSE','reference_id'=>$eid,'amount'=>$amount,'journal_entry_id'=>$jid,'cash_account_id'=>$creditAcc,'financial_account_id'=>(int)$fa->id,'currency_code'=>$currency,'exchange_rate'=>$rate,'foreign_amount'=>$data['foreign_amount']??null,'payment_method'=>$data['payment_method']??'CASH','notes'=>'سند صرف تلقائي للمصروف','created_by'=>$data['created_by']??null,'created_at'=>now(),'updated_at'=>now()]);
+                $number=app(\App\Services\SulbDocumentSequenceService::class)->reserveVoucher($cid,'PAYMENT',$data['expense_date']);
+                $voucherId=DB::table('vouchers')->insertGetId(['company_id'=>$cid,'branch_id'=>$bid,'voucher_type_id'=>$voucherTypeId,'voucher_number'=>$number,'voucher_date'=>$data['expense_date'],'reference_type'=>'EXPENSE','reference_id'=>$eid,'amount'=>$amount,'journal_entry_id'=>$jid,'cash_account_id'=>$creditAcc,'financial_account_id'=>(int)$fa->id,'currency_code'=>$currency,'exchange_rate'=>$rate,'foreign_amount'=>$data['foreign_amount']??null,'payment_method'=>$data['payment_method']??'CASH','notes'=>'سند صرف تلقائي للمصروف','created_by'=>$data['created_by']??null,'created_at'=>now(),'updated_at'=>now()]);
             }
             DB::table('expenses')->where('company_id',$cid)->where('id',$eid)->update(['voucher_id'=>$voucherId,'journal_entry_id'=>$jid,'financial_account_id'=>$fa?->id,'currency_code'=>$currency,'exchange_rate'=>$rate,'foreign_amount'=>$data['foreign_amount']??null,'updated_at'=>now()]);
             return PostingResult::success('تم ترحيل المصروف',$jid,$voucherId);

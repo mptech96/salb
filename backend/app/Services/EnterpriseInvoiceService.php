@@ -37,7 +37,8 @@ class EnterpriseInvoiceService
         int $companyId,
         int $branchId,
         int $userId,
-        ?int $invoiceId = null
+        ?int $invoiceId = null,
+        ?\App\Services\Uom\CapturedDocumentSnapshot $capturedSource = null
     ): int {
         $mode = strtoupper($mode);
         $sale = $mode === 'SALE';
@@ -52,7 +53,7 @@ class EnterpriseInvoiceService
         $partyType = $sale ? 'CUSTOMER' : 'SUPPLIER';
 
         return DB::transaction(function () use (
-            $mode,$sale,$data,$companyId,$branchId,$userId,$invoiceId,
+            $mode,$sale,$data,$companyId,$branchId,$userId,$invoiceId,$capturedSource,
             $table,$lineTable,$fk,$partyKey,$partyType
         ) {
             $old = $invoiceId
@@ -118,7 +119,18 @@ class EnterpriseInvoiceService
                 if (!$sale && !(int)($item->can_purchase ?? 1)) throw new \RuntimeException('الصنف '.$item->item_name.' غير مسموح بشرائه.');
 
                 $isService=strtoupper((string)($item->item_type??'STOCK'))==='SERVICE'||(int)($item->track_inventory??1)!==1;
-                if($isService){
+                $uom=null;
+                if(!$isService&&($item->inventory_quantity_version??'LEGACY_KG')==='BASE_V1'){
+                    if(!empty($row['shipment_id'])){
+                        // shipmentLines has already locked and scoped the READY header.
+                        $saved=DB::table('shipment_items')->where('company_id',$companyId)->where('shipment_id',$row['shipment_id'])->where('id',$row['shipment_item_id'])->where('item_id',$itemId)->lockForUpdate()->first();
+                        if(!$saved||!\App\Services\Uom\OperationalDocument::isBase($saved))throw new \RuntimeException('UOM_SHIPMENT_SNAPSHOT_SCOPE');
+                        if(strtoupper((string)$saved->currency_code)!==$currency)throw new \RuntimeException('UOM_SHIPMENT_CURRENCY_MISMATCH');
+                        $uom=\App\Services\Uom\OperationalDocument::prepareSnapshot($companyId,$item,$saved);
+                    }else $uom=$capturedSource?$capturedSource->prepare($companyId,$branchId,$item,$row,$sale):\App\Services\Uom\OperationalDocument::prepare($companyId,$item,$row,$sale);
+                    $quantity=$uom['quantity'];$unitCode=$uom['unit_code'];$qtyKg=0.0;$priceUnit='UNIT';
+                    $enteredPrice=$uom['price'];$perKg=0.0;$gross=(float)$uom['gross'];
+                }elseif($isService){
                     $quantity=round((float)($row['quantity']??$row['qty']??$row['qty_kg']??0),6);
                     if($quantity<=0)throw new \RuntimeException('كمية الخدمة في السطر '.($i+1).' يجب أن تكون أكبر من صفر.');
                     $qtyKg=0.0;$priceUnit='UNIT';$unitCode=strtoupper((string)($row['unit_code']??$item->base_unit_code??'UNIT'));
@@ -145,13 +157,14 @@ class EnterpriseInvoiceService
                     'item_id'=>$itemId,
                     'quantity'=>$quantity,
                     'unit_code'=>$unitCode,
-                    'unit_factor_to_base'=>$isService?1:1,
+                    'unit_factor_to_base'=>$uom?$uom['factor']:1,
+                    'uom_columns'=>$uom?$uom['columns']:[],
                     'qty_kg'=>$qtyKg,
                     'qty_ton'=>$isService?$quantity:round($qtyKg/1000,6),
                     'price_unit'=>$priceUnit,
                     'entered_price'=>$enteredPrice,
                     'unit_price_per_kg'=>$perKg,
-                    'legacy_unit_price'=>$isService?$enteredPrice:round($perKg*1000,3),
+                    'legacy_unit_price'=>($isService||$uom)?$enteredPrice:round($perKg*1000,3),
                     'line_discount'=>$lineDiscount,
                     'gross'=>$gross,
                     'net'=>$net,
@@ -273,6 +286,7 @@ class EnterpriseInvoiceService
 
             foreach ($taxPrepared as $row) {
                 DB::table($lineTable)->insert([
+                    ...$row['uom_columns'],
                     'company_id'=>$companyId,
                     $fk=>$id,
                     'item_id'=>$row['item_id'],
@@ -327,22 +341,62 @@ class EnterpriseInvoiceService
         });
     }
 
-    public function post(string $mode,int $companyId,int $invoiceId,int $userId,?int $branchFilter=null): array
+    public function post(string $mode,int $companyId,int $invoiceId,int $userId,?int $branchFilter=null,?callable $isolatedCapture=null): array
     {
+        // Transport metadata never creates ownership. At the HTTP entry all
+        // existing auth/subscription/tenant middleware has already run.
+        if(request()->exists('transaction_owner')||request()->exists('trusted_transaction_owner')||request()->headers->has('X-Sulb-Transaction-Owner'))
+            throw new \RuntimeException('TRANSACTION_OWNER_NOT_ACCEPTED: هوية مالك المعاملة داخلية ولا تُقبل من الطلب.');
+        if($isolatedCapture!==null)\App\Services\Accounting\IsolatedHistoricalAccountingGate::assert();
+        if($isolatedCapture!==null){
+            $actorBranch=$branchFilter??(int)DB::table(strtoupper($mode)==='SALE'?'sales_invoices':'purchase_invoices')->where('company_id',$companyId)->where('id',$invoiceId)->value('branch_id');
+            \App\Services\Accounting\HistoricalAccountingAuthorization::assert($companyId,$actorBranch,$userId,[strtoupper($mode)==='SALE'?'sales.post':'purchases.post']);
+        }
         $mode=strtoupper($mode);
         $sale=$mode==='SALE';
         $table=$sale?'sales_invoices':'purchase_invoices';
         $lineTable=$sale?'sales_invoice_lines':'purchase_invoice_lines';
         $fk=$sale?'sales_invoice_id':'purchase_invoice_id';
 
-        return DB::transaction(function()use($mode,$sale,$companyId,$invoiceId,$userId,$branchFilter,$table,$lineTable,$fk){
+        $uomOwned=app(\App\Services\Uom\OperationalTransactionOwner::class)->owns($companyId,$invoiceId,$userId,$sale?'SALE_POST':'PURCHASE_POST');
+        $ownedScope=app(ShipmentTransactionOwner::class)->scope($companyId,$invoiceId,$userId,$sale?'SALE_POST':'PURCHASE_POST');
+        if($sale&&$ownedScope===null&&(DB::transactionLevel()>0||DB::connection()->getPdo()->inTransaction())
+            &&DB::table('invoice_shipment_links')->where('company_id',$companyId)->where('invoice_type','SALE')->where('invoice_id',$invoiceId)->exists())
+            throw new \RuntimeException('SALE_POST_OUTERMOST_REQUIRED');
+        $shipmentScope=$sale?[]:($ownedScope??ShipmentPurchasePostingScope::snapshot($companyId,$invoiceId));
+        if(!$sale&&$ownedScope===null)ShipmentPurchasePostingScope::assertOuterEntry($shipmentScope);
+        $restoreIsolation=(!$sale&&$ownedScope===null)?ShipmentCostReadIsolation::prepare($shipmentScope):null;
+        try { return DB::transaction(function()use($mode,$sale,$companyId,$invoiceId,$userId,$branchFilter,$table,$lineTable,$fk,$isolatedCapture,$shipmentScope,$ownedScope,$uomOwned){
+            if(!$sale)ShipmentPurchasePostingScope::reserve($companyId,$shipmentScope);
             $inv=DB::table($table)->where('company_id',$companyId)->where('id',$invoiceId)->lockForUpdate()->first();
             if(!$inv)throw new \RuntimeException('الفاتورة غير موجودة.');
             if($branchFilter!==null&&(int)$inv->branch_id!==$branchFilter)throw new \RuntimeException('الفاتورة خارج نطاق فرعك.');
+            if(!$sale)ShipmentPurchasePostingScope::verify($companyId,$invoiceId,(int)$inv->branch_id,$shipmentScope);
             if(($inv->document_status??'DRAFT')==='POSTED'||$inv->journal_entry_id){
                 return ['id'=>$invoiceId,'journal_entry_id'=>$inv->journal_entry_id,'message'=>'الفاتورة مرحلة مسبقًا.'];
             }
             if(($inv->document_status??'DRAFT')!=='DRAFT')throw new \RuntimeException('حالة الفاتورة لا تسمح بالترحيل.');
+            if(!$sale)ShipmentPurchasePostingScope::assertReady($companyId,(int)$inv->branch_id,(int)$inv->supplier_id,$shipmentScope);
+
+            $linkedShipments=(!$sale&&!$shipmentScope)?collect():DB::table('invoice_shipment_links')->where('company_id',$companyId)->where('invoice_type',$mode)->where('invoice_id',$invoiceId)
+                ->orderBy('shipment_id')->lockForUpdate()->get();
+            foreach($linkedShipments as$link)if((int)$link->branch_id!==(int)$inv->branch_id)throw new \RuntimeException('SHIPMENT_SCOPE_BRANCH_MISMATCH');
+            // H precedes I/L/F for linked SALE as well. Purchase already owns H.
+            foreach($linkedShipments->pluck('shipment_id')->unique()->sort() as$sid)if(!DB::table('shipments')->where('company_id',$companyId)->where('id',$sid)->lockForUpdate()->first())throw new \RuntimeException('SHIPMENT_SCOPE_SOURCE_MISSING');
+
+            // Source -> company/year LOT scope (purchase only) -> sorted items -> existing FY.
+            // Reserve before any inventory/FY locks, including custom opening lot numbers.
+            if(!$sale&&DB::table($lineTable)->where('company_id',$companyId)->where($fk,$invoiceId)
+                ->where('track_inventory_snapshot',1)->where('item_type_snapshot','STOCK')->exists()){
+                InventoryPostingLocks::reserveLotScope($companyId,(string)$inv->invoice_date);
+            }
+            $invoiceItemQuery=DB::table($lineTable)->where('company_id',$companyId)->where($fk,$invoiceId);
+            // Source is already locked. Use a current line read for the union,
+            // not a potentially older Support transaction's RR snapshot.
+            if($linkedShipments->isNotEmpty())$invoiceItemQuery->lockForUpdate();
+            $invoiceItems=$invoiceItemQuery->pluck('item_id');
+            if($linkedShipments->isNotEmpty())app(ShipmentInventoryLockScope::class)->prepare($companyId,$linkedShipments->pluck('shipment_id')->map(fn($id)=>(int)$id)->all(),$invoiceItems);
+            else InventoryPostingLocks::lockItems($companyId,$invoiceItems);
 
             $lines=DB::table($lineTable.' as l')
                 ->join('items as i','i.id','=','l.item_id')
@@ -350,6 +404,7 @@ class EnterpriseInvoiceService
                 ->select('l.*','i.item_name','i.allow_negative_stock')
                 ->orderBy('l.id')->lockForUpdate()->get();
             if($lines->isEmpty())throw new \RuntimeException('الفاتورة لا تحتوي أصنافاً.');
+            if($lines->contains(fn($line)=>\App\Services\Uom\OperationalDocument::isBase($line))&&DB::transactionLevel()!==1&&$ownedScope===null&&!$uomOwned)throw new \RuntimeException('UOM_TRUSTED_POSTING_ROOT_REQUIRED');
 
             // Accounting preflight BEFORE physical stock movement. A missing item/group/category account blocks POST cleanly.
             foreach($lines as $line){
@@ -359,13 +414,23 @@ class EnterpriseInvoiceService
             }
             if($sale)$this->itemAccounts->receivable($companyId,(int)$inv->customer_id);else$this->itemAccounts->payable($companyId,(int)$inv->supplier_id);
 
+            // Linked PURCHASE only: current cost rows, after existing H/I/R,
+            // before any physical stock/journal/PAY write. No allocator enabled.
+            if(!$sale&&$linkedShipments->isNotEmpty()&&config('shipment_cost_read.enabled'))app(ShipmentPurchaseCostRead::class)->prepare($companyId,$linkedShipments->pluck('shipment_id')->all());
+            if(!$sale&&$linkedShipments->isNotEmpty()&&config('shipment_allocation.enabled')) {
+                foreach($linkedShipments->pluck('shipment_id')->unique()->sort() as $sid) {
+                    app(ShipmentAllocationLedger::class)->prepare($companyId,(int)$sid,$lines);
+                }
+            }
+
             // Inventory first inside the same DB transaction. Any shortage/error rolls everything back.
             if($sale)$this->postSaleInventory($companyId,$inv,$lines,$userId);
             else$this->postPurchaseInventory($companyId,$inv,$lines,$userId);
 
             $journalId=$sale
-                ?$this->accounting->postSale($companyId,$invoiceId,$userId)
-                :$this->accounting->postPurchase($companyId,$invoiceId,$userId);
+                ?$this->accounting->postSale($companyId,$invoiceId,$userId,$isolatedCapture)
+                :$this->accounting->postPurchase($companyId,$invoiceId,$userId,$isolatedCapture);
+            if(!$sale&&$lines->contains(fn($line)=>\App\Services\Uom\OperationalDocument::isBase($line)))\App\Services\Uom\BaseInvoiceHeaderCost::markPosted($companyId,$inv,$journalId);
 
             DB::table($table)->where('id',$invoiceId)->update([
                 'document_status'=>'POSTED','posted_at'=>now(),'posted_by'=>$userId,'updated_at'=>now()
@@ -388,7 +453,13 @@ class EnterpriseInvoiceService
                     ?'تم ترحيل فاتورة البيع والمخزون والمحاسبة.'
                     :'تم ترحيل فاتورة الشراء والمخزون والمحاسبة وتكاليف الشحنات.',
             ];
-        });
+        }); } catch(\Throwable $failure) {
+            if($ownedScope!==null)throw app(ShipmentTransactionOwner::class)->markRollbackOnly($failure);
+            if($uomOwned)throw app(\App\Services\Uom\OperationalTransactionOwner::class)->markRollbackOnly($failure);
+            throw $failure;
+        } finally {
+            if($restoreIsolation!==null)$restoreIsolation();
+        }
     }
 
     public function void(string $mode,int $companyId,int $invoiceId,int $userId,string $reason,?int $branchFilter=null): array
@@ -396,8 +467,10 @@ class EnterpriseInvoiceService
         $mode=strtoupper($mode);
         $sale=$mode==='SALE';
         $table=$sale?'sales_invoices':'purchase_invoices';
-
-        return DB::transaction(function()use($mode,$sale,$companyId,$invoiceId,$userId,$reason,$branchFilter,$table){
+        $ownedScope=$sale?null:app(ShipmentTransactionOwner::class)->scope($companyId,$invoiceId,$userId,'PURCHASE_VOID');
+        if(!$sale&&$ownedScope===null&&DB::transactionLevel()>0)throw new \RuntimeException('PURCHASE_VOID_OUTERMOST_REQUIRED');
+        $uomOwned=$sale&&app(\App\Services\Uom\OperationalTransactionOwner::class)->owns($companyId,$invoiceId,$userId,'SALE_VOID');
+        try { return DB::transaction(function()use($mode,$sale,$companyId,$invoiceId,$userId,$reason,$branchFilter,$table,$uomOwned){
             if(mb_strlen(trim($reason))<5)throw new \RuntimeException('سبب العكس مطلوب ويجب أن يكون واضحاً.');
 
             $inv=DB::table($table)->where('company_id',$companyId)->where('id',$invoiceId)->lockForUpdate()->first();
@@ -411,8 +484,16 @@ class EnterpriseInvoiceService
                 ->pluck('shipment_id')->map(fn($x)=>(int)$x)->all();
 
             if($sale){
+                $saleLines=DB::table('sales_invoice_lines')->where('company_id',$companyId)->where('sales_invoice_id',$invoiceId)->get();
+                if($saleLines->contains(fn($line)=>\App\Services\Uom\OperationalDocument::isBase($line))){
+                    if(DB::transactionLevel()!==1&&!$uomOwned)throw new \RuntimeException('UOM_TRUSTED_VOID_ROOT_REQUIRED');
+                    InventoryPostingLocks::lockItems($companyId,$saleLines->pluck('item_id'));
+                    if(DB::table('commercial_returns')->where('company_id',$companyId)->where('return_type','SALES_RETURN')->where('source_invoice_id',$invoiceId)->where('document_status','POSTED')->exists())throw new \RuntimeException('UOM_VOID_ACTIVE_RETURN_EXISTS');
+                }
                 $this->reverseSaleInventory($companyId,$invoiceId,$userId);
             }else{
+                app(ShipmentInventoryLockScope::class)->prepare($companyId,$shipmentIds,
+                    DB::table('purchase_invoice_lines')->where('company_id',$companyId)->where('purchase_invoice_id',$invoiceId)->pluck('item_id'));
                 $this->assertPurchaseCanVoid($companyId,$invoiceId);
                 // Shipment cost journals belong to the purchase lifecycle and must be reversed too.
                 foreach($shipmentIds as$shipmentId){
@@ -466,7 +547,11 @@ class EnterpriseInvoiceService
             }
 
             return ['id'=>$invoiceId,'reversal_journal_id'=>$reversalId,'message'=>'تم عكس الفاتورة مع الحفاظ على كامل الأثر التاريخي.'];
-        });
+        }); } catch(\Throwable $failure) {
+            if($ownedScope!==null)throw app(ShipmentTransactionOwner::class)->markRollbackOnly($failure);
+            if($uomOwned)throw app(\App\Services\Uom\OperationalTransactionOwner::class)->markRollbackOnly($failure);
+            throw $failure;
+        }
     }
 
     public function deleteDraft(string $mode,int $companyId,int $id,?int $branchFilter=null): void
@@ -509,6 +594,10 @@ class EnterpriseInvoiceService
 
             $items=DB::table('shipment_items')->where('company_id',$companyId)->where('shipment_id',$shipmentId)->orderBy('sorting_order')->get();
             foreach($items as$item){
+                if(\App\Services\Uom\OperationalDocument::isBase($item)){
+                    $out[]=['item_id'=>(int)$item->item_id,'quantity'=>(string)$item->quantity,'unit_code'=>$item->unit_code,'price_unit'=>'UNIT','unit_price'=>(string)$item->uom_price_snapshot,'discount_amount'=>$item->discount_amount,'tax_code_id'=>$item->tax_code_id,'vat_percent'=>$item->vat_percent,'shipment_id'=>$shipmentId,'shipment_item_id'=>(int)$item->id,'notes'=>'من الشحنة '.$shipment->shipment_number];
+                    continue;
+                }
                 $out[]=[
                     'item_id'=>(int)$item->item_id,
                     'qty_kg'=>(float)($item->accepted_qty_kg??$item->qty_kg),
@@ -531,11 +620,28 @@ class EnterpriseInvoiceService
         $stockLines=$lines->filter(fn($line)=>(int)$line->track_inventory_snapshot===1&&strtoupper((string)$line->item_type_snapshot)!=='SERVICE');
         $headerBase=round(((float)($inv->transport_cost??0)+(float)($inv->extra_cost??0))*(float)($inv->exchange_rate?:1),3);
         $stockBasis=max(0.001,(float)$stockLines->sum('base_total_before_vat'));
+        $headerShares=$stockLines->contains(fn($line)=>\App\Services\Uom\OperationalDocument::isBase($line))?\App\Services\Uom\BaseInvoiceHeaderCost::prepare($companyId,$inv,$stockLines):[];
 
         foreach($lines as$line){
             if((int)$line->track_inventory_snapshot!==1||strtoupper((string)$line->item_type_snapshot)==='SERVICE')continue;
             $share=(float)$line->base_total_before_vat/$stockBasis;
             $base=round((float)$line->base_total_before_vat+$headerBase*$share,3);
+            if($headerShares||\App\Services\Uom\OperationalDocument::isBase($line))$base=bcadd((string)$line->base_total_before_vat,$headerShares[$line->id]??'0',3);
+            if(\App\Services\Uom\OperationalDocument::isBase($line)){
+                $shipmentSource=\App\Services\Uom\ShipmentBaseLine::invoiceSource($companyId,(int)$inv->branch_id,(int)$inv->id,$line,'PURCHASE');
+                if($shipmentSource&&(!config('shipment_allocation.enabled')||!config('shipment_cost_read.enabled')||!DB::getSchemaBuilder()->hasTable('uom_lot_capitalization_events')))throw new \RuntimeException('UOM_SHIPMENT_L3_REQUIRED');
+                $baseValue=is_string($base)?$base:number_format($base,3,'.','');
+                $lotId=$this->lots->createInboundLot([
+                    'company_id'=>$companyId,'branch_id'=>(int)$inv->branch_id,'item_id'=>(int)$line->item_id,
+                    'shipment_id'=>$line->shipment_id,'shipment_item_id'=>$line->shipment_item_id,'car_id'=>$line->car_id,
+                    ...\App\Services\Uom\OperationalDocument::columns($line,(string)$line->base_quantity),
+                    'purchase_invoice_id'=>$inv->id,'purchase_invoice_line_id'=>$line->id,'base_cost'=>$baseValue,
+                    'source_type'=>'PURCHASE','source_id'=>$inv->id,'received_at'=>$inv->invoice_date.' 00:00:00','created_by'=>$userId,
+                ]);
+                \App\Services\Uom\BaseInventory::stock($line,$companyId,(int)$inv->branch_id,'IN',(string)$line->base_quantity,$baseValue,'PURCHASE',(int)$inv->id,$userId,$inv->invoice_date,$lotId);
+                if($shipmentSource)DB::table('shipment_items')->where('company_id',$companyId)->where('id',$shipmentSource->id)->update(['inventory_lot_id'=>$lotId,'purchase_line_id'=>$line->id,'inventory_created'=>1,'base_cost'=>$line->base_total_before_vat,'final_cost'=>number_format($base,3,'.',''),'updated_at'=>now()]);
+                continue;
+            }
             $kg=round((float)$line->qty_kg,3);
             if($kg<=0)throw new \RuntimeException('كمية المخزون في فاتورة الشراء غير صالحة.');
 
@@ -569,6 +675,15 @@ class EnterpriseInvoiceService
     {
         foreach($lines as$line){
             if((int)$line->track_inventory_snapshot!==1||strtoupper((string)$line->item_type_snapshot)==='SERVICE')continue;
+            if(\App\Services\Uom\OperationalDocument::isBase($line)){
+                \App\Services\Uom\ShipmentBaseLine::invoiceSource($companyId,(int)$inv->branch_id,(int)$inv->id,$line,'SALE');
+                $consumption=\App\Services\Uom\BaseInventory::consume($companyId,(int)$inv->branch_id,(int)$line->item_id,(string)$line->base_quantity,'SALE',(int)$inv->id,$userId);
+                foreach($consumption['allocations'] as $source){
+                    DB::table('sales_line_lot_sources')->insert(['company_id'=>$companyId,'branch_id'=>$inv->branch_id,'sales_invoice_line_id'=>$line->id,...$source,'created_at'=>now(),'updated_at'=>now()]);
+                    \App\Services\Uom\BaseInventory::stock($line,$companyId,(int)$inv->branch_id,'OUT',$source['base_quantity'],$source['total_cost'],'SALE',(int)$inv->id,$userId,$inv->invoice_date,(int)$source['inventory_lot_id']);
+                }
+                continue;
+            }
             $kg=round((float)$line->qty_kg,3);
             // consumeFifo deliberately refuses negative stock. Physical items cannot be sold without stock.
             $consumption=$this->lots->consumeFifo($companyId,(int)$inv->branch_id,(int)$line->item_id,$kg,'SALE',(int)$inv->id,null,$userId);
@@ -607,6 +722,10 @@ class EnterpriseInvoiceService
     {
         $lots=DB::table('inventory_lots')->where('company_id',$companyId)->where('purchase_invoice_id',$invoiceId)->get();
         foreach($lots as$lot){
+            if(\App\Services\Uom\OperationalDocument::isBase($lot)){
+                if(bccomp($lot->remaining_base_qty,$lot->received_base_qty,6)!==0)throw new \RuntimeException('UOM_PURCHASE_ALREADY_ISSUED');
+                continue;
+            }
             if(round((float)$lot->qty_remaining_kg,3)<round((float)$lot->qty_received_kg,3)){
                 throw new \RuntimeException('لا يمكن عكس فاتورة شراء تم صرف جزء من دفعاتها. استخدم مردود شراء/تسوية معتمدة.');
             }
@@ -617,7 +736,16 @@ class EnterpriseInvoiceService
     {
         $lots=DB::table('inventory_lots')->where('company_id',$companyId)->where('purchase_invoice_id',$invoiceId)->lockForUpdate()->get();
         foreach($lots as$lot){
+            if(\App\Services\Uom\OperationalDocument::isBase($lot)){
+                if(bccomp($lot->remaining_base_qty,'0',6)>0){
+                    $value=\App\Services\Uom\BaseInventory::remove($lot,$lot->remaining_base_qty);
+                    \App\Services\Uom\BaseInventory::movement($lot,'OUT',$lot->remaining_base_qty,$value,'PURCHASE_REVERSAL',$invoiceId,$userId,date('Y-m-d'));
+                    \App\Services\Uom\BaseInventory::stock($lot,$companyId,(int)$lot->branch_id,'OUT',$lot->remaining_base_qty,$value,'PURCHASE_REVERSAL',$invoiceId,$userId,date('Y-m-d'),(int)$lot->id);
+                }
+                continue;
+            }
             $qty=round((float)$lot->qty_remaining_kg,3);if($qty<=0)continue;$cost=round($qty*(float)$lot->unit_cost_per_kg,3);
+            if(config('inventory_value.enabled'))$cost=(float)InventoryLotValue::issue($lot,number_format($qty,3,'.',''));
             DB::table('inventory_lot_movements')->insert([
                 'company_id'=>$companyId,'branch_id'=>$lot->branch_id,'inventory_lot_id'=>$lot->id,'item_id'=>$lot->item_id,
                 'movement_type'=>'OUT','source_type'=>'PURCHASE_REVERSAL','source_id'=>$invoiceId,'movement_at'=>now(),
@@ -644,6 +772,13 @@ class EnterpriseInvoiceService
         foreach($sources as$source){
             $lot=DB::table('inventory_lots')->where('company_id',$companyId)->where('id',$source->inventory_lot_id)->lockForUpdate()->first();
             if(!$lot)continue;
+            if(\App\Services\Uom\OperationalDocument::isBase($source)){
+                \App\Services\Uom\BaseInventory::restore($lot,$source->base_quantity,$source->total_cost);
+                \App\Services\Uom\BaseInventory::movement($lot,'IN',$source->base_quantity,$source->total_cost,'SALE_REVERSAL',$invoiceId,$userId,date('Y-m-d'));
+                \App\Services\Uom\BaseInventory::stock($lot,$companyId,(int)$lot->branch_id,'IN',$source->base_quantity,$source->total_cost,'SALE_REVERSAL',$invoiceId,$userId,date('Y-m-d'),(int)$lot->id);
+                continue;
+            }
+            InventoryLotValue::restore($lot,(string)$source->qty_kg,(string)$source->total_cost);
             DB::table('inventory_lots')->where('id',$lot->id)->update([
                 'qty_remaining_kg'=>round((float)$lot->qty_remaining_kg+(float)$source->qty_kg,3),
                 'qty_sold_kg'=>max(0,round((float)$lot->qty_sold_kg-(float)$source->qty_kg,3)),

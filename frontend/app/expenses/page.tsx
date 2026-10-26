@@ -7,6 +7,7 @@ import ServerPagination, {
 } from "@/components/finance/ServerPagination";
 import Link from "next/link";
 import { expensePaymentAccounts, normalizeExpenseMeta } from "@/lib/expense-meta";
+import AccountSearchSelect from "@/components/finance/AccountSearchSelect";
 const n = (v: any) => Number(v || 0),
   money = (v: any) =>
     n(v).toLocaleString("en-US", {
@@ -509,11 +510,12 @@ export default function ExpensesPage() {
               ]}
             />
             {form.payment_status === "PAID" && (
-              <Select
-                l="الخزينة / البنك *"
-                v={form.financial_account_id}
-                set={(v) => {
-                  const x = financial.find((a: any) => String(a.id) === v);
+              <AccountSearchSelect
+                endpoint="/expenses/account-options"
+                branch={branch}
+                label="الخزينة / البنك / العهدة *"
+                value={form.financial_account_id}
+                onChange={(v, x) => {
                   setForm({
                     ...form,
                     financial_account_id: v,
@@ -525,10 +527,6 @@ export default function ExpensesPage() {
                         : form.exchange_rate,
                   });
                 }}
-                o={financial.map((x: any) => ({
-                  id: x.id,
-                  name: `${x.account_name} — ${x.branch_name || "مركزي"} — ${x.currency_code}`,
-                }))}
               />
             )}
             <Select

@@ -1,0 +1,277 @@
+{
+  "historical_backfill": "QA only; unsupported sources remain explicit exceptions",
+  "uom_order": [
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "New-item-only UOM definitions, composite FK/type/collation prerequisites; nonrestartable installation; implicit DDL commits",
+      "path": "backend/database/uom-migrations/2026_10_13_000001_uom_foundation.php",
+      "sha256": "fe1c46fda192480f8c6c82272c04132aa9bf8d81843967b49f7f62fd8d544096",
+      "automatic_laravel_path": false,
+      "sequence": 1,
+      "qa_dependencies": "baseline schema and composite parent keys"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Immutable transaction and cost contracts; requires foundation; nonrestartable DDL",
+      "path": "backend/database/uom-migrations/2026_10_14_000002_uom_contracts.php",
+      "sha256": "ecf680139ad45e5431e586752c147f6f54562f759b4a9dd0e29ff7b18e0007c9",
+      "automatic_laravel_path": false,
+      "sequence": 2,
+      "qa_dependencies": "001"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires001 and exact QA engine10.4.32; replaces write gates; nonrestartable additive columns",
+      "path": "backend/database/uom-migrations/2026_10_24_000003_uom_operational.php",
+      "sha256": "aa47ad93f233eb84fa8339517d7ed57f03dddc06f98d7f775cea425254f6ae6e",
+      "automatic_laravel_path": false,
+      "sequence": 3,
+      "qa_dependencies": "002"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires003; quotation/order snapshots and scoped triggers; partial-schema checks",
+      "path": "backend/database/uom-migrations/2026_10_25_000004_commercial_snapshots.php",
+      "sha256": "53fa1dc45c997376f68cd4d1ba6ae6c0f548a98135d207ead3502a6534b808f9",
+      "automatic_laravel_path": false,
+      "sequence": 4,
+      "qa_dependencies": "003"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires003; opening snapshots and scoped triggers; partial-schema checks",
+      "path": "backend/database/uom-migrations/2026_10_25_000005_opening_snapshots.php",
+      "sha256": "78e6f1d302c8897640dcb97b56943ce4b92d9f8a22817f2b20da6e260f97c6a7",
+      "automatic_laravel_path": false,
+      "sequence": 5,
+      "qa_dependencies": "004"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires003; adjustment unique request scope and precision verification",
+      "path": "backend/database/uom-migrations/2026_10_25_000006_base_adjustments.php",
+      "sha256": "3f5f48ddb9318c35a8bc42a7eb7268943ceb027df5aa045549cdb5cba45fcfe0",
+      "automatic_laravel_path": false,
+      "sequence": 6,
+      "qa_dependencies": "005"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires003; shipment snapshots; independent actual weight; legacy rows not revalued",
+      "path": "backend/database/uom-migrations/2026_10_25_000007_shipment_snapshots.php",
+      "sha256": "fb48f8aa0093490cd337a760b3922d54df9fb040128cd23058dbf0dda9d858a0",
+      "automatic_laravel_path": false,
+      "sequence": 7,
+      "qa_dependencies": "006"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires003; immutable approved recipe revisions; no inferred cross-dimension recipe",
+      "path": "backend/database/uom-migrations/2026_10_25_000008_processing_recipes.php",
+      "sha256": "2ff38eb2b71861dcd80eddb2ceb1c390141a37b0beaf822f00f48eb929aba54d",
+      "automatic_laravel_path": false,
+      "sequence": 8,
+      "qa_dependencies": "007"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires008; command/result hashes; refuses existing unhashed result history",
+      "path": "backend/database/uom-migrations/2026_10_25_000009_processing_commands.php",
+      "sha256": "da9d8aef46dc3de79cd8f974dac38ab58b0e57e27e05d64546b16af8150776cb",
+      "automatic_laravel_path": false,
+      "sequence": 9,
+      "qa_dependencies": "008"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires allocation receipts and LOT value schema; immutable BASE capitalization events",
+      "path": "backend/database/uom-migrations/2026_10_26_000010_base_capitalization.php",
+      "sha256": "114de0c4eeb5c6b18d788bc0fb39361384d6d170c68aec1f4dbf3ab3a5677d5b",
+      "automatic_laravel_path": false,
+      "sequence": 10,
+      "qa_dependencies": [
+        "007",
+        "009",
+        "stock_movements_company_source_index.php",
+        "shipment_cost_parent_fk.php",
+        "shipment_cost_allocation_receipts.php",
+        "inventory_lot_value_balances.php"
+      ]
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires003; immutable invoice-header allocation receipts",
+      "path": "backend/database/uom-migrations/2026_10_26_000011_invoice_header_cost.php",
+      "sha256": "517f4458de5434aa0d7311cf4acc93acffda9e14f263d2a4bb528fd01f9657e8",
+      "automatic_laravel_path": false,
+      "sequence": 11,
+      "qa_dependencies": "010"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Requires009; immutable source claims; unique source and restart checks",
+      "path": "backend/database/uom-migrations/2026_10_26_000012_processing_cost_sources.php",
+      "sha256": "7d1b9a849aa3d5ced17a65c823eb887aa7214b56c9936a7bed792dde6dd86607",
+      "automatic_laravel_path": false,
+      "sequence": 12,
+      "qa_dependencies": "011"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Explicit journal permission registration only; no automatic role grants",
+      "path": "backend/database/uom-migrations/2026_10_26_000013_manual_journal_permissions.php",
+      "sha256": "99bfd1983fed73253cc9b13fb23dbfeb5b4ac595093865c924a2ad966696914e",
+      "automatic_laravel_path": false,
+      "sequence": 13,
+      "qa_dependencies": "012"
+    },
+    {
+      "production_approved": false,
+      "data_rollback": "No destructive down migration after evidence; reviewed forward repair required",
+      "risk": "Explicit asset/worker/payroll write permission registration only; no automatic role grants",
+      "path": "backend/database/uom-migrations/2026_10_26_000014_resource_write_permissions.php",
+      "sha256": "fee50a376de8f1037b0c58b5b1bc9f4212e22f826071a1a6cc600e9ebc237706",
+      "automatic_laravel_path": false,
+      "sequence": 14,
+      "qa_dependencies": "013"
+    }
+  ],
+  "production_executor": "NOT_APPROVED",
+  "proposed": [
+    {
+      "path": "docs/erp-baseline/proposed-migrations/add_voucher_number_uniqueness.php",
+      "sha256": "a37a951fd59075b54e8888782670b3e67c2d5139554ba26c6b47801aed1fc0d9",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/add_voucher_number_uniqueness.sql",
+      "sha256": "71ffd334c66bb57a5fc3c70fbe33107eeda912ca4ff613fcc5c294ec5b962620",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/create_historical_invoice_accounting.php",
+      "sha256": "e0611ad9148a3f433f03db039d17838040b9f5e06ad24d5c775abbd051d01b70",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/create_voucher_operation_metadata.php",
+      "sha256": "cebee349da06c4c89e9de8db79f6f573bac24921c837f6cbc438c613077ee492",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/create_worker_loan_settlements.php",
+      "sha256": "b946697e944fad2b4ddb36dc647242aaf478fe845be273fc77b09dab720c9818",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/create_worker_operation_requests.php",
+      "sha256": "13a8ff4bb56db3b2c79c34d9305a2763cefa35bef3c2866c99196f8ea146c7d1",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/historical_invoice_accounting_triggers.php",
+      "sha256": "ce7f94de61030a57f3f622758c7289e352ff6924cef0e5ced0bb7a4adb6960fc",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/historical_invoice_accounting.sql",
+      "sha256": "25ae2cb1e7e23cb3f4e1e9dd550693bd904ff3bd3a516ed8274d5b2ed68f1955",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/inventory_lot_value_balances.php",
+      "sha256": "c8b87a36235b5eb713aef96eb25aff227d1919a7a69fcf4687c82ee1e407c314",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/lot-sequence-preparation-template.sql",
+      "sha256": "60ff026e831e76756f9859568dc2887789171b39b8d564ef2ba9ed42d727e42b",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/shipment_cost_allocation_receipts.php",
+      "sha256": "091ecb8ca51c250910752c0f1c074b76d19c359d702d8e8a263bb65bb68babea",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/shipment_cost_parent_fk.php",
+      "sha256": "4157dc1b09e7374257328977662a6409e540d67f136a13421af0d14fa7b96dcf",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/shipment_cost_settlements.sql",
+      "sha256": "ba4510443614769628e7b8e219e0c2fd0aee1f538692c75a88b110c35b08fb75",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/shipment_line_identity.php",
+      "sha256": "4b4963e024b8ef717f7d2ff6d2606e4e769e36d669218c5bf7f7db686c819608",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/stock_movements_company_source_index.php",
+      "sha256": "d41a9465b7f84e49d3617c513be4ab847a23eb6639aa75fd9e2ae3da6cc0a5ab",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/stock_movements_company_source_index.sql",
+      "sha256": "9ae076bf148ef83c8cc84c7670e49df6d1a1f0b2560fd9fa2f45f40d8ba0f07d",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/uom_stage_a_isolated.sql",
+      "sha256": "ee8e27890bc2339a51a41f157a96e50f4df3e10946f340faf0694f4b490cc5e0",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/voucher_operation_metadata.sql",
+      "sha256": "35a60591b87454be57576c090c97e901ce26c320c9fabf8c9622977703c06bdd",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/worker_loan_settlements.sql",
+      "sha256": "2dca388f974a6bbc5fdb796de029f62aac6bf1502f6836a0a6cbdd78e9b5a790",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    },
+    {
+      "path": "docs/erp-baseline/proposed-migrations/worker_operation_requests.sql",
+      "sha256": "48b4759cd494fd9d59c0454daa44ac1b11a26bcde2d9ebec0cd220d26d91c235",
+      "production_approved": false,
+      "automatic_laravel_path": false
+    }
+  ],
+  "ddl_transaction_note": "MariaDB DDL may commit implicitly; do not treat DB::transaction as schema rollback",
+  "lot_sequence": "Requires duplicate/orphan/history preflight; template is not an executor"
+}

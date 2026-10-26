@@ -77,7 +77,7 @@ export default function AccountsPage() {
 
   const filtered = useMemo(() => {
     return accounts.filter((a) =>
-      `${a.account_code || ""} ${a.account_name || ""} ${a.account_type || ""}`
+      `${a.account_code || ""} ${a.account_name || ""} ${a.account_type || ""} ${a.account_path || ""}`
         .toLowerCase()
         .includes(search.toLowerCase())
     );

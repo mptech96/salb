@@ -105,9 +105,9 @@ class ReportCenterService
         $this->dates($costQ, 'i.invoice_date', $f);
         $cogs = round((float) $costQ->sum('s.total_cost'), 3);
 
-        $stockQ = DB::table('inventory_lots')->where('company_id', $cid)->where('qty_remaining_kg', '>', 0);
+        $stockQ = DB::table('inventory_lots')->where('company_id', $cid)->whereRaw('('.\App\Services\Uom\InventoryQuantitySql::lot('inventory_lots').')>0');
         $this->branch($stockQ, $bid);
-        $stock = $stockQ->selectRaw('COALESCE(SUM(qty_remaining_kg),0) kg, COALESCE(SUM(CASE WHEN qty_received_kg>0 THEN total_cost*(qty_remaining_kg/qty_received_kg) ELSE 0 END),0) value')->first();
+        $stock = $stockQ->selectRaw('COALESCE(SUM(qty_remaining_kg),0) kg, COALESCE(SUM('.InventoryLotValue::sqlValue('inventory_lots').'),0) value')->first();
 
         $rows = collect([
             ['indicator' => 'إيراد المبيعات قبل الضريبة', 'value' => $revenue],
@@ -119,6 +119,15 @@ class ReportCenterService
             ['indicator' => 'رصيد المخزون كجم', 'value' => round((float) ($stock->kg ?? 0), 3)],
             ['indicator' => 'قيمة المخزون', 'value' => round((float) ($stock->value ?? 0), 3)],
         ]);
+        if(\App\Services\Uom\InventoryQuantitySql::available()){
+            $quantity=\App\Services\Uom\InventoryQuantitySql::lot('l');
+            $unit="CASE WHEN l.uom_version='BASE_V1' THEN i.base_unit_code ELSE 'KG' END";
+            $groups=DB::table('inventory_lots as l')->join('items as i',fn($j)=>$j->on('i.id','=','l.item_id')->on('i.company_id','=','l.company_id'))
+                ->where('l.company_id',$cid)->when($bid!==null,fn($q)=>$q->where('l.branch_id',$bid))
+                ->selectRaw("$unit unit, SUM($quantity) quantity")->groupByRaw($unit)->havingRaw("SUM($quantity)<>0")->orderBy('unit')->get();
+            $rows=$rows->reject(fn($row)=>$row['indicator']==='رصيد المخزون كجم')->values();
+            foreach($groups as $group)$rows->push(['indicator'=>'رصيد المخزون '.$group->unit,'value'=>$group->quantity.' '.$group->unit]);
+        }
 
         return $this->pack('الملخص التنفيذي', [
             $this->col('indicator', 'المؤشر'),
@@ -142,8 +151,9 @@ class ReportCenterService
         if ($bid !== null) $q->where('s.branch_id', $bid);
         $this->dates($q, 's.invoice_date', $f); $this->search($q, $f, ['s.invoice_number','c.customer_name']);
         $rows = $q->select('s.id','s.invoice_number','s.invoice_date','b.branch_name','c.customer_name','s.total_qty','s.total_before_vat','s.vat_amount','s.total_amount','s.payment_status')->orderByDesc('s.invoice_date')->orderByDesc('s.id')->limit(5000)->get();
+        $this->invoiceQuantitySummaries($rows,'sales_invoice_lines','sales_invoice_id',$cid);
         return $this->pack('تقرير المبيعات', [
-            $this->col('invoice_number','رقم الفاتورة'),$this->col('invoice_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('customer_name','العميل'),$this->col('total_qty','الكمية','number'),$this->col('total_before_vat','قبل الضريبة','number'),$this->col('vat_amount','الضريبة','number'),$this->col('total_amount','الإجمالي','number'),$this->col('payment_status','السداد'),
+            $this->col('invoice_number','رقم الفاتورة'),$this->col('invoice_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('customer_name','العميل'),$this->col('quantity_summary','الكميات حسب الوحدة'),$this->col('total_before_vat','قبل الضريبة','number'),$this->col('vat_amount','الضريبة','number'),$this->col('total_amount','الإجمالي','number'),$this->col('payment_status','السداد'),
         ], $rows, ['count'=>$rows->count(),'total_before_vat'=>round((float)$rows->sum('total_before_vat'),3),'vat'=>round((float)$rows->sum('vat_amount'),3),'total'=>round((float)$rows->sum('total_amount'),3)]);
     }
 
@@ -156,8 +166,9 @@ class ReportCenterService
         if ($bid !== null) $q->where('p.branch_id', $bid);
         $this->dates($q, 'p.invoice_date', $f); $this->search($q, $f, ['p.invoice_number','s.supplier_name']);
         $rows = $q->select('p.id','p.invoice_number','p.invoice_date','b.branch_name','s.supplier_name','p.total_qty','p.total_before_vat','p.vat_amount','p.total_amount','p.payment_status')->orderByDesc('p.invoice_date')->orderByDesc('p.id')->limit(5000)->get();
+        $this->invoiceQuantitySummaries($rows,'purchase_invoice_lines','purchase_invoice_id',$cid);
         return $this->pack('تقرير المشتريات', [
-            $this->col('invoice_number','رقم الفاتورة'),$this->col('invoice_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('supplier_name','المورد'),$this->col('total_qty','الكمية','number'),$this->col('total_before_vat','قبل الضريبة','number'),$this->col('vat_amount','الضريبة','number'),$this->col('total_amount','الإجمالي','number'),$this->col('payment_status','السداد'),
+            $this->col('invoice_number','رقم الفاتورة'),$this->col('invoice_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('supplier_name','المورد'),$this->col('quantity_summary','الكميات حسب الوحدة'),$this->col('total_before_vat','قبل الضريبة','number'),$this->col('vat_amount','الضريبة','number'),$this->col('total_amount','الإجمالي','number'),$this->col('payment_status','السداد'),
         ], $rows, ['count'=>$rows->count(),'total_before_vat'=>round((float)$rows->sum('total_before_vat'),3),'vat'=>round((float)$rows->sum('vat_amount'),3),'total'=>round((float)$rows->sum('total_amount'),3)]);
     }
 
@@ -257,26 +268,30 @@ class ReportCenterService
 
     private function inventory(int $cid, ?int $bid, array $f): array
     {
+        $hasUnit=DB::getSchemaBuilder()->hasColumn('items','base_unit_code');$unit=$hasUnit?'i.base_unit_code':DB::raw("'KG' as base_unit_code");
         $q=DB::table('inventory_lots as l')->join('items as i','i.id','=','l.item_id')->leftJoin('branches as b','b.id','=','l.branch_id')->where('l.company_id',$cid);
         if($bid!==null)$q->where('l.branch_id',$bid);$this->search($q,$f,['i.item_code','i.item_name','i.item_grade']);
-        $rows=$q->select('l.branch_id','l.item_id','b.branch_name','i.item_code','i.item_name','i.item_grade',DB::raw('SUM(l.qty_remaining_kg) balance_kg'),DB::raw('SUM(CASE WHEN l.qty_received_kg>0 THEN l.total_cost*(l.qty_remaining_kg/l.qty_received_kg) ELSE 0 END) stock_value'),DB::raw('SUM(CASE WHEN l.qty_remaining_kg>0 THEN 1 ELSE 0 END) open_lots'))->groupBy('l.branch_id','l.item_id','b.branch_name','i.item_code','i.item_name','i.item_grade')->havingRaw('SUM(l.qty_remaining_kg) > 0.0001')->orderBy('i.item_name')->get()->map(function($r){$r->balance_ton=round((float)$r->balance_kg/1000,3);$r->avg_cost_per_kg=(float)$r->balance_kg>0?round((float)$r->stock_value/(float)$r->balance_kg,6):0;$r->avg_cost_per_ton=round($r->avg_cost_per_kg*1000,3);return $r;});
-        return $this->pack('أرصدة وقيمة المخزون',[$this->col('branch_name','الفرع'),$this->col('item_code','الكود'),$this->col('item_name','الصنف'),$this->col('item_grade','الدرجة'),$this->col('balance_kg','الرصيد كجم','number'),$this->col('balance_ton','الرصيد طن','number'),$this->col('avg_cost_per_ton','متوسط تكلفة الطن','number'),$this->col('stock_value','قيمة المخزون','number'),$this->col('open_lots','دفعات مفتوحة','number')],$rows,['items'=>$rows->count(),'balance_kg'=>round((float)$rows->sum('balance_kg'),3),'stock_value'=>round((float)$rows->sum('stock_value'),3)]);
+        $quantity=\App\Services\Uom\InventoryQuantitySql::lot('l');
+        $rows=$q->select('l.branch_id','l.item_id','b.branch_name','i.item_code','i.item_name','i.item_grade',$unit,DB::raw("SUM($quantity) balance_base_quantity"),DB::raw('SUM(l.qty_remaining_kg) balance_kg'),DB::raw('SUM('.InventoryLotValue::sqlValue('l').') stock_value'),DB::raw("SUM(CASE WHEN ($quantity)>0 THEN 1 ELSE 0 END) open_lots"))->groupBy('l.branch_id','l.item_id','b.branch_name','i.item_code','i.item_name','i.item_grade')->when($hasUnit,fn($query)=>$query->groupBy('i.base_unit_code'))->havingRaw("SUM($quantity)>0")->orderBy('i.item_name')->get()->map(function($r){$r->balance_ton=round((float)$r->balance_kg/1000,3);$r->avg_cost_per_kg=(float)$r->balance_kg>0?round((float)$r->stock_value/(float)$r->balance_kg,6):0;$r->avg_cost_per_ton=round($r->avg_cost_per_kg*1000,3);$r->avg_cost_per_base=bcdiv((string)$r->stock_value,(string)$r->balance_base_quantity,6);return $r;});
+        return $this->pack('أرصدة وقيمة المخزون',[$this->col('branch_name','الفرع'),$this->col('item_code','الكود'),$this->col('item_name','الصنف'),$this->col('item_grade','الدرجة'),$this->col('balance_base_quantity','الرصيد الأساسي','quantity'),$this->col('base_unit_code','الوحدة'),$this->col('avg_cost_per_base','تكلفة الوحدة الأساسية','quantity'),$this->col('balance_kg','الرصيد كجم','number'),$this->col('balance_ton','الرصيد طن','number'),$this->col('avg_cost_per_ton','متوسط تكلفة الطن','number'),$this->col('stock_value','قيمة المخزون','number'),$this->col('open_lots','دفعات مفتوحة','number')],$rows,['items'=>$rows->count(),'balance_kg'=>round((float)$rows->sum('balance_kg'),3),'stock_value'=>round((float)$rows->sum('stock_value'),3)]);
     }
 
     private function inventoryLots(int $cid, ?int $bid, array $f): array
     {
+        $unit=DB::getSchemaBuilder()->hasColumn('items','base_unit_code')?'i.base_unit_code':DB::raw("'KG' as base_unit_code");
         $q=DB::table('inventory_lots as l')->join('items as i','i.id','=','l.item_id')->leftJoin('branches as b','b.id','=','l.branch_id')->leftJoin('shipments as s','s.id','=','l.shipment_id')->where('l.company_id',$cid);
         if($bid!==null)$q->where('l.branch_id',$bid);$this->dates($q,'l.received_at',$f);$this->search($q,$f,['l.lot_number','i.item_code','i.item_name','s.shipment_number','l.source_type']);
-        $rows=$q->select('l.id','l.lot_number','l.received_at','b.branch_name','i.item_code','i.item_name','s.shipment_number','l.source_type','l.qty_received_kg','l.qty_remaining_kg','l.qty_sold_kg','l.base_cost','l.allocated_cost','l.total_cost','l.unit_cost_per_kg','l.lot_status')->orderByDesc('l.received_at')->orderByDesc('l.id')->limit(5000)->get();
-        return $this->pack('دفعات المخزون',[$this->col('lot_number','رقم الدفعة'),$this->col('received_at','تاريخ الاستلام','date'),$this->col('branch_name','الفرع'),$this->col('item_name','الصنف'),$this->col('shipment_number','الشحنة'),$this->col('source_type','المصدر'),$this->col('qty_received_kg','الوارد كجم','number'),$this->col('qty_remaining_kg','المتبقي كجم','number'),$this->col('unit_cost_per_kg','تكلفة الكجم','number'),$this->col('total_cost','تكلفة الدفعة','number'),$this->col('lot_status','الحالة')],$rows,['count'=>$rows->count(),'received_kg'=>round((float)$rows->sum('qty_received_kg'),3),'remaining_kg'=>round((float)$rows->sum('qty_remaining_kg'),3),'total_cost'=>round((float)$rows->sum('total_cost'),3)]);
+        $rows=$q->select('l.id','l.lot_number','l.received_at','b.branch_name','i.item_code','i.item_name',$unit,'s.shipment_number','l.source_type','l.qty_received_kg','l.qty_remaining_kg','l.qty_sold_kg','l.base_cost','l.allocated_cost','l.total_cost','l.unit_cost_per_kg','l.lot_status')->selectRaw(\App\Services\Uom\InventoryQuantitySql::lot('l','received').' received_base_quantity, '.\App\Services\Uom\InventoryQuantitySql::lot('l').' remaining_base_quantity')->orderByDesc('l.received_at')->orderByDesc('l.id')->limit(5000)->get();
+        return $this->pack('دفعات المخزون',[$this->col('lot_number','رقم الدفعة'),$this->col('received_at','تاريخ الاستلام','date'),$this->col('branch_name','الفرع'),$this->col('item_name','الصنف'),$this->col('shipment_number','الشحنة'),$this->col('source_type','المصدر'),$this->col('received_base_quantity','الوارد الأساسي','quantity'),$this->col('remaining_base_quantity','المتبقي الأساسي','quantity'),$this->col('base_unit_code','الوحدة'),$this->col('qty_received_kg','الوارد كجم','number'),$this->col('qty_remaining_kg','المتبقي كجم','number'),$this->col('unit_cost_per_kg','تكلفة الكجم','number'),$this->col('total_cost','تكلفة الدفعة','number'),$this->col('lot_status','الحالة')],$rows,['count'=>$rows->count(),'received_kg'=>round((float)$rows->sum('qty_received_kg'),3),'remaining_kg'=>round((float)$rows->sum('qty_remaining_kg'),3),'total_cost'=>round((float)$rows->sum('total_cost'),3)]);
     }
 
     private function inventoryMovements(int $cid, ?int $bid, array $f): array
     {
+        $unit=DB::getSchemaBuilder()->hasColumn('items','base_unit_code')?'i.base_unit_code':DB::raw("'KG' as base_unit_code");
         $q=DB::table('inventory_lot_movements as m')->join('inventory_lots as l','l.id','=','m.inventory_lot_id')->join('items as i','i.id','=','m.item_id')->leftJoin('branches as b','b.id','=','m.branch_id')->where('m.company_id',$cid);
         if($bid!==null)$q->where('m.branch_id',$bid);$this->dates($q,'m.movement_at',$f);$this->search($q,$f,['l.lot_number','i.item_name','m.source_type','m.notes']);
-        $rows=$q->select('m.id','m.movement_at','b.branch_name','l.lot_number','i.item_name','m.movement_type','m.source_type','m.source_id','m.qty_kg','m.unit_cost_per_kg','m.total_cost','m.notes')->orderByDesc('m.movement_at')->orderByDesc('m.id')->limit(5000)->get();
-        return $this->pack('حركة المخزون',[$this->col('movement_at','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('lot_number','الدفعة'),$this->col('item_name','الصنف'),$this->col('movement_type','الحركة'),$this->col('source_type','المصدر'),$this->col('qty_kg','الكمية كجم','number'),$this->col('unit_cost_per_kg','تكلفة الكجم','number'),$this->col('total_cost','التكلفة','number'),$this->col('notes','البيان')],$rows,['count'=>$rows->count(),'in_kg'=>round((float)$rows->where('movement_type','IN')->sum('qty_kg'),3),'out_kg'=>round((float)$rows->where('movement_type','OUT')->sum('qty_kg'),3)]);
+        $rows=$q->select('m.id','m.movement_at','b.branch_name','l.lot_number','i.item_name',$unit,'m.movement_type','m.source_type','m.source_id','m.qty_kg','m.unit_cost_per_kg','m.total_cost','m.notes')->selectRaw(\App\Services\Uom\InventoryQuantitySql::movement('m').' movement_base_quantity')->orderByDesc('m.movement_at')->orderByDesc('m.id')->limit(5000)->get();
+        return $this->pack('حركة المخزون',[$this->col('movement_at','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('lot_number','الدفعة'),$this->col('item_name','الصنف'),$this->col('movement_type','الحركة'),$this->col('source_type','المصدر'),$this->col('movement_base_quantity','الكمية الأساسية','quantity'),$this->col('base_unit_code','الوحدة'),$this->col('qty_kg','الكمية كجم','number'),$this->col('unit_cost_per_kg','تكلفة الكجم','number'),$this->col('total_cost','التكلفة','number'),$this->col('notes','البيان')],$rows,['count'=>$rows->count(),'in_kg'=>round((float)$rows->where('movement_type','IN')->sum('qty_kg'),3),'out_kg'=>round((float)$rows->where('movement_type','OUT')->sum('qty_kg'),3)]);
     }
 
     private function inventoryOperations(int $cid, ?int $bid, array $f): array
@@ -284,7 +299,8 @@ class ReportCenterService
         $q=DB::table('inventory_operations as o')->leftJoin('branches as fb','fb.id','=','o.from_branch_id')->leftJoin('branches as tb','tb.id','=','o.to_branch_id')->where('o.company_id',$cid);
         if($bid!==null)$q->where('o.from_branch_id',$bid);$this->dates($q,'o.operation_date',$f);$this->search($q,$f,['o.operation_number','o.operation_type','o.notes']);
         $rows=$q->select('o.id','o.operation_number','o.operation_date','o.operation_type','fb.branch_name as from_branch_name','tb.branch_name as to_branch_name','o.input_weight_kg','o.output_weight_kg','o.loss_qty_kg','o.gain_qty_kg','o.loss_gain_reason','o.allocation_method','o.status',DB::raw("(SELECT COALESCE(SUM(l.total_cost),0) FROM inventory_operation_lines l WHERE l.operation_id=o.id AND l.line_type='FROM') input_cost"))->orderByDesc('o.operation_date')->orderByDesc('o.id')->limit(5000)->get();
-        return $this->pack('الفرز والتحويل والمعالجة',[$this->col('operation_number','رقم العملية'),$this->col('operation_date','التاريخ','date'),$this->col('operation_type','النوع'),$this->col('from_branch_name','من فرع'),$this->col('to_branch_name','إلى فرع'),$this->col('input_weight_kg','مدخل كجم','number'),$this->col('output_weight_kg','مخرج كجم','number'),$this->col('loss_qty_kg','فاقد كجم','number'),$this->col('gain_qty_kg','زيادة كجم','number'),$this->col('input_cost','التكلفة','number'),$this->col('status','الحالة')],$rows,['count'=>$rows->count(),'input_kg'=>round((float)$rows->sum('input_weight_kg'),3),'output_kg'=>round((float)$rows->sum('output_weight_kg'),3),'loss_kg'=>round((float)$rows->sum('loss_qty_kg'),3)]);
+        $this->operationQuantitySummaries($rows,$cid);
+        return $this->pack('الفرز والتحويل والمعالجة',[$this->col('operation_number','رقم العملية'),$this->col('operation_date','التاريخ','date'),$this->col('operation_type','النوع'),$this->col('from_branch_name','من فرع'),$this->col('to_branch_name','إلى فرع'),$this->col('quantity_summary','كميات الإدخال حسب الوحدة'),$this->col('input_weight_kg','مدخل كجم','number'),$this->col('output_weight_kg','مخرج كجم','number'),$this->col('loss_qty_kg','فاقد كجم','number'),$this->col('gain_qty_kg','زيادة كجم','number'),$this->col('input_cost','التكلفة','number'),$this->col('status','الحالة')],$rows,['count'=>$rows->count(),'input_kg'=>round((float)$rows->sum('input_weight_kg'),3),'output_kg'=>round((float)$rows->sum('output_weight_kg'),3),'loss_kg'=>round((float)$rows->sum('loss_qty_kg'),3)]);
     }
 
     private function shipments(int $cid, ?int $bid, array $f): array
@@ -308,8 +324,16 @@ class ReportCenterService
         $costSub=DB::table('sales_line_lot_sources')->select('sales_invoice_line_id',DB::raw('SUM(total_cost) cost_total'))->where('company_id',$cid)->groupBy('sales_invoice_line_id');
         $q=DB::table('sales_invoice_lines as sl')->join('sales_invoices as s','s.id','=','sl.sales_invoice_id')->join('items as i','i.id','=','sl.item_id')->leftJoinSub($costSub,'c','c.sales_invoice_line_id','=','sl.id')->where('sl.company_id',$cid)->where('s.company_id',$cid);
         if($bid!==null)$q->where('s.branch_id',$bid);$this->dates($q,'s.invoice_date',$f);$this->search($q,$f,['i.item_code','i.item_name']);
-        $rows=$q->select('sl.item_id','i.item_code','i.item_name',DB::raw('SUM(sl.qty*1000) sold_kg'),DB::raw('SUM(COALESCE(NULLIF(sl.total_before_vat,0), sl.line_total-sl.vat_amount)) revenue'),DB::raw('SUM(COALESCE(c.cost_total,0)) cost_total'))->groupBy('sl.item_id','i.item_code','i.item_name')->orderByDesc('revenue')->get()->map(function($r){$r->sold_ton=round((float)$r->sold_kg/1000,3);$r->profit=round((float)$r->revenue-(float)$r->cost_total,3);$r->margin_percent=(float)$r->revenue>0?round($r->profit/(float)$r->revenue*100,2):0;return $r;});
-        return $this->pack('ربحية الأصناف',[$this->col('item_code','الكود'),$this->col('item_name','الصنف'),$this->col('sold_kg','المباع كجم','number'),$this->col('sold_ton','المباع طن','number'),$this->col('revenue','الإيراد','number'),$this->col('cost_total','التكلفة','number'),$this->col('profit','الربح','number'),$this->col('margin_percent','هامش %','number')],$rows,['revenue'=>round((float)$rows->sum('revenue'),3),'cost'=>round((float)$rows->sum('cost_total'),3),'profit'=>round((float)$rows->sum('profit'),3)]);
+        $base=\App\Services\Uom\InventoryQuantitySql::available();
+        $stock="COALESCE(sl.track_inventory_snapshot,1)=1 AND COALESCE(sl.item_type_snapshot,'STOCK')<>'SERVICE'";
+        $quantity="CASE WHEN $stock THEN sl.qty_kg ELSE sl.quantity END";
+        $unit="CASE WHEN $stock THEN 'KG' ELSE sl.unit_code END";
+        if($base){$quantity="CASE WHEN sl.uom_version='BASE_V1' THEN sl.base_quantity ELSE ($quantity) END";$unit="CASE WHEN sl.uom_version='BASE_V1' THEN i.base_unit_code ELSE ($unit) END";}
+        $projected=$q->select('sl.item_id','i.item_code','i.item_name','sl.qty_kg')->selectRaw("$unit base_unit_code, $quantity base_quantity, COALESCE(NULLIF(sl.total_before_vat,0), sl.line_total-sl.vat_amount) line_revenue, COALESCE(c.cost_total,0) line_cost");
+        $rows=DB::query()->fromSub($projected,'sold')->select('item_id','item_code','item_name','base_unit_code')
+            ->selectRaw('SUM(base_quantity) sold_base_quantity, SUM(qty_kg) sold_kg, SUM(line_revenue) revenue, SUM(line_cost) cost_total')
+            ->groupBy('item_id','item_code','item_name','base_unit_code')->orderByDesc('revenue')->get()->map(function($r){$r->sold_ton=round((float)$r->sold_kg/1000,3);$r->profit=round((float)$r->revenue-(float)$r->cost_total,3);$r->margin_percent=(float)$r->revenue>0?round($r->profit/(float)$r->revenue*100,2):0;return $r;});
+        return $this->pack('ربحية الأصناف',[$this->col('item_code','الكود'),$this->col('item_name','الصنف'),$this->col('sold_base_quantity','الكمية الأساسية المباعة','quantity'),$this->col('base_unit_code','الوحدة'),$this->col('sold_kg','المباع كجم','number'),$this->col('sold_ton','المباع طن','number'),$this->col('revenue','الإيراد','number'),$this->col('cost_total','التكلفة','number'),$this->col('profit','الربح','number'),$this->col('margin_percent','هامش %','number')],$rows,['revenue'=>round((float)$rows->sum('revenue'),3),'cost'=>round((float)$rows->sum('cost_total'),3),'profit'=>round((float)$rows->sum('profit'),3)]);
     }
 
     private function shipmentProfit(int $cid, ?int $bid, array $f): array
@@ -321,7 +345,7 @@ class ReportCenterService
             $sources=DB::table('sales_line_lot_sources as src')->join('sales_invoice_lines as sl','sl.id','=','src.sales_invoice_line_id')->join('sales_invoices as si','si.id','=','sl.sales_invoice_id')->where('src.company_id',$cid)->where('src.shipment_id',$r->id)->select('src.*','sl.total_before_vat','sl.line_total','sl.vat_amount')->get();
             $revenue=0.0;$cost=0.0;$soldKg=0.0;
             foreach($sources as $s){$lineQty=(float)DB::table('sales_line_lot_sources')->where('company_id',$cid)->where('sales_invoice_line_id',$s->sales_invoice_line_id)->sum('qty_kg');$lineRevenue=(float)($s->total_before_vat ?: ((float)$s->line_total-(float)$s->vat_amount));$share=$lineQty>0?(float)$s->qty_kg/$lineQty:0;$revenue+=round($lineRevenue*$share,3);$cost+=(float)$s->total_cost;$soldKg+=(float)$s->qty_kg;}
-            $remaining=DB::table('inventory_lots')->where('company_id',$cid)->where('shipment_id',$r->id)->selectRaw('COALESCE(SUM(qty_remaining_kg),0) kg, COALESCE(SUM(CASE WHEN qty_received_kg>0 THEN total_cost*(qty_remaining_kg/qty_received_kg) ELSE 0 END),0) value')->first();
+            $remaining=DB::table('inventory_lots')->where('company_id',$cid)->where('shipment_id',$r->id)->selectRaw('COALESCE(SUM(qty_remaining_kg),0) kg, COALESCE(SUM('.InventoryLotValue::sqlValue('inventory_lots').'),0) value')->first();
             $r->sold_kg=round($soldKg,3);$r->sales_revenue=round($revenue,3);$r->cogs=round($cost,3);$r->realized_profit=round($revenue-$cost,3);$r->remaining_kg=round((float)($remaining->kg??0),3);$r->remaining_value=round((float)($remaining->value??0),3);return $r;
         });
         return $this->pack('ربحية الشحنات',[$this->col('shipment_number','الشحنة'),$this->col('shipment_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('plate_number','السيارة'),$this->col('supplier_name','المورد'),$this->col('total_net_weight_kg','وزن الشحنة كجم','number'),$this->col('sold_kg','المباع كجم','number'),$this->col('sales_revenue','إيراد مباع','number'),$this->col('cogs','تكلفة المباع','number'),$this->col('realized_profit','ربح محقق','number'),$this->col('remaining_kg','متبقي كجم','number'),$this->col('remaining_value','قيمة المتبقي','number')],$rows,['revenue'=>round((float)$rows->sum('sales_revenue'),3),'cogs'=>round((float)$rows->sum('cogs'),3),'profit'=>round((float)$rows->sum('realized_profit'),3),'remaining_value'=>round((float)$rows->sum('remaining_value'),3)]);
@@ -475,7 +499,8 @@ class ReportCenterService
         $q=DB::table('sales_invoice_lines as l')->join('sales_invoices as s','s.id','=','l.sales_invoice_id')->join('items as i','i.id','=','l.item_id')->leftJoin('customers as c','c.id','=','s.customer_id')->leftJoin('branches as b','b.id','=','s.branch_id')->where('l.company_id',$cid)->where('s.company_id',$cid);
         if($bid!==null)$q->where('s.branch_id',$bid);$this->dates($q,'s.invoice_date',$f);$this->search($q,$f,['s.invoice_number','i.item_code','i.item_name','c.customer_name']);
         $rows=$q->select('l.id','s.invoice_number','s.invoice_date','b.branch_name','c.customer_name','i.item_code','i.item_name','l.qty','l.unit_price','l.discount_amount','l.vat_amount','l.total_before_vat','l.total_after_vat')->orderByDesc('s.invoice_date')->orderByDesc('l.id')->limit(5000)->get();
-        return $this->pack('تفاصيل أصناف المبيعات',[$this->col('invoice_number','الفاتورة'),$this->col('invoice_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('customer_name','العميل'),$this->col('item_code','الكود'),$this->col('item_name','الصنف'),$this->col('qty','الكمية طن','number'),$this->col('unit_price','سعر الطن','number'),$this->col('discount_amount','الخصم','number'),$this->col('vat_amount','الضريبة','number'),$this->col('total_before_vat','قبل الضريبة','number'),$this->col('total_after_vat','الإجمالي','number')],$rows,['count'=>$rows->count(),'qty'=>round((float)$rows->sum('qty'),3),'total'=>round((float)$rows->sum('total_after_vat'),3)]);
+        $this->invoiceItemUnits($rows,'sales_invoice_lines',$cid);
+        return $this->pack('تفاصيل أصناف المبيعات',[$this->col('invoice_number','الفاتورة'),$this->col('invoice_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('customer_name','العميل'),$this->col('item_code','الكود'),$this->col('item_name','الصنف'),$this->col('display_quantity','الكمية','quantity'),$this->col('display_unit','الوحدة'),$this->col('display_unit_price','سعر الوحدة','quantity'),$this->col('discount_amount','الخصم','number'),$this->col('vat_amount','الضريبة','number'),$this->col('total_before_vat','قبل الضريبة','number'),$this->col('total_after_vat','الإجمالي','number')],$rows,['count'=>$rows->count(),'qty'=>round((float)$rows->sum('qty'),3),'total'=>round((float)$rows->sum('total_after_vat'),3)]);
     }
 
     private function purchaseItems(int $cid, ?int $bid, array $f): array
@@ -483,7 +508,56 @@ class ReportCenterService
         $q=DB::table('purchase_invoice_lines as l')->join('purchase_invoices as p','p.id','=','l.purchase_invoice_id')->join('items as i','i.id','=','l.item_id')->leftJoin('suppliers as s','s.id','=','p.supplier_id')->leftJoin('branches as b','b.id','=','p.branch_id')->where('l.company_id',$cid)->where('p.company_id',$cid);
         if($bid!==null)$q->where('p.branch_id',$bid);$this->dates($q,'p.invoice_date',$f);$this->search($q,$f,['p.invoice_number','i.item_code','i.item_name','s.supplier_name']);
         $rows=$q->select('l.id','p.invoice_number','p.invoice_date','b.branch_name','s.supplier_name','i.item_code','i.item_name','l.qty','l.unit_price','l.discount_amount','l.vat_amount','l.total_before_vat','l.total_after_vat')->orderByDesc('p.invoice_date')->orderByDesc('l.id')->limit(5000)->get();
-        return $this->pack('تفاصيل أصناف المشتريات',[$this->col('invoice_number','الفاتورة'),$this->col('invoice_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('supplier_name','المورد'),$this->col('item_code','الكود'),$this->col('item_name','الصنف'),$this->col('qty','الكمية طن','number'),$this->col('unit_price','سعر الطن','number'),$this->col('discount_amount','الخصم','number'),$this->col('vat_amount','الضريبة','number'),$this->col('total_before_vat','قبل الضريبة','number'),$this->col('total_after_vat','الإجمالي','number')],$rows,['count'=>$rows->count(),'qty'=>round((float)$rows->sum('qty'),3),'total'=>round((float)$rows->sum('total_after_vat'),3)]);
+        $this->invoiceItemUnits($rows,'purchase_invoice_lines',$cid);
+        return $this->pack('تفاصيل أصناف المشتريات',[$this->col('invoice_number','الفاتورة'),$this->col('invoice_date','التاريخ','date'),$this->col('branch_name','الفرع'),$this->col('supplier_name','المورد'),$this->col('item_code','الكود'),$this->col('item_name','الصنف'),$this->col('display_quantity','الكمية','quantity'),$this->col('display_unit','الوحدة'),$this->col('display_unit_price','سعر الوحدة','quantity'),$this->col('discount_amount','الخصم','number'),$this->col('vat_amount','الضريبة','number'),$this->col('total_before_vat','قبل الضريبة','number'),$this->col('total_after_vat','الإجمالي','number')],$rows,['count'=>$rows->count(),'qty'=>round((float)$rows->sum('qty'),3),'total'=>round((float)$rows->sum('total_after_vat'),3)]);
+    }
+
+    /** Read the saved transaction, never the current item mapping. Keep legacy qty/price keys intact. */
+    private function invoiceItemUnits($rows,string $table,int $company):void
+    {
+        $baseSchema=DB::getSchemaBuilder()->hasColumn($table,'uom_version');
+        $snapshots=DB::table($table)->where('company_id',$company)->whereIn('id',$rows->pluck('id'))
+            ->get(['id','quantity','unit_code','track_inventory_snapshot','item_type_snapshot',...($baseSchema?['uom_version','uom_price_snapshot']:[])])->keyBy('id');
+        foreach($rows as $row){
+            $saved=$snapshots->get($row->id);
+            $base=$saved && ($saved->uom_version??'LEGACY_KG')==='BASE_V1';
+            $service=$saved&&((int)($saved->track_inventory_snapshot??1)!==1||$saved->item_type_snapshot==='SERVICE');
+            $row->display_quantity=$base||$service?$saved->quantity:$row->qty;
+            $row->display_unit=$base||$service?$saved->unit_code:'TON';
+            $row->display_unit_price=$base?$saved->uom_price_snapshot:$row->unit_price;
+        }
+    }
+
+    private function operationQuantitySummaries($rows,int $company):void
+    {
+        $q=DB::table('inventory_operation_lines as l')->where('l.company_id',$company)->where('l.line_type','FROM')->whereIn('l.operation_id',$rows->pluck('id'));
+        $quantity='l.qty_kg';$unit="'KG'";
+        if(DB::getSchemaBuilder()->hasColumn('inventory_operation_lines','uom_version')){
+            $q->leftJoin('uom_units as u','u.id','=','l.base_uom_id_snapshot');
+            $quantity="CASE WHEN l.uom_version='BASE_V1' THEN l.base_quantity ELSE l.qty_kg END";
+            $unit="CASE WHEN l.uom_version='BASE_V1' THEN u.code ELSE 'KG' END";
+        }
+        $projected=$q->select('l.operation_id')->selectRaw("$unit unit, $quantity quantity");
+        $groups=DB::query()->fromSub($projected,'quantities')->select('operation_id','unit')->selectRaw('SUM(quantity) quantity')->groupBy('operation_id','unit')->orderBy('unit')->get()->groupBy('operation_id');
+        foreach($rows as $row)$row->quantity_summary=($groups->get($row->id)??collect())->map(fn($g)=>$g->quantity.' '.($g->unit?:'—'))->implode(' / ');
+    }
+
+    private function invoiceQuantitySummaries($rows,string $table,string $foreignKey,int $company):void
+    {
+        $base=DB::getSchemaBuilder()->hasColumn($table,'uom_version');
+        $q=DB::table($table.' as l')->where('l.company_id',$company)->whereIn('l.'.$foreignKey,$rows->pluck('id'));
+        $stock="COALESCE(l.track_inventory_snapshot,1)=1 AND COALESCE(l.item_type_snapshot,'STOCK')<>'SERVICE'";
+        $quantity="CASE WHEN $stock THEN l.qty_kg ELSE l.quantity END";
+        $unit="CASE WHEN $stock THEN 'KG' ELSE l.unit_code END";
+        if($base){
+            $q->leftJoin('uom_units as u','u.id','=','l.base_uom_id_snapshot');
+            $quantity="CASE WHEN l.uom_version='BASE_V1' THEN l.base_quantity ELSE ($quantity) END";
+            $unit="CASE WHEN l.uom_version='BASE_V1' THEN u.code ELSE ($unit) END";
+        }
+        $projected=$q->select('l.'.$foreignKey.' as document_id')->selectRaw("$unit unit, $quantity quantity");
+        $groups=DB::query()->fromSub($projected,'quantities')->select('document_id','unit')->selectRaw('SUM(quantity) quantity')
+            ->groupBy('document_id','unit')->orderBy('unit')->get()->groupBy('document_id');
+        foreach($rows as $row)$row->quantity_summary=($groups->get($row->id)??collect())->map(fn($g)=>$g->quantity.' '.($g->unit?:'—'))->implode(' / ');
     }
 
     private function pack(string $title, array $columns, $rows, array $summary = []): array

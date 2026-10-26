@@ -5,6 +5,7 @@ import PrintApprovalBoxes from "@/components/print/PrintApprovalBoxes";
 import PrintWatermark from "@/components/print/PrintWatermark";
 import PrintFooter from "@/components/reports/PrintFooter";
 import type { CSSProperties } from "react";
+import { exactQuantity } from "@/lib/inventory-uom";
 import { localizedPrintText, localeDirection, printVisible, resolvePrintLocale, resolvePrintOptions } from "@/lib/print-branding";
 
 type InvoiceKind = "sale" | "purchase";
@@ -128,7 +129,7 @@ export default function TaxInvoicePrint({ data, profile }: { data: unknown; kind
       <table className="tax-invoice-lines">
         <thead><tr><th>#</th><th>رمز الصنف<br/><small>Item Code</small></th><th>البيان<br/><small>Description</small></th><th>الوحدة<br/><small>Unit</small></th><th>الكمية<br/><small>Qty</small></th><th>سعر الوحدة<br/><small>Unit Price</small></th><th>الخصم<br/><small>Discount</small></th><th>الوعاء الضريبي<br/><small>Taxable</small></th><th>الضريبة %<br/><small>VAT</small></th><th>مبلغ الضريبة<br/><small>VAT Amount</small></th><th>الإجمالي<br/><small>Total</small></th></tr></thead>
         <tbody>{lines.map((line: DataRecord, index: number) => <tr key={text(line.id, index)}>
-          <td>{index + 1}</td><td dir="ltr">{text(line.item_code, line.code, "—")}</td><td className="tax-invoice-description">{text(line.item_name, line.description, line.notes, "—")}</td><td>{text(line.unit_code, line.price_unit, "—")}</td><td>{quantity(line).toLocaleString("en-US", { maximumFractionDigits: 3 })}</td><td>{money(linePrice(line))}</td><td>{money(line.discount_amount)}</td><td>{money(line.total_before_vat ?? line.subtotal)}</td><td>{money(line.tax_rate_snapshot ?? line.vat_percent ?? line.vat_rate ?? line.tax_rate)}%</td><td>{money(line.vat_amount ?? line.tax_amount)}</td><td>{money(line.total_after_vat ?? line.line_total ?? line.total_amount)}</td>
+          <td>{index + 1}</td><td dir="ltr">{text(line.item_code, line.code, "—")}</td><td className="tax-invoice-description">{text(line.item_name, line.description, line.notes, "—")}</td><td>{text(line.unit_code, line.price_unit, "—")}</td><td>{line.uom_version === "BASE_V1" ? exactQuantity(line.quantity) : quantity(line).toLocaleString("en-US", { maximumFractionDigits: 3 })}</td><td>{line.uom_version === "BASE_V1" ? exactQuantity(line.uom_price_snapshot ?? line.unit_price) : money(linePrice(line))}</td><td>{money(line.discount_amount)}</td><td>{money(line.total_before_vat ?? line.subtotal)}</td><td>{money(line.tax_rate_snapshot ?? line.vat_percent ?? line.vat_rate ?? line.tax_rate)}%</td><td>{money(line.vat_amount ?? line.tax_amount)}</td><td>{money(line.total_after_vat ?? line.line_total ?? line.total_amount)}</td>
         </tr>)}</tbody>
       </table>
     </div>

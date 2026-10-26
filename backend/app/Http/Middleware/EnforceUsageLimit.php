@@ -22,7 +22,17 @@ final class EnforceUsageLimit
     private function documentMetric(Request $request): ?string
     {
         if (strtoupper($request->method())!=='POST') return null;
-        $uri=(string)optional($request->route())->uri();
+        $route=$request->route();
+        // Resource creation names are independent of the API mount prefix.
+        if(in_array($route?->getName(),['sales-invoices.store','purchase-invoices.store'],true))return 'max_documents';
+        if(in_array($route?->getActionName(),[
+            \App\Http\Controllers\Api\SalesInvoiceController::class.'@store',
+            \App\Http\Controllers\Api\PurchaseInvoiceController::class.'@store',
+            \App\Http\Controllers\Api\OfficialDocumentController::class.'@store',
+        ],true))return 'max_documents';
+        // Preserve existing unnamed routes/adapters without matching sub-actions.
+        $uri=trim((string)$route?->uri(),'/');
+        if(str_starts_with($uri,'api/'))$uri=substr($uri,4);
         return in_array($uri,['purchase-invoices','sales-invoices','official-documents'],true)?'max_documents':null;
     }
 }

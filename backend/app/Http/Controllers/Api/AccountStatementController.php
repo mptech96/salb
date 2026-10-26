@@ -19,14 +19,7 @@ class AccountStatementController extends Controller
         $kind = strtolower(trim($kind));
 
         if ($kind === 'account') {
-            $rows = DB::table('accounts')
-                ->where('company_id', $companyId)
-                ->where('is_active', 1)
-                ->where('is_group', 0)
-                ->where('allow_posting', 1)
-                ->select('id', 'account_code', 'account_name')
-                ->orderBy('account_code')
-                ->get();
+            $rows = app(\App\Domain\Accounting\Repositories\AccountRepository::class)->tree($companyId);
 
             return response()->json(['status' => true, 'data' => $rows]);
         }

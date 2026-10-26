@@ -46,6 +46,15 @@ class DashboardController extends Controller
             ")
             ->value('balance');
 
+        $stockUnits=null;
+        if(\App\Services\Uom\InventoryQuantitySql::available()){
+            $quantity=\App\Services\Uom\InventoryQuantitySql::lot('l');
+            $unit="CASE WHEN l.uom_version='BASE_V1' THEN i.base_unit_code ELSE 'KG' END";
+            $stockUnits=DB::table('inventory_lots as l')->join('items as i',function($join){$join->on('i.id','=','l.item_id')->on('i.company_id','=','l.company_id');})
+                ->where('l.company_id',$companyId)->when($branchId!==null,fn($q)=>$q->where('l.branch_id',$branchId))
+                ->selectRaw("$unit base_unit_code, SUM($quantity) base_quantity")->groupByRaw($unit)->havingRaw("SUM($quantity)<>0")->orderBy('base_unit_code')->get();
+        }
+
         $latestSalesQuery = DB::table('sales_invoices as s')
             ->leftJoin('customers as c', 'c.id', '=', 's.customer_id')
             ->where('s.company_id', $companyId);
@@ -98,6 +107,7 @@ class DashboardController extends Controller
                 'profit' => $sales - $purchases - $expenses,
                 'open_cars' => $openCars,
                 'stock_qty' => (float) ($stockQty ?? 0),
+                'stock_quantities_by_unit' => $stockUnits,
             ],
             'latest_sales' => $latestSales,
             'latest_purchases' => $latestPurchases,

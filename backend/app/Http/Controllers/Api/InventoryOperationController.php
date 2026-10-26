@@ -83,13 +83,14 @@ class InventoryOperationController extends Controller
             ->orderBy('item_name')
             ->get();
 
+        \App\Services\Uom\OperationalDocument::enrichItems($companyId,$items,false,true);
         return response()->json([
             'status' => true,
             'data' => [
                 'branches' => $branches,
                 'items' => $items,
                 'inventory' => $lots->summary($companyId, $branchId),
-                'financial_accounts' => DB::table('financial_accounts')->where('company_id',$companyId)->where('is_active',1)
+                'financial_accounts' => DB::table('financial_accounts')->when(!$request->boolean('include_accounts',true),fn($q)=>$q->whereRaw('1 = 0'))->where('company_id',$companyId)->where('is_active',1)
                     ->when($branchId !== null, fn($q)=>$q->where(fn($x)=>$x->where('branch_id',$branchId)->orWhereNull('branch_id')))
                     ->select('id','branch_id','account_name','account_type','currency_code')->orderBy('account_name')->get(),
                 'currencies' => DB::table('company_currencies')->where('company_id',$companyId)->where('is_active',1)->orderByDesc('is_base')->get(['currency_code','is_base']),
@@ -111,9 +112,16 @@ class InventoryOperationController extends Controller
             'allocation_method' => ['nullable', 'in:RELATIVE_VALUE,WEIGHT,MANUAL_PERCENT,MANUAL_COST'],
             'loss_gain_reason' => ['nullable', 'string', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'from_lines' => ['required', 'array', 'min:1', 'max:100'],
+            'recipe_id' => ['nullable','integer','min:1'],
+            'batch_multiplier' => ['required_with:recipe_id','string','regex:/^\d+(?:\.\d{1,6})?$/D'],
+            'request_key' => ['required_with:recipe_id','string','max:80'],
+            'output_percentages' => ['nullable','array','max:100'],
+            'output_percentages.*' => ['string','regex:/^\d+(?:\.\d{1,6})?$/D'],
+            'from_lines' => ['required_without:recipe_id', 'array', 'min:1', 'max:100'],
             'from_lines.*.item_id' => ['required', 'integer'],
-            'from_lines.*.qty_kg' => ['required', 'numeric', 'gt:0'],
+            'from_lines.*.qty_kg' => ['required_without:from_lines.*.quantity', 'numeric', 'gt:0'],
+            'from_lines.*.quantity' => ['required_without:from_lines.*.qty_kg', 'string', 'regex:/^\d+(?:\.\d{1,6})?$/D'],
+            'from_lines.*.unit_code' => ['nullable', 'string', 'max:20'],
             'from_lines.*.notes' => ['nullable', 'string', 'max:1000'],
             'to_lines' => ['nullable', 'array', 'max:100'],
             'to_lines.*.item_id' => ['required_with:to_lines', 'integer'],
@@ -124,6 +132,8 @@ class InventoryOperationController extends Controller
             'to_lines.*.notes' => ['nullable', 'string', 'max:1000'],
             'costs' => ['nullable','array','max:50'],
             'costs.*.cost_type' => ['required_with:costs','string','max:60'],
+            // Recipe costs must be documented; preserve the separate historical legacy API contract.
+            'costs.*.source_reference' => [$request->filled('recipe_id')?'required':'sometimes','string','min:3','max:160'],
             'costs.*.amount' => ['required_with:costs','numeric','gt:0'],
             'costs.*.currency_code' => ['nullable','string','max:10'],
             'costs.*.exchange_rate' => ['nullable','numeric','gt:0'],
@@ -160,8 +170,10 @@ class InventoryOperationController extends Controller
                 'message' => 'تم حفظ العملية كمسودة. راجعها ثم رحّلها.',
                 'id' => $id,
             ], 201);
+        } catch (\App\Services\ShipmentPostingFailure $failure) {
+            throw $failure;
         } catch (\Throwable $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
+            return response()->json(['status' => false, 'message' => \App\Support\ApiExceptionMessage::for($e)], 422);
         }
     }
 
@@ -201,11 +213,20 @@ class InventoryOperationController extends Controller
                 'message' => $result['message'],
                 'data' => $result,
             ]);
+        } catch (\App\Services\ShipmentPostingFailure $failure) {
+            throw $failure;
         } catch (\Throwable $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
+            return response()->json(['status' => false, 'message' => \App\Support\ApiExceptionMessage::for($e)], 422);
         }
     }
 
+    public function void(Request $request,int $id,AccountingContext $context)
+    {
+        $v=$request->validate(['reason'=>'required|string|min:5|max:1000']);$company=$context->companyId($request);$branch=$context->branchFilter($request);
+        $operation=DB::table('inventory_operations')->where('company_id',$company)->where('id',$id)->when($branch!==null,fn($q)=>$q->where('from_branch_id',$branch))->first();if(!$operation)abort(404);
+        try{return response()->json(['status'=>true,'data'=>app(\App\Services\Uom\BaseProcessingService::class)->void($company,(int)$operation->from_branch_id,$id,(int)$context->userId($request),$v['reason'])]);}
+        catch(\App\Services\ShipmentPostingFailure $failure){throw $failure;}catch(\Throwable $failure){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($failure)],422);}
+    }
     public function destroy(
         Request $request,
         int $id,

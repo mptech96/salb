@@ -1,0 +1,147 @@
+<?php
+// Only loaded by the guarded schema-only MariaDB test runner. Real controllers/posting.
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\WorkerController;
+\App\Services\Accounting\IsolatedHistoricalAccountingGate::assert();
+fixture('permissions',['permission_code'=>'workers.view','permission_name'=>'Workers','permission_scope'=>'COMPANY']);
+$reader=\App\Models\User::findOrFail($httpUser)->createToken('ISOLATED WORKER READER')->plainTextToken;
+$wRole=fixture('roles',['role_code'=>'TEST_WORKER_OPERATOR','role_name'=>'TEST WORKER OPERATOR','is_active'=>1]);
+$wUser=fixture('users',['company_id'=>$cid,'branch_id'=>$bid,'username'=>'WORKER_OPERATOR_TEST','name'=>'WORKER OPERATOR','is_active'=>1,'password'=>password_hash(bin2hex(random_bytes(8)),PASSWORD_BCRYPT)]);
+fixture('user_roles',['company_id'=>$cid,'user_id'=>$wUser,'role_id'=>$wRole,'is_active'=>1]);
+foreach(['workers.view','vouchers.create'] as $p)fixture('role_permissions',['role_id'=>$wRole,'permission_id'=>DB::table('permissions')->where('permission_code',$p)->value('id'),'company_id'=>null,'is_active'=>1]);
+$wToken=\App\Models\User::findOrFail($wUser)->createToken('ISOLATED WORKER BRANCH')->plainTextToken;
+$foreignAccount=fixture('accounts',['company_id'=>$foreign,'account_code'=>'W-FOREIGN','account_name'=>'Foreign expense','account_type'=>'ASSET','normal_side'=>'DEBIT','is_active'=>1,'is_group'=>0,'allow_posting'=>1]);
+foreach([['workers/{id}/loans','addLoan'],['workers/{id}/commissions','addCommission'],['workers/commissions/{commissionId}/approve','approveCommission'],['workers/commissions/{commissionId}/pay','payCommission']] as [$uri,$method])Route::post('api/'.$uri,[WorkerController::class,$method])->middleware($chain);
+$wLoan=fixture('accounts',['company_id'=>$cid,'account_code'=>'W-LOAN','account_name'=>'Worker advances','account_type'=>'ASSET','normal_side'=>'DEBIT','is_active'=>1,'is_group'=>0,'allow_posting'=>1]);
+$wPay=fixture('accounts',['company_id'=>$cid,'account_code'=>'W-PAY','account_name'=>'Worker payable','account_type'=>'LIABILITY','normal_side'=>'CREDIT','is_active'=>1,'is_group'=>0,'allow_posting'=>1]);
+foreach(['WORKER_LOAN_ACCOUNT'=>$wLoan,'WORKER_PAYABLE_ACCOUNT'=>$wPay,'WORKER_COMMISSION_EXPENSE_ACCOUNT'=>$gl['expense'],'SALARY_EXPENSE_ACCOUNT'=>$gl['expense']] as $k=>$a)fixture('accounting_settings',['company_id'=>$cid,'setting_key'=>$k,'account_id'=>$a]);
+$w=fixture('workers',['company_id'=>$cid,'branch_id'=>$bid,'worker_name'=>'WORKER FINANCE TEST','salary_rate'=>1000,'salary_type'=>'MONTHLY','worker_status'=>'ACTIVE','is_active'=>1]);
+$wf=fixture('workers',['company_id'=>$foreign,'branch_id'=>$foreignBid,'worker_name'=>'FOREIGN WORKER','is_active'=>1]);
+$wb=fixture('workers',['company_id'=>$cid,'branch_id'=>$otherBranch,'worker_name'=>'OTHER BRANCH WORKER','is_active'=>1]);
+$historyIds=DB::table('journal_entries')->pluck('id')->all();$history=fn()=>[DB::table('journal_entries')->whereIn('id',$historyIds)->orderBy('id')->get()->toJson(),DB::table('journal_entry_lines')->whereIn('journal_entry_id',$historyIds)->orderBy('id')->get()->toJson()];$historyBefore=$history();
+$workerCounts=fn()=>[DB::table('worker_loans')->count(),DB::table('worker_commissions')->count(),DB::table('vouchers')->count(),DB::table('journal_entries')->count(),DB::table('sulb_document_sequences')->orderBy('id')->get()->toJson()];
+$wCall=function(string $uri,array $body=[],?string $token=null)use($http,$owner){return $http($token??$owner,$uri,$body);};
+$wOk=function($r,string $label){check($r->getStatusCode()===200,$label);if($r->getStatusCode()!==200)throw new RuntimeException($label.' '.$r->getStatusCode().' '.$r->getContent());return json_decode($r->getContent(),true);};
+$loanBody=['loan_date'=>'2026-10-10','amount'=>'100.125','payment_method'=>'CASH','financial_account_id'=>$fa,'notes'=>'LOCAL TEST ONLY'];
+// Reproduce the original unavailable service call without reverting any source.
+$before=$workerCounts();$missingError=false;
+try{DB::transaction(function()use($cid,$bid){$n=app(\App\Services\SulbDocumentSequenceService::class)->reserveVoucher($cid,'PAYMENT','2026-10-10');fixture('vouchers',['company_id'=>$cid,'branch_id'=>$bid,'voucher_number'=>$n,'voucher_type_id'=>2]);app(\App\Services\AccountingService::class)->settingAccount($cid,'WORKER_LOAN_ACCOUNT');});}
+catch(\Error $e){$missingError=str_contains($e->getMessage(),'AccountingService::settingAccount');}
+check($missingError,'WORKER original missing method reproduced without reverting source');
+check($workerCounts()===$before,'WORKER original missing method rolls back original transaction');
+$loan=$wOk($wCall("workers/$w/loans",$loanBody),'WORKER loan actual HTTP posts');
+$journalSides=function(int $journal,int $account){$q=DB::table('journal_entry_lines')->where('journal_entry_id',$journal)->where('account_id',$account);return [(string)$q->sum('debit'),(string)$q->sum('credit')];};
+check($journalSides($loan['journal_entry_id'],$wLoan)===['100.125','0.000']&&$journalSides($loan['journal_entry_id'],$gl['cash'])===['0.000','100.125'],'WORKER loan exact advance debit cash credit');
+check((int)DB::table('vouchers')->where('id',$loan['voucher_id'])->value('journal_entry_id')===$loan['journal_entry_id'],'WORKER loan voucher shares one original journal');
+$before=$workerCounts();$repost=app(\App\Services\Accounting\AccountingEngine::class)->voucher(['company_id'=>$cid,'voucher_id'=>$loan['voucher_id'],'created_by'=>$uid]);
+check($repost->success&&$repost->journalEntryId===$loan['journal_entry_id']&&$workerCounts()===$before,'WORKER generic voucher repost cannot duplicate loan journal');
+check(DB::table('journal_entry_lines')->where('journal_entry_id',$loan['journal_entry_id'])->where('party_type','WORKER')->where('party_id',$w)->exists(),'WORKER loan actual party dimensions');
+// Missing/stopped/cross-tenant settings never leave data or consume numbering.
+foreach(['missing','inactive','foreign'] as $case){
+    DB::table('accounting_settings')->where('company_id',$cid)->where('setting_key','WORKER_LOAN_ACCOUNT')->update(['account_id'=>$case==='missing'?null:($case==='foreign'?$foreignAccount:$wLoan)]);
+    if($case==='inactive')DB::table('accounts')->where('id',$wLoan)->update(['is_active'=>0]);
+    $before=$workerCounts();$r=$wCall("workers/$w/loans",$loanBody);check($r->getStatusCode()===422&&$workerCounts()===$before,'WORKER '.$case.' GL rejected with full rollback');
+    DB::table('accounts')->where('id',$wLoan)->update(['is_active'=>1]);
+}
+DB::table('accounting_settings')->where('company_id',$cid)->where('setting_key','WORKER_LOAN_ACCOUNT')->update(['account_id'=>$wLoan]);
+$before=$workerCounts();check($wCall("workers/$wf/loans",$loanBody)->getStatusCode()===404&&$workerCounts()===$before,'WORKER foreign company rejected');
+check($wCall("workers/$wb/loans",$loanBody,$wToken)->getStatusCode()===404&&$workerCounts()===$before,'WORKER other branch rejected');
+check($wCall("workers/$w/loans",$loanBody,$reader)->getStatusCode()===403&&$workerCounts()===$before,'WORKER unauthorized user rejected');
+$bad=$loanBody;$bad['financial_account_id']=$otherFa;check($wCall("workers/$w/loans",$bad)->getStatusCode()===422&&$workerCounts()===$before,'WORKER other branch payment account rejected');
+$supportRequest=\Illuminate\Http\Request::create('/api/companies/'.$cid.'/support-access','POST');
+$actor=\App\Models\User::findOrFail($platformActual);$pt=$actor->createToken('ISOLATED WORKER PLATFORM',['platform-admin'])->plainTextToken;
+$actor->withAccessToken(\Laravel\Sanctum\PersonalAccessToken::findToken($pt));$supportRequest->setUserResolver(fn()=>$actor);$supportRequest->attributes->set('actual_role_code','SUPER_ADMIN');
+$support=app(\App\Services\Support\SupportSessionService::class)->create($supportRequest,$actor,['company_id'=>$cid,'branch_id'=>$bid,'access_level'=>'READ_ONLY','reason'=>'ISOLATED WORKER TEST','ticket_reference'=>'WORKER-TEST','expires_at'=>now()->addHour()]);
+check($wCall("workers/$w/loans",$loanBody,$support['plain_text_token'])->getStatusCode()===403&&$workerCounts()===$before,'WORKER durable READ_ONLY rejected');
+check($wCall("workers/$w/loans",$loanBody,$pt)->getStatusCode()===403&&$workerCounts()===$before,'WORKER platform token without tenant authority rejected');
+// Real DB fault after voucher/loan insertion, before journal completion.
+DB::unprepared("CREATE TRIGGER worker_test_fault BEFORE INSERT ON journal_entries FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='WORKER injected journal failure'");
+$before=$workerCounts();$r=$wCall("workers/$w/loans",$loanBody);DB::unprepared('DROP TRIGGER worker_test_fault');check($r->getStatusCode()>=400&&$workerCounts()===$before,'WORKER failure after reservation rolls back all data and counter');
+$retry=$wOk($wCall("workers/$w/loans",$loanBody,$wToken),'WORKER retry after failed loan posts in same authorized branch');
+check(DB::table('vouchers')->where('id',$retry['voucher_id'])->value('journal_entry_id')===$retry['journal_entry_id'],'WORKER successful retry has no orphan voucher');
+$pending=$wOk($wCall("workers/$w/commissions",['commission_date'=>'2026-10-10','amount'=>'50.250','status'=>'PENDING']),'WORKER pending commission creates no financial movement');
+check($pending['journal_entry_id']===null,'WORKER pending has no journal');
+$command=fn($uri,$body=[])=>['--worker-http-worker',$name,$cid,$bid,$uid,base64_encode(json_encode(['uri'=>$uri,'body'=>$body]))];
+$before=$workerCounts();$parallel=$race([$command('workers/commissions/'.$pending['id'].'/approve'),$command('workers/commissions/'.$pending['id'].'/approve')]);
+check(count(array_filter($parallel,fn($x)=>$x['ok']))===1&&DB::table('journal_entries')->count()===$before[3]+1,'WORKER concurrent approval one accrual journal');
+$accrual=(int)DB::table('worker_commissions')->where('id',$pending['id'])->value('journal_entry_id');
+check($journalSides($accrual,$gl['expense'])===['50.250','0.000']&&$journalSides($accrual,$wPay)===['0.000','50.250'],'WORKER accrual exact expense debit payable credit');
+// Changing default payable must not settle an already-accrued commission on a new GL.
+DB::table('accounting_settings')->where('company_id',$cid)->where('setting_key','WORKER_PAYABLE_ACCOUNT')->update(['account_id'=>$gl['ap']]);
+$before=$workerCounts();DB::table('accounts')->where('id',$wPay)->update(['is_active'=>0]);
+check($wCall('workers/commissions/'.$pending['id'].'/pay')->getStatusCode()===422&&$workerCounts()===$before,'WORKER stopped historical payable blocks payment rollback');
+DB::table('accounts')->where('id',$wPay)->update(['is_active'=>1]);
+DB::unprepared("CREATE TRIGGER worker_test_fault BEFORE INSERT ON journal_entries FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='WORKER payment journal failure'");
+$r=$wCall('workers/commissions/'.$pending['id'].'/pay');DB::unprepared('DROP TRIGGER worker_test_fault');
+check($r->getStatusCode()>=400&&$workerCounts()===$before&&DB::table('worker_commissions')->where('id',$pending['id'])->value('status')==='APPROVED','WORKER payment fault preserves approved liability and counter');
+$before=$workerCounts();$parallel=$race([$command('workers/commissions/'.$pending['id'].'/pay'),$command('workers/commissions/'.$pending['id'].'/pay')]);
+check(count(array_filter($parallel,fn($x)=>$x['ok']))===1&&DB::table('vouchers')->count()===$before[2]+1&&DB::table('journal_entries')->count()===$before[3]+1,'WORKER concurrent payment one voucher one journal');
+$payJournal=(int)DB::table('vouchers')->where('id',DB::table('worker_commissions')->where('id',$pending['id'])->value('voucher_id'))->value('journal_entry_id');
+check($journalSides($payJournal,$wPay)===['50.250','0.000']&&$journalSides($payJournal,$gl['cash'])===['0.000','50.250'],'WORKER payment uses historical payable not new setting');
+check(DB::table('journal_entry_lines')->whereIn('journal_entry_id',[$accrual,$payJournal])->where('account_id',$wPay)->sum('debit')===DB::table('journal_entry_lines')->whereIn('journal_entry_id',[$accrual,$payJournal])->where('account_id',$wPay)->sum('credit'),'WORKER commission liability fully settled');
+$before=$workerCounts();check($wCall('workers/commissions/'.$pending['id'].'/pay')->getStatusCode()===400&&$workerCounts()===$before,'WORKER payment retry rejected without duplicate');
+DB::table('accounting_settings')->where('company_id',$cid)->where('setting_key','WORKER_PAYABLE_ACCOUNT')->update(['account_id'=>$wPay]);
+$before=$workerCounts();DB::table('accounts')->where('id',$gl['expense'])->update(['is_active'=>0]);
+check($wCall("workers/$w/commissions",['commission_date'=>'2026-10-10','amount'=>'12.125','status'=>'APPROVED'])->getStatusCode()===422&&$workerCounts()===$before,'WORKER inactive expense GL prevents commission accrual');
+DB::table('accounts')->where('id',$gl['expense'])->update(['is_active'=>1]);
+DB::table('financial_accounts')->where('id',$fa)->update(['is_active'=>0]);
+$r=$wCall("workers/$w/commissions",['commission_date'=>'2026-10-10','amount'=>'12.125','status'=>'PAID']);
+check($r->getStatusCode()===422&&$workerCounts()===$before,'WORKER immediate PAID payment failure rolls back accrual and commission');
+DB::table('financial_accounts')->where('id',$fa)->update(['is_active'=>1]);
+$before=$workerCounts();$paid=$wOk($wCall("workers/$w/commissions",['commission_date'=>'2026-10-10','amount'=>'12.125','status'=>'PAID']),'WORKER immediate PAID executes real accrual and payment');
+check(DB::table('worker_commissions')->where('id',$paid['id'])->value('status')==='PAID'&&DB::table('vouchers')->count()===$before[2]+1&&DB::table('journal_entries')->count()===$before[3]+2,'WORKER immediate PAID not just a status label');
+// Settlement through existing payroll, with no second accrual of commission expense.
+$payrollCommission=$wOk($wCall("workers/$w/commissions",['commission_date'=>'2026-10-10','amount'=>'200.000','status'=>'APPROVED']),'WORKER payroll commission accrual');
+DB::table('workers')->where('company_id',$cid)->where('id','<>',$w)->update(['is_active'=>0]);
+$bindOwner();request()->headers->set('X-Company-ID',(string)$cid);request()->headers->set('X-Branch-ID',(string)$bid);request()->headers->set('X-User-ID',(string)$uid);
+request()->attributes->set('tenant_company_id',$cid);request()->attributes->set('tenant_branch_id',$bid);request()->attributes->set('effective_role_code','COMPANY_OWNER');
+$run=app(\App\Services\Payroll\PayrollService::class)->generate(['company_id'=>$cid,'branch_id'=>$bid,'salary_month'=>'2026-10-01']);
+$approved=app(\App\Services\Payroll\PayrollApprover::class)->approve($run['salary_run_id']);
+check($journalSides($approved['journal_entry_id'],$gl['expense'])===['1000.000','0.000'],'WORKER payroll accrues salary only not commission twice');
+check($journalSides($approved['journal_entry_id'],$wLoan)===['0.000','200.250'],'WORKER payroll settles exact original loan');
+check($journalSides($approved['journal_entry_id'],$wPay)===['0.000','799.750'],'WORKER payroll adds net payable excluding prior commission');
+$payment=app(\App\Services\Payroll\PayrollPayment::class)->pay($run['salary_run_id'],'CASH',(int)$fa);
+check($journalSides($payment['journal_entry_id'],$wPay)===['999.750','0.000'],'WORKER payroll pays salary and existing commission payable');
+check(DB::table('journal_entry_lines')->where('account_id',$wLoan)->sum('debit')===DB::table('journal_entry_lines')->where('account_id',$wLoan)->sum('credit'),'WORKER advance GL balance zero after payroll deduction');
+check(DB::table('journal_entry_lines')->where('account_id',$wPay)->sum('debit')===DB::table('journal_entry_lines')->where('account_id',$wPay)->sum('credit'),'WORKER payable GL balance zero after all payments');
+$partyGL=app(\App\Domain\Accounting\Services\AccountingReportService::class)->ledger($cid,$bid,$wPay,['from_date'=>'2026-01-01','to_date'=>'2026-12-31','party_type'=>'WORKER','party_id'=>$w]);
+check($partyGL['closing_balance']===0.0,'WORKER party-tagged payable ledger agrees with zero liability');
+$loanGL=app(\App\Domain\Accounting\Services\AccountingReportService::class)->ledger($cid,$bid,$wLoan,['from_date'=>'2026-01-01','to_date'=>'2026-12-31','party_type'=>'WORKER','party_id'=>$w]);
+check($loanGL['closing_balance']===0.0,'WORKER party-tagged advance ledger agrees with zero advance');
+$before=$workerCounts();rejects(fn()=>app(\App\Services\Payroll\PayrollApprover::class)->approve($run['salary_run_id']),'WORKER payroll reapproval rejected');check($workerCounts()===$before,'WORKER payroll retry creates no journal');
+check($history()===$historyBefore,'WORKER no preexisting journal or line modified');
+// New loan creation and a legacy payment compete for exactly the same sequence.
+$mixBody=$loanBody;$mixBody['amount']='1.000';
+$legacyBody=$makeOld('PAYMENT');$before=$workerCounts();
+$parallel=$race([$command("workers/$w/loans",$mixBody),['--legacy-voucher-worker',$name,$cid,$bid,$uid,base64_encode(json_encode($legacyBody))]]);
+check($parallel[0]['ok']&&$parallel[1]['ok']&&DB::table('vouchers')->whereIn('journal_entry_id',[$parallel[0]['journal'],$parallel[1]['journal']])->pluck('voucher_number')->unique()->count()===2,'WORKER loan and legacy payment concurrent unique numbering');
+check(DB::table('vouchers')->count()===$before[2]+2&&DB::table('journal_entries')->count()===$before[3]+2,'WORKER mixed race has exactly two intended balanced operations');
+$bankGL=fixture('accounts',['company_id'=>$cid,'account_code'=>'WORKER-BANK','account_name'=>'WORKER TEST BANK','account_type'=>'ASSET','normal_side'=>'DEBIT','is_active'=>1,'is_group'=>0,'allow_posting'=>1]);
+$bankFA=fixture('financial_accounts',['company_id'=>$cid,'branch_id'=>$bid,'account_code'=>'WORKER-BANK','account_name'=>'WORKER TEST BANK','account_type'=>'BANK','currency_code'=>'SAR','gl_account_id'=>$bankGL,'is_active'=>1]);
+$bankCommission=$wOk($wCall("workers/$w/commissions",['commission_date'=>'2026-10-10','amount'=>'25.500','status'=>'APPROVED']),'WORKER bank commission actual accrual');
+$bankPayment=$wOk($wCall('workers/commissions/'.$bankCommission['id'].'/pay',['payment_method'=>'BANK','financial_account_id'=>$bankFA]),'WORKER explicit bank payment actual posting');
+check($journalSides($bankPayment['journal_entry_id'],$bankGL)===['0.000','25.500']&&DB::table('vouchers')->where('id',$bankPayment['voucher_id'])->value('payment_method')==='BANK'&&(int)DB::table('vouchers')->where('id',$bankPayment['voucher_id'])->value('financial_account_id')===$bankFA,'WORKER bank GL and operational account and payment method agree');
+$receiptBody=$makeOld('RECEIPT');$receiptBody['reference_type']='WORKER';$receiptBody['reference_id']=$w;$receiptBody['amount']='0.500';$receiptBody['foreign_amount']='0.500';
+$receipt=$oldOk($receiptBody,'WORKER real receipt repays advance through current voucher route');
+check($journalSides($receipt['journal_entry_id'],$wLoan)===['0.000','0.500']&&$journalSides($receipt['journal_entry_id'],$gl['cash'])===['0.500','0.000'],'WORKER receipt exact cash debit advance credit');
+$bindOwner();request()->headers->set('X-Company-ID',(string)$cid);request()->headers->set('X-Branch-ID',(string)$bid);request()->headers->set('X-User-ID',(string)$uid);
+request()->attributes->set('tenant_company_id',$cid);request()->attributes->set('tenant_branch_id',$bid);request()->attributes->set('effective_role_code','COMPANY_OWNER');
+$nextRun=app(\App\Services\Payroll\PayrollService::class)->generate(['company_id'=>$cid,'branch_id'=>$bid,'salary_month'=>'2026-11-01']);$before=$workerCounts();
+rejects(fn()=>app(\App\Services\Payroll\PayrollApprover::class)->approve($nextRun['salary_run_id']),'WORKER unallocated receipt blocks automatic double deduction');
+check($workerCounts()===$before&&DB::table('worker_salary_runs')->where('id',$nextRun['salary_run_id'])->value('status')==='DRAFT','WORKER receipt review gate leaves draft and all financial records unchanged');
+// Direct service callers must not substitute supplied identity or bypass subscription.
+$bindOwner();request()->attributes->set('tenant_company_id',$foreign);
+rejects(fn()=>app(\App\Services\Payroll\WorkerAccountingSupport::class)->authorize(),'WORKER direct service rejects forged company');
+$bindOwner();request()->attributes->set('tenant_company_id',$cid);request()->attributes->set('tenant_branch_id',$bid);request()->attributes->set('effective_role_code','COMPANY_OWNER');
+DB::table('subscriptions')->where('id',$sub)->update(['status'=>'SUSPENDED']);
+rejects(fn()=>app(\App\Services\Payroll\WorkerAccountingSupport::class)->authorize(),'WORKER direct service rejects subscription READ_ONLY');
+DB::table('subscriptions')->where('id',$sub)->update(['status'=>'ACTIVE']);
+\Illuminate\Support\Facades\Auth::setUser(\App\Models\User::findOrFail($wUser));
+rejects(fn()=>app(\App\Services\Payroll\WorkerAccountingSupport::class)->worker($wb),'WORKER direct service rejects forged company-wide role');
+\Illuminate\Support\Facades\Auth::forgetGuards();
+rejects(fn()=>app(\App\Services\Payroll\WorkerAccountingSupport::class)->authorize(),'WORKER direct service requires authenticated actor');
+$bindOwner();
+require __DIR__.'/worker_payroll_capacity_cases.php';
+require __DIR__.'/worker_request_isolated_cases.php';
+require __DIR__.'/worker_settlement_isolated_cases.php';

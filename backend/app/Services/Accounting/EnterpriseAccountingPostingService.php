@@ -19,18 +19,20 @@ class EnterpriseAccountingPostingService
         private TaxEngineService $taxes,
     ) {}
 
-    public function postSale(int $companyId,int $invoiceId,int $userId): int
+    public function postSale(int $companyId,int $invoiceId,int $userId,?callable $capture=null): int
     {
         $inv=DB::table('sales_invoices')->where('company_id',$companyId)->where('id',$invoiceId)->first();
         if(!$inv)throw new \RuntimeException('فاتورة البيع غير موجودة.');
+        if($capture!==null)HistoricalAccountingAuthorization::assert($companyId,(int)$inv->branch_id,$userId,['sales.post']);
         if($inv->journal_entry_id)return (int)$inv->journal_entry_id;
         $lines=DB::table('sales_invoice_lines')->where('company_id',$companyId)->where('sales_invoice_id',$invoiceId)->orderBy('id')->get();
         if($lines->isEmpty())throw new \RuntimeException('فاتورة البيع لا تحتوي أصنافاً.');
 
-        $journal=[];$revenueTotal=0.0;
+        $journal=[];$revenueTotal=0.0;$contributions=[];
         foreach($lines as$line){
             $base=round((float)($line->base_total_before_vat??$line->total_before_vat),3);if(abs($base)<0.0001)continue;
             $acc=$this->accounts->sales($companyId,(int)$line->item_id);
+            $contributions[]=['line_id'=>$line->id,'role'=>'REVENUE','account_id'=>$acc,'debit'=>0,'credit'=>$base];
             $this->pushGrouped($journal,$acc,0,$base,'إيراد بيع - '.$this->itemName((int)$line->item_id));$revenueTotal+=$base;
         }
 
@@ -40,6 +42,7 @@ class EnterpriseAccountingPostingService
         foreach($taxRows as$taxRow){
             $amount=round((float)$taxRow->tax,3);if($amount<=0)continue;
             $acc=$this->taxes->taxAccount($companyId,$taxRow->tax_code_id?(int)$taxRow->tax_code_id:null,'SALES');
+            foreach($lines as$line)if($line->tax_code_id==$taxRow->tax_code_id&&(float)($line->base_vat_amount??$line->vat_amount)>0)$contributions[]=['line_id'=>$line->id,'role'=>'VAT_OUTPUT','account_id'=>$acc,'debit'=>0,'credit'=>(float)($line->base_vat_amount??$line->vat_amount)];
             $this->pushGrouped($journal,$acc,0,$amount,'ضريبة مخرجات');$postedTax+=$amount;
         }
         $taxDiff=round($vatTotal-$postedTax,3);
@@ -55,6 +58,8 @@ class EnterpriseAccountingPostingService
             $cost=round((float)DB::table('sales_line_lot_sources')->where('company_id',$companyId)->where('sales_invoice_line_id',$line->id)->sum('total_cost'),3);
             if($cost<=0)continue;
             $cogs=$this->accounts->cogs($companyId,(int)$line->item_id);$inventory=$this->accounts->inventory($companyId,(int)$line->item_id);
+            $contributions[]=['line_id'=>$line->id,'role'=>'COGS','account_id'=>$cogs,'debit'=>$cost,'credit'=>0];
+            $contributions[]=['line_id'=>$line->id,'role'=>'INVENTORY','account_id'=>$inventory,'debit'=>0,'credit'=>$cost];
             $this->pushGrouped($journal,$cogs,$cost,0,'تكلفة مبيعات - '.$this->itemName((int)$line->item_id));
             $this->pushGrouped($journal,$inventory,0,$cost,'إخراج مخزون مباع - '.$this->itemName((int)$line->item_id));
         }
@@ -66,24 +71,27 @@ class EnterpriseAccountingPostingService
             'currency_code'=>$inv->currency_code??null,'exchange_rate'=>$inv->exchange_rate??null,
             'lines'=>array_values($journal),'is_system_generated'=>1,'created_by'=>$userId,
         ]);
+        if($capture)$capture($inv,$lines,$contributions,(int)$jid);
         DB::table('sales_invoices')->where('id',$invoiceId)->update(['journal_entry_id'=>$jid,'updated_at'=>now()]);
         DB::table('stock_movements')->where('company_id',$companyId)->where('source_type','SALE')->where('source_id',$invoiceId)->update(['journal_entry_id'=>$jid,'updated_at'=>now()]);
         return (int)$jid;
     }
 
-    public function postPurchase(int $companyId,int $invoiceId,int $userId): int
+    public function postPurchase(int $companyId,int $invoiceId,int $userId,?callable $capture=null): int
     {
         $inv=DB::table('purchase_invoices')->where('company_id',$companyId)->where('id',$invoiceId)->first();
         if(!$inv)throw new \RuntimeException('فاتورة الشراء غير موجودة.');
+        if($capture!==null)HistoricalAccountingAuthorization::assert($companyId,(int)$inv->branch_id,$userId,['purchases.post']);
         if($inv->journal_entry_id)return (int)$inv->journal_entry_id;
         $lines=DB::table('purchase_invoice_lines')->where('company_id',$companyId)->where('purchase_invoice_id',$invoiceId)->orderBy('id')->get();
         if($lines->isEmpty())throw new \RuntimeException('فاتورة الشراء لا تحتوي أصنافاً.');
 
-        $journal=[];$stockBasis=[];$stockBasisTotal=0.0;$serviceExists=false;
+        $journal=[];$stockBasis=[];$stockBasisTotal=0.0;$serviceExists=false;$contributions=[];
         foreach($lines as$line){
             $base=round((float)($line->base_total_before_vat??$line->total_before_vat),3);if(abs($base)<0.0001)continue;
             $stock=(int)($line->track_inventory_snapshot??1)===1&&strtoupper((string)($line->item_type_snapshot??'STOCK'))!=='SERVICE';
             $acc=$stock?$this->accounts->inventory($companyId,(int)$line->item_id):$this->accounts->purchaseExpense($companyId,(int)$line->item_id);
+            $contributions[]=['line_id'=>$line->id,'role'=>$stock?'INVENTORY':'PURCHASE_EXPENSE','account_id'=>$acc,'debit'=>$base,'credit'=>0];
             $this->pushGrouped($journal,$acc,$base,0,($stock?'إثبات مخزون - ':'شراء خدمة/مصروف - ').$this->itemName((int)$line->item_id));
             if($stock){$stockBasis[(int)$line->item_id]=($stockBasis[(int)$line->item_id]??0)+$base;$stockBasisTotal+=$base;}else$serviceExists=true;
         }
@@ -91,7 +99,10 @@ class EnterpriseAccountingPostingService
         // Header freight/extra costs are part of invoice total and lot cost in Stage 6.
         $rate=(float)($inv->exchange_rate?:1);$headerCosts=round(((float)($inv->transport_cost??0)+(float)($inv->extra_cost??0))*$rate,3);
         if($headerCosts>0){
-            if($stockBasisTotal>0){
+            if($capture)throw new \RuntimeException('Historical snapshot of landed costs requires approved policy.');
+            if($lines->contains(fn($line)=>\App\Services\Uom\OperationalDocument::isBase($line))){
+                foreach(\App\Services\Uom\BaseInvoiceHeaderCost::accountShares($companyId,$inv) as $account=>$amount)if(bccomp($amount,'0',3)>0)$this->pushGrouped($journal,(int)$account,(float)$amount,0,'تكلفة شراء مباشرة وفق توزيع محفوظ');
+            }elseif($stockBasisTotal>0){
                 $remain=$headerCosts;$keys=array_keys($stockBasis);$last=end($keys);
                 foreach($stockBasis as$itemId=>$basis){$share=$itemId===$last?$remain:round($headerCosts*($basis/$stockBasisTotal),3);$remain=round($remain-$share,3);$this->pushGrouped($journal,$this->accounts->inventory($companyId,$itemId),$share,0,'تكلفة شراء مباشرة محملة على المخزون');}
             }else{
@@ -103,7 +114,7 @@ class EnterpriseAccountingPostingService
         $vatTotal=round((float)($inv->base_vat_amount??$inv->vat_amount),3);$postedTax=0.0;
         $taxRows=DB::table('purchase_invoice_lines')->where('company_id',$companyId)->where('purchase_invoice_id',$invoiceId)
             ->select('tax_code_id',DB::raw('SUM(COALESCE(base_vat_amount,vat_amount)) tax'))->groupBy('tax_code_id')->get();
-        foreach($taxRows as$taxRow){$amount=round((float)$taxRow->tax,3);if($amount<=0)continue;$acc=$this->taxes->taxAccount($companyId,$taxRow->tax_code_id?(int)$taxRow->tax_code_id:null,'PURCHASE');$this->pushGrouped($journal,$acc,$amount,0,'ضريبة مدخلات');$postedTax+=$amount;}
+        foreach($taxRows as$taxRow){$amount=round((float)$taxRow->tax,3);if($amount<=0)continue;$acc=$this->taxes->taxAccount($companyId,$taxRow->tax_code_id?(int)$taxRow->tax_code_id:null,'PURCHASE');$this->pushGrouped($journal,$acc,$amount,0,'ضريبة مدخلات');$postedTax+=$amount;foreach($lines as$line)if($line->tax_code_id==$taxRow->tax_code_id&&(float)($line->base_vat_amount??$line->vat_amount)>0)$contributions[]=['line_id'=>$line->id,'role'=>'VAT_INPUT','account_id'=>$acc,'debit'=>(float)($line->base_vat_amount??$line->vat_amount),'credit'=>0];}
         $taxDiff=round($vatTotal-$postedTax,3);if(abs($taxDiff)>0.0001){$acc=$this->accounts->settingAny($companyId,['VAT_INPUT_ACCOUNT']);$this->pushGrouped($journal,$acc,$taxDiff>0?$taxDiff:0,$taxDiff<0?abs($taxDiff):0,'تسوية تقريب ضريبة المدخلات');}
 
         $total=round((float)($inv->base_total_amount??$inv->total_amount),3);$ap=$this->accounts->payable($companyId,(int)$inv->supplier_id);
@@ -116,6 +127,7 @@ class EnterpriseAccountingPostingService
             'currency_code'=>$inv->currency_code??null,'exchange_rate'=>$inv->exchange_rate??null,
             'lines'=>array_values($journal),'is_system_generated'=>1,'created_by'=>$userId,
         ]);
+        if($capture)$capture($inv,$lines,$contributions,(int)$jid);
         DB::table('purchase_invoices')->where('id',$invoiceId)->update(['journal_entry_id'=>$jid,'updated_at'=>now()]);
         DB::table('stock_movements')->where('company_id',$companyId)->where('source_type','PURCHASE')->where('source_id',$invoiceId)->update(['journal_entry_id'=>$jid,'updated_at'=>now()]);
         return (int)$jid;

@@ -20,6 +20,7 @@ class P1OpeningReconciliationTest extends TestCase
     protected function setUp():void
     {
         parent::setUp();self::assertSame('sqlite',DB::connection()->getDriverName());self::assertSame(':memory:',DB::connection()->getDatabaseName());
+        require_once __DIR__.'/../../Support/InventorySequenceFixture.php';\Tests\Support\InventorySequenceFixture::install();
         $this->table('branches','company_id is_active','branch_name');
         $this->table('financial_years','company_id is_closed','year_name start_date end_date');
         $this->table('company_settings','company_id','base_currency_code currency_code');
@@ -63,6 +64,9 @@ class P1OpeningReconciliationTest extends TestCase
         self::assertSame(10.0,(float)(clone$gl)->where('party_type','CUSTOMER')->where('party_id',1)->sum('debit'));self::assertSame(5.0,(float)(clone$gl)->where('party_type','SUPPLIER')->where('party_id',1)->sum('credit'));
         $asset=DB::table('fixed_assets')->first();self::assertSame(10.0,(float)$asset->current_book_value);self::assertSame(12.0,(float)$asset->purchase_cost);self::assertSame(2.0,(float)$asset->accumulated_depreciation);
         self::assertSame(2.0,(float)app(InventoryLotService::class)->summary(1,1)[0]->balance_kg);
+        self::assertSame('KG',app(InventoryLotService::class)->summary(1,1)[0]->base_unit_code);
+        $this->table('shipments','','shipment_number');$this->table('cars','','car_number plate_number');
+        self::assertSame('KG',app(InventoryLotService::class)->lots(1,1,1)[0]->base_unit_code);
         $fifo=DB::transaction(fn()=>app(InventoryLotService::class)->consumeFifo(1,1,1,0.5,'TEST',1));self::assertSame((int)$lot->id,$fifo['allocations'][0]['inventory_lot_id']);self::assertSame(1.5,$fifo['total_cost']);self::assertSame(1.5,(float)DB::table('inventory_lots')->value('qty_remaining_kg'));
     }
     public function test_opening_batch_pagination_search_and_stable_second_page():void

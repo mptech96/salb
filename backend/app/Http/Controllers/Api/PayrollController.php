@@ -49,7 +49,7 @@ class PayrollController extends Controller
         $cid=$context->companyId($request);$scoped=$context->branchFilter($request);
         return response()->json(['status'=>true,'data'=>[
             'branches'=>DB::table('branches')->where('company_id',$cid)->where('is_active',1)->when($scoped!==null,fn($q)=>$q->where('id',$scoped))->orderBy('branch_name')->get(['id','branch_name']),
-            'financial_accounts'=>$money->list($cid,$scoped),'base_currency'=>$money->baseCurrency($cid),'scoped_branch_id'=>$scoped,
+            'financial_accounts'=>$money->selectionList($cid,$scoped),'base_currency'=>$money->baseCurrency($cid),'scoped_branch_id'=>$scoped,
         ]]);
     }
 

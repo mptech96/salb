@@ -97,6 +97,7 @@ export default function ERPTree({
               {node.type}
             </span>
           )}
+          {node.raw?.is_active !== undefined && Number(node.raw.is_active) === 0 && <span className="rounded-full bg-slate-100 px-2 py-1 text-xs">موقوف</span>}
         </div>
 
         {hasChildren && isOpen && (

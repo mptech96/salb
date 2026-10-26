@@ -1,9 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import api from "@/app/api";
+import AccountSearchSelect from "@/components/finance/AccountSearchSelect";
 
 type Props = { title: string; type: string; value: string; branch?: string; options: any[][]; onChange: (value: string, row?: any) => void; empty?: string };
-export default function OpeningLookup({title,type,value,branch,options,onChange,empty="اختر"}:Props) {
+export default function OpeningLookup(props: Props) {
+  if (props.type === "accounts" || props.type === "financial_accounts") return <AccountSearchSelect endpoint={props.type === "accounts" ? "/opening-balances/gl-options" : "/opening-balances/account-options"} label={props.title} value={props.value} branch={props.branch} onChange={props.onChange} />;
+  return <LegacyOpeningLookup {...props} />;
+}
+function LegacyOpeningLookup({title,type,value,branch,options,onChange,empty="اختر"}:Props) {
   const [search,setSearch]=useState("");
   const [rows,setRows]=useState<any[]|null>(null);
   const [error,setError]=useState("");

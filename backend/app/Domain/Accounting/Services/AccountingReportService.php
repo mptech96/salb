@@ -90,9 +90,10 @@ class AccountingReportService
     public function ledger(int $companyId,?int $branchId,int $accountId,array $filters=[]): array
     {
         [$from,$to,$fy]=$this->period($companyId,$filters);
-        $account=DB::table('accounts')->where('company_id',$companyId)->where('id',$accountId)->where('is_active',1)->where('is_group',0)->where('allow_posting',1)->first();
+        $account=DB::table('accounts')->where('company_id',$companyId)->where('id',$accountId)->first();
         if(!$account) throw new \RuntimeException('الحساب غير موجود.');
-        $base=DB::table('journal_entry_lines as l')->join('journal_entries as e','e.id','=','l.journal_entry_id')->where('l.company_id',$companyId)->where('l.account_id',$accountId)->where('e.status','POSTED');
+        $ids=(bool)$account->is_group ? app(\App\Domain\Accounting\Repositories\AccountRepository::class)->descendantIds($companyId,$accountId) : [$accountId];
+        $base=DB::table('journal_entry_lines as l')->join('journal_entries as e','e.id','=','l.journal_entry_id')->where('l.company_id',$companyId)->where('e.company_id',$companyId)->whereIn('l.account_id',$ids)->where('e.status','POSTED');
         if($branchId!==null)$base->where('l.branch_id',$branchId);
         if(!empty($filters['cost_center_id']))$base->where('l.cost_center_id',$filters['cost_center_id']);
         if(!empty($filters['party_type']))$base->where('l.party_type',strtoupper($filters['party_type']));

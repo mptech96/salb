@@ -8,6 +8,7 @@ import PrintFooter from "@/components/reports/PrintFooter";
 import { printWhenReady } from "@/lib/print-branding";
 import {PageHeader} from "@/components/ui/enterprise";
 import ServerPagination, {PaginationMeta} from "@/components/finance/ServerPagination";
+import DriverShipmentStatement from "@/components/finance/DriverShipmentStatement";
 
 const fmt = (x: any) => Number(x || 0).toLocaleString("ar", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
@@ -29,7 +30,7 @@ export default function StatementsPage() {
   const [dialog, setDialog] = useState<any>({ open: false, title: "", message: "", type: "warning" });
 
   const endpoint = useMemo(() => `/statements/entities/${kind}`, [kind]);
-  const nameOf = (x: any) => kind === "account" ? `${x.account_code} - ${x.account_name}` : x.customer_name || x.supplier_name || x.driver_name || x.worker_name || x.name || `#${x.id}`;
+  const nameOf = (x: any) => kind === "account" ? `${x.account_path || `${x.account_code} - ${x.account_name}`}${Number(x.is_active) === 0 ? " (موقوف)" : ""}` : x.customer_name || x.supplier_name || x.driver_name || x.worker_name || x.name || `#${x.id}`;
 
   async function loadEntities() {
     setSelected(""); setData(null);
@@ -85,6 +86,7 @@ export default function StatementsPage() {
         <button onClick={()=>load(1)} className="rounded-xl bg-[#0B2A4A] p-3 font-black text-white">{loading ? "جاري التحميل..." : "عرض الكشف"}</button>
       </div>
 
+      <div className="no-print"><DriverShipmentStatement key={branch} branch={branch} /></div>
       {data && <>
         <div className="no-print flex flex-wrap gap-2"><button onClick={() => void printWhenReady()} className="rounded-xl border bg-white px-4 py-2 font-bold">طباعة / PDF</button>{kind==="account"?<><button onClick={()=>void exportLedger("xls")} className="rounded-xl border bg-white px-4 py-2 font-bold">Excel — كامل النطاق</button><button onClick={()=>void exportLedger("csv")} className="rounded-xl border bg-white px-4 py-2 font-bold">CSV — كامل النطاق</button></>:null}</div>
         <div className="sulb-print-area space-y-4 rounded-3xl border bg-white p-5 shadow-sm">

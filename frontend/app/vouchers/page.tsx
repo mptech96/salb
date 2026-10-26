@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import AccountSearchSelect from "@/components/finance/AccountSearchSelect";
 import SystemDialog from "@/components/common/SystemDialog";
 import ServerPagination, {
   PaginationMeta,
@@ -434,11 +435,12 @@ export default function VouchersPage() {
                 { id: "WALLET", name: "محفظة" },
               ]}
             />
-            <Select
-              l="الخزينة / البنك"
-              v={form.financial_account_id}
-              set={(v) => {
-                const x = fa.find((a: any) => String(a.id) === v);
+            <AccountSearchSelect
+              endpoint="/vouchers/account-options"
+              branch={branch}
+              label="الخزينة / البنك / العهدة"
+              value={form.financial_account_id}
+              onChange={(v, x) => {
                 setForm({
                   ...form,
                   financial_account_id: v,
@@ -450,10 +452,6 @@ export default function VouchersPage() {
                       : form.exchange_rate,
                 });
               }}
-              o={fa.map((x: any) => ({
-                id: x.id,
-                name: `${x.account_name} — ${x.branch_name || "مركزي"} — ${x.currency_code}`,
-              }))}
             />
             <Select
               l="عملة السند"

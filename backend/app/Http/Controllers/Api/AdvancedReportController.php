@@ -64,7 +64,7 @@ class AdvancedReportController extends Controller
 
             return response()->json(['status' => true, 'data' => $data]);
         } catch (\Throwable $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
+            return response()->json(['status' => false, 'message' => \App\Support\ApiExceptionMessage::for($e)], 422);
         }
     }
 
@@ -106,7 +106,7 @@ class AdvancedReportController extends Controller
                 'pdf' => $this->pdf($data, $profile, $safeName, $validated),
             };
         } catch (\Throwable $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
+            return response()->json(['status' => false, 'message' => \App\Support\ApiExceptionMessage::for($e)], 422);
         }
     }
 

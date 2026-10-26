@@ -336,6 +336,7 @@ class MigrationCenterService
     {
         $existing=DB::table('items')->where('company_id',$cid)->when(!empty($r['item_code']),fn($q)=>$q->where('item_code',$r['item_code']),fn($q)=>$q->where('item_name',$r['item_name']))->first();
         $type=$this->itemType($r['item_type']??'STOCK');$base=$type==='SERVICE'?'UNIT':$this->unit($r['base_unit_code']??'KG','KG');$commercial=$type==='SERVICE'?'UNIT':$this->unit($r['commercial_unit_code']??'TON','TON');
+        if($type==='STOCK')$r=array_replace($r,ExistingItemUnitContract::stock(['base_unit_code'=>$base,'commercial_unit_code'=>$commercial,'commercial_to_base_factor'=>$r['commercial_to_base_factor']??null]));
         $data=['company_id'=>$cid,'item_code'=>$r['item_code']?:null,'item_name'=>$r['item_name'],'item_grade'=>$r['item_grade']??null,'group_id'=>$this->groupId($cid,$r['group_code']??null,$r['group_name']??null,$auto),'category_id'=>$this->categoryId($cid,$r['category_code']??null,$r['category_name']??null,$auto),'item_type'=>$type,'track_inventory'=>$type==='SERVICE'?0:$this->bool($r['track_inventory']??1),'allow_negative_stock'=>0,'can_purchase'=>$this->bool($r['can_purchase']??1),'can_sell'=>$this->bool($r['can_sell']??1),'base_unit_code'=>$base,'commercial_unit_code'=>$commercial,'commercial_to_base_factor'=>$type==='SERVICE'?1:(float)($r['commercial_to_base_factor']?:($commercial==='TON'?1000:1)),'costing_method'=>'FIFO','default_buy_price'=>(float)($r['default_buy_price']?:0),'default_sell_price'=>(float)($r['default_sell_price']?:0),'min_sell_price'=>(float)($r['min_sell_price']?:0),'inventory_account_id'=>$this->account($cid,$r['inventory_account_code']??null),'sales_account_id'=>$this->account($cid,$r['sales_account_code']??null),'cogs_account_id'=>$this->account($cid,$r['cogs_account_code']??null),'purchase_expense_account_id'=>$this->account($cid,$r['purchase_expense_account_code']??null),'is_waste_item'=>$this->bool($r['is_waste_item']??0),'is_byproduct'=>$this->bool($r['is_byproduct']??0),'notes'=>$r['notes']??null,'is_active'=>1,'updated_at'=>now()];
         return $this->persist('items',$existing,$data,$batch,$source,$r['item_code']??$r['item_name']);
     }
@@ -384,7 +385,24 @@ class MigrationCenterService
         $defaults=$this->defaultParties->ensure($cid,$uid);$table=$mode==='SALE'?'sales_invoices':'purchase_invoices';$partyType=$mode==='SALE'?'CUSTOMER':'SUPPLIER';
         foreach($groups as$invoiceNo=>$group){$first=$group[0]['data'];try{$signatures=[];$header=$this->invoiceHeaderSignature($entity,$first);foreach($group as$g){$signature=hash('sha256',json_encode($g['data'],JSON_UNESCAPED_UNICODE));if(isset($signatures[$signature]))throw new \RuntimeException('يوجد سطر مكرر بالكامل داخل الفاتورة في الصفين '.$signatures[$signature].' و'.$g['row_number'].'.');$signatures[$signature]=$g['row_number'];if($this->invoiceHeaderSignature($entity,$g['data'])!==$header)throw new \RuntimeException('بيانات رأس الفاتورة غير متطابقة بين أسطر الرقم '.$invoiceNo.'.');}$bid=$this->branch($cid,$first['branch_code']??null)?:$fallbackBranch;if(!$bid)$bid=(int)DB::table('branches')->where('company_id',$cid)->where('is_active',1)->orderBy('id')->value('id');if(!$bid)throw new \RuntimeException('لا يوجد فرع صالح للفاتورة.');if($fallbackBranch!==null&&$bid!==$fallbackBranch)throw new \RuntimeException('الفرع المحدد خارج نطاق المستخدم الحالي.');$existing=DB::table($table)->where('company_id',$cid)->where('invoice_number',$invoiceNo)->first();if($existing){$stats['skipped']++;$this->log($cid,$batch,$group[0]['row_number'],$invoiceNo,'SKIPPED','رقم الفاتورة موجود مسبقًا؛ سياسة SKIP_EXISTING تمنع الكتابة فوق المسودة أو المستند المرحل.',$first);continue;}
             $partyId=$this->party($cid,$partyType,$first)?:($mode==='SALE'?(int)$defaults['default_customer_id']:(int)$defaults['default_supplier_id']);$carId=$this->car($cid,$first['car_plate']??null);$items=[];
-            foreach($group as$g){$r=$g['data'];$errs=$this->validateBasic($entity,$r);if($errs)throw new \RuntimeException('السطر '.$g['row_number'].': '.implode(' | ',$errs));$item=$this->item($cid,$r);if(!$item)throw new \RuntimeException('الصنف غير موجود في السطر '.$g['row_number'].'.');$qty=(float)$r['quantity'];$unit=$this->unit($r['unit_code']??($item->item_type==='SERVICE'?'UNIT':'KG'),$item->item_type==='SERVICE'?'UNIT':'KG');$line=['item_id'=>(int)$item->id,'unit_price'=>(float)$r['unit_price'],'discount_amount'=>(float)(($r['line_discount']??'')?:0),'vat_percent'=>($r['vat_percent']??'')!==''?(float)$r['vat_percent']:null,'tax_code_id'=>$this->taxCode($cid,$r['tax_code']??null),'notes'=>$r['notes']??null];if(strtoupper((string)$item->item_type)==='SERVICE'){$line['quantity']=$qty;$line['unit_code']='UNIT';$line['price_unit']='UNIT';}else{$line['qty_kg']=$unit==='TON'?round($qty*1000,3):round($qty,3);$line['price_unit']=$unit==='TON'?'TON':'KG';}$items[]=$line;}
+            foreach($group as$g){
+                $r=$g['data'];$errs=$this->validateBasic($entity,$r);if($errs)throw new \RuntimeException('السطر '.$g['row_number'].': '.implode(' | ',$errs));
+                $item=$this->item($cid,$r);if(!$item)throw new \RuntimeException('الصنف غير موجود في السطر '.$g['row_number'].'.');
+                $line=['item_id'=>(int)$item->id,'discount_amount'=>(float)(($r['line_discount']??'')?:0),'vat_percent'=>($r['vat_percent']??'')!==''?(float)$r['vat_percent']:null,'tax_code_id'=>$this->taxCode($cid,$r['tax_code']??null),'notes'=>$r['notes']??null];
+                if(($item->inventory_quantity_version??'LEGACY_KG')==='BASE_V1'){
+                    // CSV decimal text crosses the same server-side mapping gate as manual entry.
+                    // Never convert BASE input to float or synthesize a kilogram field.
+                    $line+=['quantity'=>\App\Services\Uom\DecimalQuantity::decimal((string)$r['quantity']),
+                        'unit_price'=>\App\Services\Uom\DecimalQuantity::decimal((string)$r['unit_price'],18,true),
+                        'unit_code'=>strtoupper(trim((string)($r['unit_code']??$item->base_unit_code))),'price_unit'=>'UNIT'];
+                }else{
+                    $qty=(float)$r['quantity'];$unit=$this->unit($r['unit_code']??($item->item_type==='SERVICE'?'UNIT':'KG'),$item->item_type==='SERVICE'?'UNIT':'KG');
+                    $line['unit_price']=(float)$r['unit_price'];
+                    if(strtoupper((string)$item->item_type)==='SERVICE'){$line['quantity']=$qty;$line['unit_code']='UNIT';$line['price_unit']='UNIT';}
+                    else{$line['qty_kg']=$unit==='TON'?round($qty*1000,3):round($qty,3);$line['price_unit']=$unit==='TON'?'TON':'KG';}
+                }
+                $items[]=$line;
+            }
             $payload=['branch_id'=>$bid,($mode==='SALE'?'customer_id':'supplier_id')=>$partyId,'car_id'=>$carId,'invoice_number'=>$invoiceNo,'invoice_date'=>$first['invoice_date'],'currency_code'=>($first['currency_code']??'')?:null,'exchange_rate'=>($first['exchange_rate']??'')!==''?(float)$first['exchange_rate']:null,'discount_amount'=>(float)(($first['header_discount']??'')?:0),'transport_cost'=>(float)(($first['transport_cost']??'')?:0),'extra_cost'=>(float)(($first['extra_cost']??'')?:0),'notes'=>$first['notes']??null,'items'=>$items];
             $id=$this->invoices->saveDraft($mode,$payload,$cid,$bid,$uid,null);if(Schema::hasColumn($table,'external_source_system'))DB::table($table)->where('id',$id)->update(['external_source_system'=>$source,'external_reference'=>$invoiceNo,'migration_batch_id'=>$batch,'updated_at'=>now()]);$status='IMPORTED';$stats['imported']++;$this->log($cid,$batch,$group[0]['row_number'],$invoiceNo,$status,'تم إنشاء مسودة تحتوي '.count($items).' سطر. راجعها ثم رحّلها من شاشة الفاتورة.',$first);
         }catch(\Throwable $e){$stats['failed']++;$this->log($cid,$batch,$group[0]['row_number'],$invoiceNo,'ERROR',$e->getMessage(),$first);}}
@@ -541,6 +559,7 @@ class MigrationCenterService
                 ->where('l.company_id',$cid)->where('l.'.$fk,$x->id)->select('l.*','i.item_code','i.item_name','t.tax_code')->orderBy('l.id')->get();
             foreach($lines as$ln){
                 $service=strtoupper((string)($ln->item_type_snapshot??'STOCK'))==='SERVICE'||(int)($ln->track_inventory_snapshot??1)!==1;
+                $base=\App\Services\Uom\OperationalDocument::isBase($ln);
                 $out[]=[
                     'invoice_number'=>$x->invoice_number,'invoice_date'=>$x->invoice_date,'branch_code'=>$x->branch_code,
                     ($mode==='SALE'?'customer_code':'supplier_code')=>$party?->{$partyCodeCol},
@@ -548,9 +567,9 @@ class MigrationCenterService
                     'car_plate'=>$x->car_plate,'currency_code'=>$x->currency_code,'exchange_rate'=>$x->exchange_rate,
                     'header_discount'=>$x->discount_amount??0,'transport_cost'=>$x->transport_cost??0,'extra_cost'=>$x->extra_cost??0,
                     'item_code'=>$ln->item_code,'item_name'=>$ln->item_name,
-                    'quantity'=>$service?(float)($ln->quantity??$ln->qty??0):(float)($ln->qty_kg??0),
-                    'unit_code'=>$service?($ln->unit_code??'UNIT'):'KG',
-                    'unit_price'=>$ln->entered_unit_price??($service?($ln->unit_price??0):($ln->unit_price_per_kg??0)),
+                    'quantity'=>$base?(string)$ln->quantity:($service?(float)($ln->quantity??$ln->qty??0):(float)($ln->qty_kg??0)),
+                    'unit_code'=>$base?$ln->unit_code:($service?($ln->unit_code??'UNIT'):'KG'),
+                    'unit_price'=>$base?(string)$ln->uom_price_snapshot:($ln->entered_unit_price??($service?($ln->unit_price??0):($ln->unit_price_per_kg??0))),
                     'line_discount'=>$ln->discount_amount??0,'vat_percent'=>$ln->vat_percent??$ln->tax_rate_snapshot??0,'tax_code'=>$ln->tax_code,'notes'=>$ln->notes??null,
                 ];
             }
@@ -571,12 +590,16 @@ class MigrationCenterService
     private function exportInventoryBalances(int $cid,array $filters): array
     {
         if(!Schema::hasTable('inventory_lots'))return [];
+        $unit=Schema::hasColumn('items','base_unit_code')?'i.base_unit_code':DB::raw("'KG' as base_unit_code");
         $rows=DB::table('inventory_lots as l')->leftJoin('items as i','i.id','=','l.item_id')->leftJoin('branches as b','b.id','=','l.branch_id')
             ->where('l.company_id',$cid)->when(!empty($filters['branch_id']),fn($q)=>$q->where('l.branch_id',(int)$filters['branch_id']))
-            ->select('l.*','i.item_code','i.item_name','b.branch_code')->orderBy('l.branch_id')->orderBy('l.item_id')->orderBy('l.id')->get();
+            ->select('l.*','i.item_code','i.item_name',$unit,'b.branch_code')
+            ->selectRaw(\App\Services\Uom\InventoryQuantitySql::lot('l').' export_remaining_quantity, '.InventoryLotValue::sqlValue('l').' export_remaining_value')
+            ->orderBy('l.branch_id')->orderBy('l.item_id')->orderBy('l.id')->get();
         return $rows->map(fn($x)=>['branch_code'=>$x->branch_code,'item_code'=>$x->item_code,'item_name'=>$x->item_name,'lot_id'=>$x->id,
-            'qty_remaining_kg'=>$x->qty_remaining_kg??0,'unit_cost_per_kg'=>$x->unit_cost_per_kg??0,'remaining_value'=>round((float)($x->qty_remaining_kg??0)*(float)($x->unit_cost_per_kg??0),6),
-            'received_at'=>$x->received_at??null,'status'=>$x->status??null])->all();
+            'qty_remaining_kg'=>$x->qty_remaining_kg??0,'unit_cost_per_kg'=>$x->unit_cost_per_kg??0,'remaining_value'=>(string)$x->export_remaining_value,
+            'quantity'=>(string)$x->export_remaining_quantity,'unit_code'=>\App\Services\Uom\OperationalDocument::isBase($x)?$x->base_unit_code:'KG',
+            'received_at'=>$x->received_at??null,'status'=>$x->lot_status??$x->status??null])->all();
     }
 
     private function exportJournalEntries(int $cid,array $filters): array
@@ -663,7 +686,14 @@ class MigrationCenterService
     private function norm(string $s): string{$s=mb_strtolower(trim($s));$s=str_replace([' ','-','/','\\','.','(',')','[',']','_'],'',$s);return $s;}
     private function bool($v): int{$s=mb_strtolower(trim((string)$v));return in_array($s,['1','true','yes','y','نعم','صح','active'],true)?1:0;}
     private function itemType(string $v): string{$s=mb_strtolower(trim($v));return in_array($s,['service','خدمة','خدمي'],true)?'SERVICE':'STOCK';}
-    private function unit(string $v,string $default): string{$s=mb_strtolower(trim($v));if(in_array($s,['ton','tons','طن','طنن'],true))return 'TON';if(in_array($s,['unit','وحدة','خدمة'],true))return 'UNIT';if(in_array($s,['kg','كجم','كيلو','كيلوجرام'],true))return 'KG';return strtoupper($v?:$default);}
+    private function unit(string $v,string $default): string
+    {
+        $s=mb_strtolower(trim($v));if($s==='')return $default;
+        if(in_array($s,['ton','tons','طن','طنن'],true))return 'TON';
+        if(in_array($s,['kg','كجم','كيلو','كيلوجرام'],true))return 'KG';
+        if(in_array($s,['unit','وحدة','خدمة'],true)&&$default!=='KG')return 'UNIT';
+        throw \Illuminate\Validation\ValidationException::withMessages(['unit_code'=>'الوحدة المستوردة غير مدعومة لهذا المسار؛ لا يمكن اعتبارها كيلوجرام أو طن تلقائيًا.']);
+    }
     private function account(int $cid,?string $code): ?int{if(!$code||!Schema::hasTable('accounts'))return null;$cols=array_flip(Schema::getColumnListing('accounts'));$col=isset($cols['account_code'])?'account_code':(isset($cols['account_number'])?'account_number':(isset($cols['code'])?'code':null));if(!$col)return null;$q=DB::table('accounts')->where($col,$code);if(isset($cols['company_id']))$q->where('company_id',$cid);$id=$q->value('id');if(!$id)throw new \RuntimeException('الحساب '.$code.' غير موجود.');return (int)$id;}
     private function branch(int $cid,?string $code): ?int{if(!$code)return null;$q=DB::table('branches')->where('company_id',$cid);if(Schema::hasColumn('branches','branch_code'))$q->where('branch_code',$code);else$q->where('branch_name',$code);return ($id=$q->value('id'))?(int)$id:null;}
     private function groupId(int $cid,?string $code,?string $name,bool $auto): ?int{if(!$code&&!$name)return null;$q=DB::table('item_groups')->where('company_id',$cid);$x=$code?(clone $q)->where('group_code',$code)->first():(clone $q)->where('group_name',$name)->first();if($x)return (int)$x->id;if(!$auto)return null;return (int)DB::table('item_groups')->insertGetId(['company_id'=>$cid,'group_code'=>$code?:null,'group_name'=>$name?:$code,'is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);}

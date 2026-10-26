@@ -45,7 +45,7 @@ export default function AccountForm({ form, setForm, accounts, onSave, onCancel 
             label="الحساب الأب"
             value={form.parent_id}
             onChange={(v: any) => setForm({ ...form, parent_id: v })}
-            options={accounts.filter((x: any) => x.is_group == 1)}
+            options={accounts.filter((x: any) => x.is_group == 1 && Number(x.is_active) === 1)}
             nameKey="account_name"
             placeholder="بدون حساب أب"
           />

@@ -72,13 +72,12 @@ test('actual expense page loads complete options and submits the unchanged expen
   assert.equal(add.props.disabled, false);
   add.props.onClick();
   tree = app.render();
-  const accountSelector = find(tree, node => node.props?.l === 'الخزينة / البنك *');
-  assert.equal(accountSelector.props.o.length, 32);
-  assert.match(accountSelector.props.o.find(option => option.id === 31).name, /عهد/);
-  assert.match(accountSelector.props.o.find(option => option.id === 32).name, /سلف/);
+  const accountSelector = find(tree, node => node.props?.endpoint === '/expenses/account-options');
+  assert.equal(accountSelector.props.branch, '7');
+  assert.equal(typeof accountSelector.props.onChange, 'function');
   find(tree, node => node.props?.l === 'نوع المصروف *').props.set('9');
   tree = app.render();
-  find(tree, node => node.props?.l === 'الخزينة / البنك *').props.set('31');
+  find(tree, node => node.props?.endpoint === '/expenses/account-options').props.onChange('31', { id: 31, account_name: 'عهد', currency_code: 'SAR' });
   tree = app.render();
   find(tree, node => node.props?.l === 'المبلغ (SAR)').props.set('10');
   tree = app.render();

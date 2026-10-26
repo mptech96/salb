@@ -47,6 +47,8 @@ final class TenantResourceScopeService
         'journal-entries/{id}' => ['table' => 'journal_entries', 'param' => 'id', 'branch' => true],
         'financial-years/{id}' => ['table' => 'financial_years', 'param' => 'id', 'branch' => false],
         'inventory-operations/{id}' => ['table' => 'inventory_operations', 'param' => 'id', 'branch' => true],
+        'inventory/adjustments/{id}' => ['table' => 'uom_inventory_adjustments', 'param' => 'id', 'branch' => true],
+        'inventory/recipes/{id}' => ['table' => 'uom_processing_recipes', 'param' => 'id', 'branch' => true],
         'weighbridge/cards/{id}' => ['table' => 'weighbridge_cards', 'param' => 'id', 'branch' => true],
         'weighbridge/weights/{weightId}' => ['table' => 'shipment_weights', 'param' => 'weightId', 'branch' => true],
         'payroll/{id}' => ['table' => 'worker_salary_runs', 'param' => 'id', 'branch' => true],

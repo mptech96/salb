@@ -52,20 +52,22 @@ class PurchaseInvoiceController extends Controller
     public function post(Request $r,int $id,AccountingContext $ctx,EnterpriseInvoiceService $service)
     {
         try{return response()->json(['status'=>true,'data'=>$service->post('PURCHASE',$ctx->companyId($r),$id,$ctx->userId($r),$ctx->branchFilter($r))]);}
-        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        catch(\App\Services\ShipmentPostingFailure $e){throw $e;}
+        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     public function void(Request $r,int $id,AccountingContext $ctx,EnterpriseInvoiceService $service)
     {
         $v=$r->validate(['reason'=>'required|string|min:5|max:2000']);
         try{return response()->json(['status'=>true,'data'=>$service->void('PURCHASE',$ctx->companyId($r),$id,$ctx->userId($r),$v['reason'],$ctx->branchFilter($r))]);}
-        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        catch(\App\Services\ShipmentPostingFailure $e){throw $e;}
+        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     public function destroy(Request $r,int $id,AccountingContext $ctx,EnterpriseInvoiceService $service)
     {
         try{$service->deleteDraft('PURCHASE',$ctx->companyId($r),$id,$ctx->branchFilter($r));return response()->json(['status'=>true,'message'=>'تم حذف مسودة فاتورة الشراء.']);}
-        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     private function save(Request $r,?int $id,AccountingContext $ctx,EnterpriseInvoiceService $service)
@@ -80,7 +82,7 @@ class PurchaseInvoiceController extends Controller
             $bid=$ctx->branchForOperation($r);
             $newId=$service->saveDraft('PURCHASE',$v,$ctx->companyId($r),$bid,$ctx->userId($r),$id);
             return response()->json(['status'=>true,'message'=>$id?'تم تحديث مسودة فاتورة الشراء.':'تم حفظ فاتورة الشراء كمسودة. لم يتأثر المخزون أو المحاسبة حتى الآن.','id'=>$newId],$id?200:201);
-        }catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        }catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     private function metaData(Request $r,AccountingContext $ctx,FinancialAccountService $money): array
@@ -91,6 +93,7 @@ class PurchaseInvoiceController extends Controller
         foreach($parties as$p)$p->branch_ids=(int)($p->scope_all_branches??0)===1?[]:DB::table('supplier_branches')->where('company_id',$cid)->where('supplier_id',$p->id)->where('is_active',1)->pluck('branch_id')->map(fn($x)=>(int)$x)->all();
         $cars=DB::table('cars')->where('company_id',$cid)->where('is_active',1)->when($scoped!==null,fn($q)=>$q->where(fn($x)=>$x->where('branch_id',$scoped)->orWhereNull('branch_id')))->orderBy('plate_number')->get(['id','branch_id','car_number','plate_number','ownership_type']);
         $items=DB::table('items')->where('company_id',$cid)->where('is_active',1)->where('can_purchase',1)->orderBy('item_name')->get(['id','item_code','item_name','unit_name','default_buy_price','default_sell_price','item_type','track_inventory','base_unit_code','commercial_unit_code','commercial_to_base_factor']);
+        \App\Services\Uom\OperationalDocument::enrichItems($cid,$items,false);
         $currencies=DB::table('company_currencies as cc')->join('currencies as cu','cu.currency_code','=','cc.currency_code')->where('cc.company_id',$cid)->where('cc.is_active',1)->where('cu.is_active',1)->orderByDesc('cc.is_base')->get(['cc.currency_code','cc.is_base','cu.currency_name','cu.symbol','cu.decimal_places']);
         $taxCodes=DB::table('tax_codes')->where('company_id',$cid)->where('is_active',1)->orderBy('tax_code')->get(['id','tax_code','tax_name','rate','is_zero_rated','is_exempt','is_out_of_scope','is_default_purchase']);
         $ready=DB::table('shipments as sh')->leftJoin('suppliers as s','s.id','=','sh.supplier_id')->where('sh.company_id',$cid)->where('sh.shipment_type','PURCHASE')->where('sh.commercial_status','READY')->when($scoped!==null,fn($q)=>$q->where('sh.branch_id',$scoped))->whereNotExists(fn($q)=>$q->select(DB::raw(1))->from('invoice_shipment_links as l')->whereColumn('l.shipment_id','sh.id')->whereColumn('l.company_id','sh.company_id'))->select('sh.id','sh.branch_id','sh.supplier_id','sh.shipment_number','sh.shipment_date','sh.accepted_weight_kg',DB::raw('sh.total_before_discount as total_before_vat'),'sh.vat_amount','sh.total_amount','s.supplier_name')->orderByDesc('sh.id')->get();

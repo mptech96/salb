@@ -5,9 +5,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import api from "./api";
 import { AccessState, EmptyState, LoadingState, secondaryButtonClassName } from "@/components/ui/enterprise";
 import { formatMoney, formatNumber, formatQuantity } from "@/lib/formatters";
+import { dashboardStockText } from "@/lib/inventory-uom";
 
 type ActivityRecord = { id: number | string; customer_name?: string; supplier_name?: string; invoice_number?: string; invoice_date?: string; voucher_number?: string; payment_method?: string; total_amount?: number | string; amount?: number | string };
-type DashboardData = { scope?: { scope_type?: string }; cards?: { sales?: number | string; purchases?: number | string; expenses?: number | string; profit?: number | string; open_cars?: number | string; stock_qty?: number | string; currency_decimal_places?: number }; currency_decimal_places?: number; latest_sales?: ActivityRecord[]; latest_purchases?: ActivityRecord[]; latest_vouchers?: ActivityRecord[]; top_cars?: Array<{ car_number?: string | null; total_sales?: number | string }> };
+type DashboardData = { scope?: { scope_type?: string }; cards?: { sales?: number | string; purchases?: number | string; expenses?: number | string; profit?: number | string; open_cars?: number | string; stock_qty?: number | string; stock_quantities_by_unit?: Array<{base_unit_code: string; base_quantity: string}> | null; currency_decimal_places?: number }; currency_decimal_places?: number; latest_sales?: ActivityRecord[]; latest_purchases?: ActivityRecord[]; latest_vouchers?: ActivityRecord[]; top_cars?: Array<{ car_number?: string | null; total_sales?: number | string }> };
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -21,13 +22,14 @@ export default function DashboardPage() {
 
   const precision = Number(data?.currency_decimal_places ?? data?.cards?.currency_decimal_places ?? 2);
   const openCars = Number(data?.cards?.open_cars || 0);
+  const stockText = dashboardStockText(data?.cards);
   const kpis = [
     { label: "المبيعات", value: formatMoney(data?.cards?.sales, precision), href: "/sales" },
     { label: "المشتريات", value: formatMoney(data?.cards?.purchases, precision), href: "/purchases" },
     { label: "المصروفات", value: formatMoney(data?.cards?.expenses, precision), href: "/expenses" },
     { label: "صافي النتيجة", value: formatMoney(data?.cards?.profit, precision), tone: Number(data?.cards?.profit || 0) < 0 ? "danger" : "success" },
     { label: "السيارات المفتوحة", value: formatNumber(openCars), href: "/weighing", tone: openCars > 0 ? "warning" : "default" },
-    { label: "كمية المخزون", value: formatQuantity(data?.cards?.stock_qty), href: "/inventory" },
+    { label: "كمية المخزون", value: stockText, href: "/inventory" },
   ];
 
   return <section dir="rtl" className="enterprise-dashboard space-y-3">
@@ -42,7 +44,7 @@ export default function DashboardPage() {
         <div className="divide-y divide-slate-100"><ActionRow label="السيارات المفتوحة" description={openCars > 0 ? "راجع الأوزان والحالة التشغيلية للسيارات المفتوحة." : "لا توجد سيارات مفتوحة حاليًا."} value={formatNumber(openCars)} href="/weighing" tone={openCars > 0 ? "warning" : "success"} /><ActionRow label="آخر مستندات البيع" description="السجلات الأحدث المتاحة للمراجعة في لوحة التحكم." value={formatNumber(data?.latest_sales?.length || 0)} href="/sales" /><ActionRow label="آخر مستندات الشراء" description="السجلات الأحدث المتاحة للمراجعة في لوحة التحكم." value={formatNumber(data?.latest_purchases?.length || 0)} href="/purchases" /></div>
       </EnterprisePanel>
       <EnterprisePanel title="التشغيل والمخزون" description="ملخص مباشر دون حسابات إضافية في الواجهة.">
-        <div className="grid grid-cols-2 divide-x divide-x-reverse divide-slate-100"><OperationalValue label="السيارات المفتوحة" value={formatNumber(openCars)} href="/weighing" /><OperationalValue label="رصيد الحركة" value={formatQuantity(data?.cards?.stock_qty)} href="/inventory" /></div>
+        <div className="grid grid-cols-2 divide-x divide-x-reverse divide-slate-100"><OperationalValue label="السيارات المفتوحة" value={formatNumber(openCars)} href="/weighing" /><OperationalValue label="رصيد الحركة" value={stockText} href="/inventory" /></div>
         <div className="border-t border-slate-100 px-3 py-2.5"><div className="mb-2 text-[11px] font-semibold text-slate-600">أعلى السيارات حسب المبيعات</div>{!data?.top_cars?.length ? <p className="text-[11px] text-slate-400">لا توجد بيانات متاحة.</p> : <div className="space-y-2">{data.top_cars.slice(0, 3).map((car, index) => <div key={`${car.car_number}-${index}`} className="flex items-center justify-between gap-3 text-[11px]"><span className="truncate text-slate-600">{car.car_number || "بدون سيارة"}</span><span className="sulb-numeric font-semibold text-slate-800">{formatMoney(car.total_sales, precision)}</span></div>)}</div>}</div>
       </EnterprisePanel>
     </div>

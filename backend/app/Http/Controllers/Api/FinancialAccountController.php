@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 class FinancialAccountController extends Controller
 {
+    public function options(Request $r, AccountingContext $c, FinancialAccountService $s)
+    {
+        $v = $r->validate(['page'=>'nullable|integer|min:1','per_page'=>'nullable|integer|in:25,50,100','search'=>'nullable|string|max:200','branch_id'=>'nullable|integer|min:1','selected_id'=>'nullable|integer|min:1']);
+        $branch = $c->branchFilter($r);
+        unset($v['branch_id']);
+        return response()->json(['status'=>true,'data'=>$s->selectionPage($c->companyId($r), $branch, $v)]);
+    }
     public function index(Request $r,AccountingContext $c,FinancialAccountService $s)
     {
         $v=$r->validate(['page'=>'nullable|integer|min:1','per_page'=>'nullable|integer|in:25,50,100','search'=>'nullable|string|max:200','branch_id'=>'nullable|integer','scope'=>'nullable|in:CENTRAL','account_type'=>'nullable|in:CASH,BANK,WALLET,PETTY_CASH,OTHER','is_active'=>'nullable|boolean']);
@@ -44,7 +51,7 @@ class FinancialAccountController extends Controller
     public function meta(Request $r,AccountingContext $c){$cid=$c->companyId($r);$bid=$c->branchFilter($r);return response()->json(['status'=>true,'data'=>[
         'branches'=>DB::table('branches')->where('company_id',$cid)->where('is_active',1)->when($bid!==null,fn($q)=>$q->where('id',$bid))->orderBy('branch_name')->get(),
         // لا نحصر النظام في أكواد ثابتة؛ أي حساب أصل نشط وقابل للترحيل يمكن ربطه بخزينة/بنك/محفظة.
-        'accounts'=>DB::table('accounts')->where('company_id',$cid)->where('is_active',1)->where('is_group',0)->where('allow_posting',1)->where('account_type','ASSET')->orderBy('account_code')->get(),
+        'accounts'=>DB::table('accounts')->when(!$r->boolean('include_accounts',true),fn($q)=>$q->whereIn('account_code',['1110','1120','1130']))->where('company_id',$cid)->where('is_active',1)->where('is_group',0)->where('allow_posting',1)->where('account_type','ASSET')->orderBy('account_code')->get(),
         'currencies'=>DB::table('company_currencies as cc')->join('currencies as c','c.currency_code','=','cc.currency_code')->where('cc.company_id',$cid)->where('cc.is_active',1)->select('c.*','cc.is_base')->orderByDesc('cc.is_base')->orderBy('c.currency_code')->get()
     ]]);}
     public function store(Request $r,AccountingContext $c,FinancialAccountService $s){$cid=$c->companyId($r);$v=$this->valid($r);$scoped=$c->branchFilter($r);if($scoped!==null)$v['branch_id']=$scoped;elseif(!empty($v['branch_id']))$c->branchForOperation($r,(int)$v['branch_id']);try{$id=$s->save($cid,$v);return response()->json(['status'=>true,'message'=>'تم إنشاء الخزينة/الحساب المالي وربطه بدفتر الأستاذ.','id'=>$id],201);}catch(\Throwable$e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}}

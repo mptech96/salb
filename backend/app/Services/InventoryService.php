@@ -8,6 +8,7 @@ class InventoryService
 {
     public function stockIn(array $data): int
     {
+        \App\Services\Uom\LegacyWeightGuard::item((int)$data['company_id'],(int)$data['item_id']);
         $qty = round((float)($data['qty'] ?? 0), 3);
         $unitCost = round((float)($data['unit_cost'] ?? 0), 3);
         $totalCost = round((float)($data['total_cost'] ?? ($qty * $unitCost)), 3);
@@ -41,6 +42,7 @@ class InventoryService
 
     public function stockOut(array $data): int
     {
+        \App\Services\Uom\LegacyWeightGuard::item((int)$data['company_id'],(int)$data['item_id']);
         $qty = round((float)($data['qty'] ?? 0), 3);
 
         if ($qty <= 0) {
@@ -86,6 +88,8 @@ class InventoryService
 
     public function reverseSource(int $companyId, string $sourceType, int $sourceId): void
     {
+        foreach(DB::table('stock_movements')->where('company_id',$companyId)->where('source_type',$sourceType)->where('source_id',$sourceId)->distinct()->pluck('item_id') as $item)
+            \App\Services\Uom\LegacyWeightGuard::item($companyId,(int)$item);
         DB::table('stock_movements')
             ->where('company_id', $companyId)
             ->where('source_type', $sourceType)
@@ -95,6 +99,7 @@ class InventoryService
 
     public function availableQty(int $companyId, int $itemId, $carId = null, $shipmentItemId = null): float
     {
+        \App\Services\Uom\LegacyWeightGuard::item($companyId,$itemId);
         $q = DB::table('stock_movements')
             ->where('company_id', $companyId)
             ->where('item_id', $itemId);

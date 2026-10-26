@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import { exactQuantity } from "@/lib/inventory-uom";
 import SystemDialog from "@/components/common/SystemDialog";
 import PrintHeader from "@/components/reports/PrintHeader";
 import PrintFooter from "@/components/reports/PrintFooter";
@@ -193,7 +194,7 @@ export default function ReportsPage() {
                   <tr key={row.id ?? `${active}-${idx}`} className="border-t even:bg-slate-50/50">
                     {data.columns.map((c: any) => (
                       <td key={c.key} className={`p-3 ${c.type === "number" ? "font-bold tabular-nums" : ""}`}>
-                        {c.type === "number" ? fmt(row[c.key]) : String(row[c.key] ?? "—")}
+                        {c.type === "quantity" ? exactQuantity(row[c.key]) : c.type === "number" ? fmt(row[c.key]) : String(row[c.key] ?? "—")}
                       </td>
                     ))}
                   </tr>

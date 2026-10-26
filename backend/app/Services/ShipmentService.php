@@ -20,6 +20,8 @@ class ShipmentService
     public function save(array $d, int $cid, int $bid, int $uid, ?int $shipmentId = null): int
     {
         return DB::transaction(function () use ($d,$cid,$bid,$uid,$shipmentId) {
+            app(ShipmentLineIdentity::class)->assertServerOwned($d['items'] ?? []);
+            $identityEnabled = app(ShipmentLineIdentity::class)->enabled();
             $old = $shipmentId
                 ? DB::table('shipments')->where('company_id',$cid)->where('id',$shipmentId)->lockForUpdate()->first()
                 : null;
@@ -56,6 +58,9 @@ class ShipmentService
             if ($driverId) {
                 $driver=DB::table('drivers')->where('company_id',$cid)->where('id',$driverId)->where('is_active',1)->first();
                 if (!$driver) throw new \RuntimeException('السائق غير موجود أو غير نشط.');
+                if ($driver->branch_id !== null && (int) $driver->branch_id !== $bid) {
+                    throw new \RuntimeException('السائق لا يتبع فرع الشحنة.');
+                }
             }
 
             $date=(string)($d['shipment_date'] ?? ($old->shipment_date ?? date('Y-m-d')));
@@ -81,7 +86,8 @@ class ShipmentService
                 $sid=DB::table('shipments')->insertGetId($header);
             }
 
-            if(array_key_exists('items',$d)) $this->saveItems($sid,$cid,$type,$date,$currency,$rate,$d['items']??[]);
+            if(array_key_exists('items',$d)) $this->saveItems($sid,$cid,$type,$date,$currency,$rate,$d['items']??[],$identityEnabled);
+            if(DB::getSchemaBuilder()->hasColumn('shipment_items','uom_version')&&DB::table('shipment_items')->where('company_id',$cid)->where('shipment_id',$sid)->where('uom_version','BASE_V1')->exists())app(\App\Services\Uom\BaseShipmentAdmission::class)->captureCostPolicy($cid,$sid,$uid,$header['cost_allocation_method'],$d['items']??[]);
             $this->recalculateShipment($sid,$cid);
             return $sid;
         });
@@ -94,6 +100,11 @@ class ShipmentService
             if(!$s)throw new \RuntimeException('الشحنة غير موجودة.');
             if($branchFilter!==null&&(int)$s->branch_id!==$branchFilter)throw new \RuntimeException('الشحنة خارج نطاق فرعك.');
             if(($s->commercial_status??'DRAFT')==='INVOICED')throw new \RuntimeException('الشحنة مفوترة ولا يمكن تغيير حالتها.');
+            if(DB::getSchemaBuilder()->hasColumn('shipment_items','uom_version')&&DB::table('shipment_items')->where('company_id',$cid)->where('shipment_id',$sid)->where('uom_version','BASE_V1')->exists()){
+                $this->recalculateShipment($sid,$cid);$diff=app(\App\Services\Uom\BaseShipmentAdmission::class)->validate($cid,$s);
+                if(($s->shipment_type==='PURCHASE'&&!$s->supplier_id)||($s->shipment_type==='SALE'&&!$s->customer_id))throw new \RuntimeException('اختر طرف الشحنة قبل تجهيزها للفوترة.');
+                DB::table('shipments')->where('company_id',$cid)->where('id',$sid)->update(['commercial_status'=>'READY','status'=>'READY','ready_at'=>now(),'ready_by'=>$uid,'weight_variance_kg'=>$diff,'updated_at'=>now()]);return $this->details($cid,$sid,$branchFilter);
+            }
 
             $open=DB::table('weighbridge_cards')->where('company_id',$cid)->where('shipment_id',$sid)->where('status','OPEN')->count();
             $closed=DB::table('weighbridge_cards')->where('company_id',$cid)->where('shipment_id',$sid)->where('status','CLOSED')->count();
@@ -167,6 +178,10 @@ class ShipmentService
         $s=$q->select('s.*','b.branch_name','sp.supplier_name','cu.customer_name','c.car_number','c.plate_number','d.driver_name')->first();
         if(!$s)return null;
         $items=DB::table('shipment_items as si')->join('items as i','i.id','=','si.item_id')->leftJoin('tax_codes as t','t.id','=','si.tax_code_id')->where('si.company_id',$cid)->where('si.shipment_id',$sid)->select('si.*','i.item_code','i.item_name','i.item_type','i.track_inventory','t.tax_code','t.tax_name')->orderBy('si.sorting_order')->orderBy('si.id')->get();
+        foreach($items as $row)if(\App\Services\Uom\OperationalDocument::isBase($row)){
+            $row->base_unit_code_snapshot=DB::table('uom_units')->where('id',$row->base_uom_id_snapshot)->value('code');$row->on_hand_base_quantity=null;$row->remaining_base_qty=null;$row->sold_base_qty=null;
+            if($row->inventory_lot_id){$lot=DB::table('inventory_lots')->where('company_id',$cid)->where('branch_id',$s->branch_id)->where('item_id',$row->item_id)->where('id',$row->inventory_lot_id)->where('uom_version','BASE_V1')->where('base_uom_id_snapshot',$row->base_uom_id_snapshot)->first();if($lot){$row->on_hand_base_quantity=$lot->remaining_base_qty;$row->remaining_base_qty=$lot->remaining_base_qty;$row->sold_base_qty=$lot->sold_base_qty;}}
+        }
         $cards=DB::table('weighbridge_cards as w')->leftJoin('items as wi','wi.id','=','w.item_id')->leftJoin('cars as c','c.id','=','w.car_id')->leftJoin('drivers as d','d.id','=','w.driver_id')->where('w.company_id',$cid)->where('w.shipment_id',$sid)->select('w.*','wi.item_code as weighed_item_code','wi.item_name as weighed_item_name','c.car_number','c.plate_number','d.driver_name')->orderBy('w.entry_at')->orderBy('w.id')->get();
         $costs=DB::table('shipment_costs as sc')->leftJoin('expense_types as et','et.id','=','sc.expense_type_id')->leftJoin('financial_accounts as fa','fa.id','=','sc.financial_account_id')->where('sc.company_id',$cid)->where('sc.shipment_id',$sid)->select('sc.*','et.type_name','fa.account_name as financial_account_name')->orderBy('sc.expense_date')->orderBy('sc.id')->get();
         $links=DB::table('invoice_shipment_links')->where('company_id',$cid)->where('shipment_id',$sid)->orderBy('id')->get();
@@ -188,10 +203,37 @@ class ShipmentService
         ]);
     }
 
-    private function saveItems(int $sid,int $cid,string $type,string $date,string $currency,float $rate,array $items): void
+    private function saveItems(int $sid,int $cid,string $type,string $date,string $currency,float $rate,array $items,bool $identityEnabled): void
     {
-        DB::table('shipment_items')->where('company_id',$cid)->where('shipment_id',$sid)->delete();
+        $scope=fn()=>DB::table('shipment_items')->where('company_id',$cid)->where('shipment_id',$sid);
+        $existing=$identityEnabled ? $scope()->get()->keyBy('id') : collect();
+        $seen=[];
+        if($identityEnabled){
+            if(DB::table('invoice_shipment_links')->where('company_id',$cid)->where('shipment_id',$sid)->exists()
+                || DB::table('shipment_costs')->where('company_id',$cid)->where('shipment_id',$sid)->where('cost_status','POSTED')->exists()
+                || $existing->contains(fn($r)=>$r->inventory_created || $r->inventory_lot_id || $r->purchase_line_id))throw new \RuntimeException('SLI_SOURCE_NOT_EDITABLE');
+            // Legacy clients cannot silently replace existing identities by omission.
+            if($existing->isNotEmpty() && $items && !array_filter($items,fn($r)=>!empty($r['id'])))throw new \RuntimeException('SLI_EXISTING_LINE_IDS_REQUIRED');
+            foreach($items as $r){
+                $id=(int)($r['id']??0);
+                if($id && (!$existing->has($id)||isset($seen[$id])))throw new \RuntimeException('SLI_INVALID_LINE_ID');
+                if($id)$seen[$id]=true;
+            }
+        }else{
+            $scope()->delete();
+        }
+        $retained=[];
         foreach($items as$i=>$r){
+            $baseItem=DB::table('items')->where('company_id',$cid)->where('id',(int)($r['item_id']??0))->where('is_active',1)->first();
+            if(($baseItem->inventory_quantity_version??'LEGACY_KG')==='BASE_V1'){
+                if(($type==='PURCHASE'&&!($baseItem->can_purchase??1))||($type==='SALE'&&!($baseItem->can_sell??1)))throw new \RuntimeException('UOM_MAPPING_SCOPE_OR_SIDE');
+                $values=\App\Services\Uom\ShipmentBaseLine::values($cid,$sid,$baseItem,$r,$type,$date,$currency,$rate,$i+1);
+                $id=$identityEnabled?(int)($r['id']??0):0;
+                if($id){unset($values['created_at']);$scope()->where('id',$id)->update($values);$retained[]=$id;}
+                else $retained[]=DB::table('shipment_items')->insertGetId($values+app(ShipmentLineIdentity::class)->newAttributes($identityEnabled));
+                continue;
+            }
+            if(isset($r['quantity']))throw new \RuntimeException('LEGACY_WEIGHT_QUANTITY_REQUIRED');
             $itemId=(int)($r['item_id']??0);$gross=round((float)($r['gross_qty_kg']??$r['qty_kg']??0),3);$ded=round((float)($r['deduction_qty_kg']??0),3);$accepted=round((float)($r['accepted_qty_kg']??max(0,$gross-$ded)),3);
             if(!$itemId||$gross<=0)continue;
             if($ded<0||$accepted<0||abs(($gross-$ded)-$accepted)>0.011)throw new \RuntimeException('السطر '.($i+1).': الكمية المقبولة يجب أن تساوي الموزع ناقص الخصم.');
@@ -203,7 +245,7 @@ class ShipmentService
             $disc=round((float)($r['discount_amount']??0),3);$grossValue=round($accepted*$perKg,3);
             $tax=$this->taxes->line($cid,$grossValue,$disc,isset($r['tax_code_id'])&&$r['tax_code_id']!==''?(int)$r['tax_code_id']:null,$date,$type==='SALE'?'SALES':'PURCHASE',isset($r['vat_percent'])?(float)$r['vat_percent']:null);
             $baseBefore=round((float)$tax['total_before_vat']*$rate,3);$baseVat=round((float)$tax['vat_amount']*$rate,3);$baseAfter=round((float)$tax['total_after_vat']*$rate,3);
-            DB::table('shipment_items')->insert([
+            $values=[
                 'company_id'=>$cid,'shipment_id'=>$sid,'item_id'=>$itemId,'gross_weight'=>0,'tare_weight'=>0,'deduction_weight'=>round($ded/1000,6),'net_weight'=>round($accepted/1000,6),
                 'remaining_qty'=>round($accepted/1000,6),'sold_qty'=>0,'qty_kg'=>$accepted,'remaining_qty_kg'=>$accepted,'sold_qty_kg'=>0,
                 'gross_qty_kg'=>$gross,'deduction_qty_kg'=>$ded,'accepted_qty_kg'=>$accepted,'inventory_qty_kg'=>$accepted,'deduction_reason'=>$r['deduction_reason']??null,
@@ -211,8 +253,17 @@ class ShipmentService
                 'tax_code_id'=>$tax['tax_code_id'],'tax_code_snapshot'=>$tax['tax_code_snapshot'],'tax_name_snapshot'=>$tax['tax_name_snapshot'],'tax_rate_snapshot'=>$tax['tax_rate_snapshot'],'currency_code'=>$currency,'exchange_rate'=>$rate,
                 'base_total_before_vat'=>$baseBefore,'base_vat_amount'=>$baseVat,'base_total_after_vat'=>$baseAfter,'base_cost'=>$baseBefore,'allocated_cost'=>0,'final_unit_cost_per_kg'=>$accepted>0?round($baseBefore/$accepted,6):0,
                 'cost_share_percent'=>$r['cost_share_percent']??null,'manual_allocated_cost'=>$r['manual_allocated_cost']??null,'average_cost'=>$accepted>0?round($baseBefore/($accepted/1000),3):0,'distributed_cost'=>0,'profit'=>0,'inventory_created'=>0,'sorting_order'=>$i+1,'status'=>'OPEN','notes'=>$r['notes']??null,'created_at'=>now(),'updated_at'=>now(),
-            ]);
+            ];
+            $id=$identityEnabled?(int)($r['id']??0):0;
+            if($id){
+                unset($values['created_at']);
+                $scope()->where('id',$id)->update($values);
+                $retained[]=$id;
+            }else{
+                $retained[]=DB::table('shipment_items')->insertGetId($values+app(ShipmentLineIdentity::class)->newAttributes($identityEnabled));
+            }
         }
+        if($identityEnabled)$scope()->whereNotIn('id',$retained)->delete();
     }
 
 } 

@@ -22,7 +22,7 @@ return [
     'route_prefixes' => [
         'weighbridge' => 'weighbridge', 'shipments' => 'shipments', 'shipment-costs' => 'shipments',
         'purchase-invoices' => 'purchases', 'purchase-orders' => 'purchases', 'sales-invoices' => 'sales', 'quotations' => 'sales', 'commercial-returns' => 'sales',
-        'inventory' => 'inventory', 'inventory-operations' => 'processing',
+        'inventory' => 'inventory', 'inventory-operations' => 'processing', 'inventory/recipes' => 'processing',
         'accounts' => 'accounting', 'journal-entries' => 'accounting', 'trial-balance' => 'accounting',
         'accounting' => 'accounting', 'financial-years' => 'accounting', 'opening-balances' => 'accounting',
         'financial-accounts' => 'accounting', 'financial-setup' => 'accounting', 'tax-reports' => 'tax',

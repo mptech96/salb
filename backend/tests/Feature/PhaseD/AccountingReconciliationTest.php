@@ -142,6 +142,207 @@ class AccountingReconciliationTest extends TestCase
         $companyBs=$this->reports->balanceSheet(1,null,['as_of'=>'2026-12-31']);self::assertSame(0.0,$companyBs['current_period_result']);self::assertSame(0.0,$companyBs['difference']);
     }
 
+    public function test_parent_ledger_includes_deep_inactive_descendants_without_duplicates(): void
+    {
+        $parent=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'ROOT','account_name'=>'Parent','account_type'=>'ASSET','normal_side'=>'DEBIT','is_group'=>1,'allow_posting'=>0]);
+        $root=$parent;
+        for($i=0;$i<12;$i++) $parent=DB::table('accounts')->insertGetId(['company_id'=>1,'parent_id'=>$parent,'account_code'=>'DEEP'.$i,'account_name'=>'Deep '.$i,'account_type'=>'ASSET','normal_side'=>'DEBIT','is_group'=>1,'allow_posting'=>0]);
+        DB::table('accounts')->where('id',$this->asset)->update(['parent_id'=>$parent,'is_active'=>0]);
+        $this->journal('2026-03-01','POSTED',[[$this->asset,800,0],[$this->equity,0,800]],1,'historical');
+        $report=$this->reports->ledger(1,1,$root,['from_date'=>'2026-03-01','to_date'=>'2026-03-31']);
+        self::assertSame(800.0,$report['total_debit']);
+        self::assertSame(1,$report['data']['total']);
+        self::assertSame(800.0,$report['closing_balance']);
+    }
+
+    public function test_real_expense_posting_from_custody_is_balanced_and_retry_has_no_duplicate(): void
+    {
+        Schema::dropIfExists('companies');Schema::dropIfExists('sulb_document_sequences');
+        Schema::create('companies',fn(Blueprint$t)=>[$t->id(),$t->string('company_name')]);
+        DB::table('companies')->insert(['id'=>1,'company_name'=>'Isolated expense company']);
+        Schema::create('sulb_document_sequences',function(Blueprint$t){$t->id();$t->unsignedBigInteger('company_id');$t->unsignedBigInteger('branch_id')->default(0);$t->string('document_type');$t->integer('document_year');$t->unsignedBigInteger('next_number');$t->timestamps();$t->unique(['company_id','branch_id','document_type','document_year']);});
+        DB::table('branches')->insert(['id'=>1,'company_id'=>1,'branch_name'=>'Test branch','is_active'=>1]);
+        Schema::dropIfExists('branch_financial_settings');
+        Schema::create('branch_financial_settings',fn(Blueprint $t)=>[$t->id(),$t->integer('company_id'),$t->integer('branch_id'),$t->integer('default_cost_center_id')->nullable()]);
+        Schema::dropIfExists('expenses'); Schema::dropIfExists('vouchers'); Schema::dropIfExists('voucher_types');
+        Schema::create('expenses',function(Blueprint $t){$t->id();$t->integer('company_id');$t->integer('journal_entry_id')->nullable();$t->integer('voucher_id')->nullable();$t->integer('financial_account_id')->nullable();$t->string('currency_code')->nullable();$t->decimal('exchange_rate',18,8)->nullable();$t->decimal('foreign_amount',18,3)->nullable();$t->timestamps();});
+        Schema::create('voucher_types',fn(Blueprint $t)=>[$t->id(),$t->string('type_code')]);
+        Schema::create('vouchers',function(Blueprint $t){$t->id();foreach(['company_id','branch_id','voucher_type_id','reference_id','journal_entry_id','cash_account_id','financial_account_id']as$c)$t->integer($c);foreach(['voucher_number','voucher_date','reference_type','currency_code','payment_method','notes']as$c)$t->string($c);$t->decimal('amount',18,3);$t->decimal('exchange_rate',18,8);$t->decimal('foreign_amount',18,3)->nullable();$t->integer('created_by')->nullable();$t->timestamps();});
+        DB::table('voucher_types')->insert(['type_code'=>'PAYMENT']);
+        DB::table('accounting_settings')->insert(['company_id'=>1,'setting_key'=>'ACCRUED_EXPENSE_ACCOUNT','account_id'=>$this->liability]);
+        $fa=DB::table('financial_accounts')->insertGetId(['company_id'=>1,'branch_id'=>1,'gl_account_id'=>$this->asset,'account_code'=>'CUSTODY','account_name'=>'عهدة اختبار','account_type'=>'PETTY_CASH','currency_code'=>'SAR']);
+        $journals=app(JournalService::class);
+        $journals->post(['company_id'=>1,'branch_id'=>1,'entry_date'=>'2026-03-01','description'=>'Test opening','source_type'=>'TEST','lines'=>[['account_id'=>$this->asset,'financial_account_id'=>$fa,'debit'=>5000,'credit'=>0,'currency_code'=>'SAR','exchange_rate'=>1],['account_id'=>$this->equity,'debit'=>0,'credit'=>5000]]]);
+        $id=DB::table('expenses')->insertGetId(['company_id'=>1]);
+        $data=['company_id'=>1,'branch_id'=>1,'expense_id'=>$id,'expense_date'=>'2026-03-02','amount'=>800,'expense_account_id'=>$this->expense,'payment_status'=>'PAID','payment_method'=>'CASH','financial_account_id'=>$fa,'currency_code'=>'SAR','exchange_rate'=>1,'foreign_amount'=>800];
+        $posting=app(\App\Services\Accounting\ExpensePosting::class);
+        $result=$posting->post($data);
+        self::assertTrue($result->success,$result->message);
+        $count=DB::table('journal_entries')->count();
+        self::assertTrue($posting->post($data)->success);
+        self::assertSame($count,DB::table('journal_entries')->count());
+        self::assertSame(1,DB::table('vouchers')->count());
+        self::assertSame(4200.0,(float)DB::table('journal_entry_lines')->where('financial_account_id',$fa)->sum(DB::raw('debit-credit')));
+        $jid=DB::table('expenses')->where('id',$id)->value('journal_entry_id');
+        self::assertSame(800.0,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$jid)->sum('debit'));
+        self::assertSame(800.0,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$jid)->sum('credit'));
+    }
+
+    public function test_invoice_posting_uses_mapped_gl_accounts_and_preserves_history_on_retry(): void
+    {
+        DB::table('branches')->insert(['id'=>1,'company_id'=>1,'branch_name'=>'Test branch','is_active'=>1]);
+        Schema::create('branch_financial_settings',fn(Blueprint $t)=>[$t->id(),$t->integer('company_id'),$t->integer('branch_id'),$t->integer('default_cost_center_id')->nullable()]);
+        foreach(['customers','suppliers']as$table){Schema::create($table,fn(Blueprint $t)=>[$t->id(),$t->integer('company_id'),$t->integer('ledger_account_id')->nullable()]);DB::table($table)->insert(['id'=>1,'company_id'=>1,'ledger_account_id'=>$table==='customers'?$this->asset:$this->liability]);}
+        Schema::create('items',function(Blueprint $t){$t->id();$t->integer('company_id');$t->string('item_name');foreach(['inventory_account_id','sales_account_id','cogs_account_id','purchase_expense_account_id','sales_return_account_id','purchase_return_account_id']as$c)$t->integer($c)->nullable();});
+        DB::table('items')->insert(['id'=>1,'company_id'=>1,'item_name'=>'TEST service','sales_account_id'=>$this->revenue,'purchase_expense_account_id'=>$this->expense]);
+        foreach(['sales','purchase']as$kind){
+            Schema::create($kind.'_invoices',function(Blueprint $t)use($kind){$t->id();$t->integer('company_id');$t->integer('branch_id');$t->integer($kind==='sales'?'customer_id':'supplier_id');$t->string('invoice_number');$t->date('invoice_date');$t->string('currency_code');$t->decimal('exchange_rate',18,8);$t->decimal('total_amount',18,3);$t->decimal('vat_amount',18,3)->default(0);$t->integer('journal_entry_id')->nullable();$t->timestamps();});
+            Schema::create($kind.'_invoice_lines',function(Blueprint $t)use($kind){$t->id();$t->integer('company_id');$t->integer($kind.'_invoice_id');$t->integer('item_id');$t->integer('tax_code_id')->nullable();$t->decimal('total_before_vat',18,3);$t->decimal('base_vat_amount',18,3)->default(0);$t->decimal('vat_amount',18,3)->default(0);$t->boolean('track_inventory_snapshot')->default(false);$t->string('item_type_snapshot')->default('SERVICE');});
+            DB::table($kind.'_invoices')->insert(['id'=>1,'company_id'=>1,'branch_id'=>1,$kind==='sales'?'customer_id':'supplier_id'=>1,'invoice_number'=>'TEST-'.$kind,'invoice_date'=>'2026-03-05','currency_code'=>'SAR','exchange_rate'=>1,'total_amount'=>100]);
+            DB::table($kind.'_invoice_lines')->insert(['company_id'=>1,$kind.'_invoice_id'=>1,'item_id'=>1,'total_before_vat'=>100]);
+        }
+        Schema::create('stock_movements',fn(Blueprint $t)=>[$t->id(),$t->integer('company_id'),$t->string('source_type'),$t->integer('source_id'),$t->integer('journal_entry_id')->nullable(),$t->timestamps()]);
+        $historical=$this->journal('2026-02-01','POSTED',[[$this->asset,37,0],[$this->equity,0,37]],1,'Historical sentinel');
+        $before=DB::table('journal_entry_lines')->where('journal_entry_id',$historical)->get()->toJson();
+        $posting=app(\App\Services\Accounting\EnterpriseAccountingPostingService::class);
+        $sale=$posting->postSale(1,1,1);$purchase=$posting->postPurchase(1,1,1);
+        self::assertSame($sale,$posting->postSale(1,1,1));self::assertSame($purchase,$posting->postPurchase(1,1,1));
+        self::assertSame(3,DB::table('journal_entries')->count());
+        foreach([$sale,$purchase]as$id){self::assertSame(100.0,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$id)->sum('debit'));self::assertSame(100.0,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$id)->sum('credit'));}
+        self::assertSame(100.0,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$sale)->where('account_id',$this->revenue)->sum('credit'));
+        self::assertSame(100.0,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$purchase)->where('account_id',$this->expense)->sum('debit'));
+        self::assertSame($sale,(int)DB::table('sales_invoices')->value('journal_entry_id'));self::assertSame($purchase,(int)DB::table('purchase_invoices')->value('journal_entry_id'));
+        self::assertSame($before,DB::table('journal_entry_lines')->where('journal_entry_id',$historical)->get()->toJson());
+        self::assertSame(100.0,$this->reports->ledger(1,1,$this->revenue,['from_date'=>'2026-03-01','to_date'=>'2026-03-31'])['total_credit']);
+        Schema::create('voucher_types',fn(Blueprint $t)=>[$t->id(),$t->string('type_code')]);
+        Schema::create('vouchers',function(Blueprint $t){$t->id();foreach(['company_id','branch_id','voucher_type_id','reference_id','financial_account_id','cash_account_id','journal_entry_id','created_by']as$c)$t->integer($c)->nullable();foreach(['voucher_number','reference_type','payment_method','currency_code']as$c)$t->string($c);$t->date('voucher_date');foreach(['amount','exchange_rate','foreign_amount']as$c)$t->decimal($c,18,3)->default(0);$t->timestamps();});
+        DB::table('voucher_types')->insert([['id'=>1,'type_code'=>'RECEIPT'],['id'=>2,'type_code'=>'PAYMENT']]);
+        // Deliberately different defaults expose an invoice/settlement GL mismatch.
+        DB::table('accounting_settings')->insert([['company_id'=>1,'setting_key'=>'CUSTOMER_ACCOUNT','account_id'=>$this->equity],['company_id'=>1,'setting_key'=>'SUPPLIER_ACCOUNT','account_id'=>$this->expense]]);
+        $cash=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'TEST-CASH','account_name'=>'TEST cash','account_type'=>'ASSET','normal_side'=>'DEBIT']);
+        $fa=DB::table('financial_accounts')->insertGetId(['company_id'=>1,'branch_id'=>1,'gl_account_id'=>$cash,'account_code'=>'TEST','account_name'=>'TEST','account_type'=>'CASH','currency_code'=>'SAR']);
+        foreach([[1,'CUSTOMER'],[2,'SUPPLIER']]as[$type,$party]){
+            foreach([40,60]as$amount){
+                $id=DB::table('vouchers')->insertGetId(['company_id'=>1,'branch_id'=>1,'voucher_type_id'=>$type,'reference_type'=>$party,'reference_id'=>1,'financial_account_id'=>$fa,'voucher_number'=>'TEST-'.$party.'-'.$amount,'voucher_date'=>'2026-03-06','payment_method'=>'CASH','currency_code'=>'SAR','exchange_rate'=>1,'amount'=>$amount]);
+                $result=app(\App\Services\Accounting\VoucherPosting::class)->post(['company_id'=>1,'voucher_id'=>$id,'created_by'=>1]);self::assertTrue($result->success,$result->message);
+                $partyBalance=(float)DB::table('journal_entry_lines')->where('company_id',1)->where('party_type',$party)->where('party_id',1)->sum(DB::raw('debit-credit'));
+                self::assertSame($amount===40?($party==='CUSTOMER'?60.0:-60.0):0.0,$partyBalance);
+                self::assertSame($party==='CUSTOMER'?$this->asset:$this->liability,(int)DB::table('journal_entry_lines')->where('journal_entry_id',$result->journalEntryId)->where('party_type',$party)->value('account_id'));
+                self::assertTrue(app(\App\Services\Accounting\VoucherPosting::class)->post(['company_id'=>1,'voucher_id'=>$id,'created_by'=>1])->success);
+            }
+        }
+        self::assertSame(7,DB::table('journal_entries')->count());
+        self::assertSame($before,DB::table('journal_entry_lines')->where('journal_entry_id',$historical)->get()->toJson());
+        foreach(['sales_invoices','purchase_invoices'] as $table){
+            Schema::table($table,fn(Blueprint $t)=>$t->string('document_status')->default('POSTED'));
+        }
+        DB::table('customers')->where('id',1)->update(['ledger_account_id'=>$this->equity]);
+        DB::table('suppliers')->where('id',1)->update(['ledger_account_id'=>$this->expense]);
+        $original=app(\App\Services\Accounting\HistoricalInvoiceAccountingService::class);
+        self::assertSame($this->asset,$original->partyAccount(1,1,'SALE',1));
+        self::assertSame($this->liability,$original->partyAccount(1,1,'PURCHASE',1));
+        foreach([[2,1],[1,2]] as [$company,$branch]){
+            try{$original->partyAccount($company,$branch,'SALE',1);self::fail('Foreign source accepted');}catch(\RuntimeException $e){self::assertStringContainsString('نطاق',$e->getMessage());}
+        }
+        $sourceLines=DB::table('journal_entry_lines')->where('journal_entry_id',$sale)->get()->toJson();
+        DB::table('journal_entries')->where('id',$sale)->update(['source_id'=>999]);
+        try{$original->partyAccount(1,1,'SALE',1);self::fail('Mismatched source accepted');}catch(\RuntimeException $e){self::assertStringContainsString('لا يطابق',$e->getMessage());}
+        DB::table('journal_entries')->where('id',$sale)->update(['source_id'=>1]);
+        DB::table('journal_entries')->where('id',$sale)->update(['status'=>'DRAFT']);
+        try{$original->partyAccount(1,1,'SALE',1);self::fail('Draft source accepted');}catch(\RuntimeException $e){self::assertStringContainsString('لا يطابق',$e->getMessage());}
+        DB::table('journal_entries')->where('id',$sale)->update(['status'=>'POSTED']);
+        self::assertSame($sourceLines,DB::table('journal_entry_lines')->where('journal_entry_id',$sale)->get()->toJson());
+        self::assertSame(7,DB::table('journal_entries')->count());
+    }
+
+    public function test_customer_receipt_and_supplier_payment_use_selected_operational_account_once(): void
+    {
+        DB::table('branches')->insert(['id'=>1,'company_id'=>1,'branch_name'=>'TEST','is_active'=>1]);
+        Schema::create('branch_financial_settings',fn(Blueprint $t)=>[$t->id(),$t->integer('company_id'),$t->integer('branch_id'),$t->integer('default_cost_center_id')->nullable()]);
+        Schema::create('voucher_types',fn(Blueprint $t)=>[$t->id(),$t->string('type_code')]);
+        Schema::create('vouchers',function(Blueprint $t){$t->id();foreach(['company_id','branch_id','voucher_type_id','reference_id','financial_account_id','cash_account_id','journal_entry_id','created_by']as$c)$t->integer($c)->nullable();foreach(['voucher_number','reference_type','payment_method','currency_code']as$c)$t->string($c);$t->date('voucher_date');foreach(['amount','exchange_rate','foreign_amount']as$c)$t->decimal($c,18,3)->default(0);$t->timestamps();});
+        DB::table('voucher_types')->insert([['id'=>1,'type_code'=>'RECEIPT'],['id'=>2,'type_code'=>'PAYMENT']]);
+        DB::table('accounting_settings')->insert([['company_id'=>1,'setting_key'=>'CUSTOMER_ACCOUNT','account_id'=>$this->asset],['company_id'=>1,'setting_key'=>'SUPPLIER_ACCOUNT','account_id'=>$this->liability]]);
+        $cash=DB::table('accounts')->insertGetId(['company_id'=>1,'account_code'=>'1111','account_name'=>'TEST cash','account_type'=>'ASSET','normal_side'=>'DEBIT']);
+        $fa=DB::table('financial_accounts')->insertGetId(['company_id'=>1,'branch_id'=>1,'gl_account_id'=>$cash,'account_code'=>'TEST','account_name'=>'TEST','account_type'=>'CASH','currency_code'=>'SAR']);
+        $posting=app(\App\Services\Accounting\VoucherPosting::class);
+        foreach(['customers','suppliers'] as $table){
+            Schema::create($table,fn(Blueprint $t)=>[$t->id(),$t->integer('company_id'),$t->integer('ledger_account_id')->nullable()]);
+            DB::table($table)->insert(['id'=>1,'company_id'=>1,'ledger_account_id'=>$table==='customers'?$this->equity:$this->expense]);
+        }
+        foreach([[1,'CUSTOMER',100],[2,'SUPPLIER',50]]as[$type,$party,$amount]){
+            $id=DB::table('vouchers')->insertGetId(['company_id'=>1,'branch_id'=>1,'voucher_type_id'=>$type,'reference_type'=>$party,'reference_id'=>1,'financial_account_id'=>$fa,'voucher_number'=>'TEST-'.$type,'voucher_date'=>'2026-03-06','payment_method'=>'CASH','currency_code'=>'SAR','exchange_rate'=>1,'amount'=>$amount]);
+            $result=$posting->post(['company_id'=>1,'voucher_id'=>$id,'created_by'=>1]);self::assertTrue($result->success,$result->message);
+            $jid=DB::table('vouchers')->where('id',$id)->value('journal_entry_id');
+            self::assertSame($party==='CUSTOMER'?$this->equity:$this->expense,(int)DB::table('journal_entry_lines')->where('journal_entry_id',$jid)->where('party_type',$party)->value('account_id'));
+            self::assertSame((float)$amount,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$jid)->sum('debit'));
+            self::assertSame((float)$amount,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$jid)->sum('credit'));
+            self::assertSame($cash,(int)DB::table('journal_entry_lines')->where('journal_entry_id',$jid)->where('financial_account_id',$fa)->value('account_id'));
+            self::assertTrue($posting->post(['company_id'=>1,'voucher_id'=>$id,'created_by'=>1])->success);
+        }
+        self::assertSame(2,DB::table('journal_entries')->count());
+        self::assertSame(50.0,(float)DB::table('journal_entry_lines')->where('financial_account_id',$fa)->sum(DB::raw('debit-credit')));
+        self::assertSame(50.0,$this->reports->ledger(1,1,$cash,['from_date'=>'2026-03-01','to_date'=>'2026-03-31'])['closing_balance']);
+        foreach([[1,'CUSTOMER','customers',$this->asset],[2,'SUPPLIER','suppliers',$this->liability]] as [$type,$party,$table,$expected]){
+            DB::table($table)->insert(['id'=>2,'company_id'=>1,'ledger_account_id'=>null]);
+            $id=DB::table('vouchers')->insertGetId(['company_id'=>1,'branch_id'=>1,'voucher_type_id'=>$type,'reference_type'=>$party,'reference_id'=>2,'financial_account_id'=>$fa,'voucher_number'=>'TEST-GENERAL-'.$type,'voucher_date'=>'2026-03-06','payment_method'=>'CASH','currency_code'=>'SAR','exchange_rate'=>1,'amount'=>25]);
+            $result=$posting->post(['company_id'=>1,'voucher_id'=>$id,'created_by'=>1]);self::assertTrue($result->success,$result->message);
+            self::assertSame($expected,(int)DB::table('journal_entry_lines')->where('journal_entry_id',$result->journalEntryId)->where('party_type',$party)->value('account_id'));
+            self::assertSame(25.0,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$result->journalEntryId)->sum('debit'));
+            self::assertSame(25.0,(float)DB::table('journal_entry_lines')->where('journal_entry_id',$result->journalEntryId)->sum('credit'));
+        }
+    }
+
+    public function test_stock_returns_use_original_lot_sources_mapped_gl_and_are_retry_safe(bool $changedMapping = false): void
+    {
+        DB::table('branches')->insert(['id'=>1,'company_id'=>1,'branch_name'=>'TEST','is_active'=>1]);
+        Schema::create('branch_financial_settings',fn(Blueprint $t)=>[$t->id(),$t->integer('company_id'),$t->integer('branch_id'),$t->integer('default_cost_center_id')->nullable()]);
+        foreach(['customers','suppliers']as$table){Schema::create($table,fn(Blueprint $t)=>[$t->id(),$t->integer('company_id'),$t->integer('ledger_account_id')->nullable()]);DB::table($table)->insert(['id'=>1,'company_id'=>1,'ledger_account_id'=>$table==='customers'?$this->asset:$this->liability]);}
+        Schema::create('items',function(Blueprint $t){$t->id();$t->integer('company_id');$t->string('item_code');$t->string('item_name');foreach(['inventory_account_id','cogs_account_id','sales_return_account_id','purchase_return_account_id']as$c)$t->integer($c);});
+        DB::table('items')->insert(['id'=>1,'company_id'=>1,'item_code'=>'TEST','item_name'=>'TEST stock','inventory_account_id'=>$this->asset,'cogs_account_id'=>$this->cogs,'sales_return_account_id'=>$this->revenue,'purchase_return_account_id'=>$this->expense]);
+        $tables=[
+            'commercial_returns'=>['company_id branch_id party_id source_invoice_id posted_by journal_entry_id','return_type return_number document_status return_date currency_code','exchange_rate base_total_amount'],
+            'commercial_return_lines'=>['company_id return_id item_id source_invoice_line_id track_inventory_snapshot tax_code_id','item_type_snapshot','base_total_before_vat base_vat_amount qty_kg inventory_cost'],
+            'commercial_return_lot_sources'=>['company_id return_line_id inventory_lot_id','','qty_kg unit_cost_per_kg total_cost'],
+            'inventory_lots'=>['company_id branch_id item_id purchase_invoice_line_id','received_at lot_status','qty_remaining_kg qty_sold_kg unit_cost_per_kg'],
+            'sales_line_lot_sources'=>['company_id sales_invoice_line_id inventory_lot_id','','qty_kg unit_cost_per_kg total_cost'],
+            'inventory_lot_movements'=>['company_id branch_id inventory_lot_id item_id source_id created_by','movement_type source_type movement_at notes','qty_kg unit_cost_per_kg total_cost'],
+            'stock_movements'=>['company_id branch_id item_id inventory_lot_id source_id created_by','movement_type source_type movement_date notes','qty qty_kg unit_cost unit_cost_per_kg total_cost'],
+        ];
+        foreach($tables as$table=>[$ids,$strings,$decimals])Schema::create($table,function(Blueprint $t)use($ids,$strings,$decimals){$t->id();foreach(array_filter(explode(' ',$ids))as$c)$t->integer($c)->nullable();foreach(array_filter(explode(' ',$strings))as$c)$t->string($c)->nullable();foreach(array_filter(explode(' ',$decimals))as$c)$t->decimal($c,18,6)->default(0);$t->timestamp('posted_at')->nullable();$t->timestamps();});
+        DB::table('inventory_lots')->insert(['id'=>1,'company_id'=>1,'branch_id'=>1,'item_id'=>1,'purchase_invoice_line_id'=>1,'received_at'=>'2026-03-01','lot_status'=>'OPEN','qty_remaining_kg'=>20,'qty_sold_kg'=>10,'unit_cost_per_kg'=>5]);
+        DB::table('sales_line_lot_sources')->insert(['company_id'=>1,'sales_invoice_line_id'=>1,'inventory_lot_id'=>1,'qty_kg'=>10,'unit_cost_per_kg'=>5,'total_cost'=>50]);
+        if($changedMapping){
+            DB::table('items')->where('id',1)->update(['inventory_account_id'=>$this->equity,'cogs_account_id'=>$this->liability]);
+        }
+        $service=app(\App\Services\CommercialReturnService::class);
+        foreach(['SALES_RETURN','PURCHASE_RETURN']as$index=>$type){
+            $id=DB::table('commercial_returns')->insertGetId(['company_id'=>1,'branch_id'=>1,'party_id'=>1,'source_invoice_id'=>1,'return_type'=>$type,'return_number'=>'TEST-'.$index,'document_status'=>'DRAFT','return_date'=>'2026-03-07','currency_code'=>'SAR','exchange_rate'=>1,'base_total_amount'=>100]);
+            DB::table('commercial_return_lines')->insert(['company_id'=>1,'return_id'=>$id,'item_id'=>1,'source_invoice_line_id'=>1,'track_inventory_snapshot'=>1,'item_type_snapshot'=>'STOCK','base_total_before_vat'=>100,'qty_kg'=>10]);
+            $result=$service->post(1,$id,1,1);$jid=$result['return']->journal_entry_id;
+            self::assertSame('POSTED',$result['return']->document_status);
+            self::assertSame((float)($index===0?150:100),(float)DB::table('journal_entry_lines')->where('journal_entry_id',$jid)->sum('debit'));
+            self::assertSame((float)($index===0?150:100),(float)DB::table('journal_entry_lines')->where('journal_entry_id',$jid)->sum('credit'));
+            self::assertSame($jid,$service->post(1,$id,1,1)['return']->journal_entry_id);
+            self::assertSame($index===0?30.0:20.0,(float)DB::table('inventory_lots')->value('qty_remaining_kg'));
+        }
+        self::assertSame(2,DB::table('journal_entries')->count());self::assertSame(2,DB::table('stock_movements')->count());self::assertSame(2,DB::table('inventory_lot_movements')->count());
+        self::assertSame([1,1],DB::table('commercial_return_lot_sources')->orderBy('id')->pluck('inventory_lot_id')->all());
+        self::assertSame(50.0,(float)DB::table('journal_entry_lines')->where('account_id',$this->expense)->sum('credit'));
+        if($changedMapping){
+            // Characterization: current return posting follows mutable mappings, not source GL.
+            // Do not treat this as approval of the accounting policy.
+            self::assertSame(0,DB::table('journal_entry_lines')->where('account_id',$this->cogs)->count());
+            self::assertSame(50.0,(float)DB::table('journal_entry_lines')->where('account_id',$this->liability)->sum('credit'));
+            self::assertSame(2,DB::table('journal_entry_lines')->where('account_id',$this->equity)->count());
+        }
+    }
+
+    public function test_characterizes_return_inventory_gl_drift_after_mapping_change(): void
+    {
+        $this->test_stock_returns_use_original_lot_sources_mapped_gl_and_are_retry_safe(true);
+    }
+
     private function journal(string $date,string $status,array $lines,?int $branch,string $description,string $source='MANUAL',?int $sourceId=null,bool $closing=false,int $company=1): int
     {
         $id=DB::table('journal_entries')->insertGetId(['company_id'=>$company,'branch_id'=>$branch,'financial_year_id'=>1,'entry_number'=>'J-'.uniqid(),'entry_date'=>$date,'source_type'=>$source,'source_id'=>$sourceId,'description'=>$description,'status'=>$status,'is_closing_entry'=>$closing?1:0,'is_system_generated'=>0]);

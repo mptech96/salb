@@ -168,29 +168,39 @@ class WorkerController extends Controller
 
    public function addLoan(Request $request, $id, \App\Services\AccountingService $accounting)
 {
-    $companyId = $this->companyId();
-    $branchId = $request->branch_id ?? $this->branchId();
+    $support=app(\App\Services\Payroll\WorkerAccountingSupport::class);
+    $companyId = $support->authorize();
+    $branchId = $support->branch($support->worker((int)$id));
 
     $request->validate([
         'loan_date' => 'required|date',
         'amount' => 'required|numeric|min:0.001',
         'payment_method' => 'nullable|string',
+        'financial_account_id' => 'nullable|integer|min:1',
     ]);
 
     return DB::transaction(function () use ($request, $id, $companyId, $branchId, $accounting) {
 
-        $lastId = DB::table('vouchers')->where('company_id', $companyId)->max('id') ?? 0;
-        $voucherNumber = 'PAY-' . date('Y') . '-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+        $voucherNumber = app(\App\Services\SulbDocumentSequenceService::class)->reserveVoucher((int)$companyId,'PAYMENT',(string)$request->loan_date);
+        $support=app(\App\Services\Payroll\WorkerAccountingSupport::class);
+        abort_unless($support->branch($support->worker((int)$id))===(int)$branchId,403,'تغير نطاق العامل أثناء العملية.');
+        $loanAccount=$support->setting((int)$companyId,'WORKER_LOAN_ACCOUNT');
+        $fa=$support->payment((int)$companyId,(int)$branchId,$request->payment_method,$request->financial_account_id?(int)$request->financial_account_id:null);
 
         $voucherId = DB::table('vouchers')->insertGetId([
             'company_id' => $companyId,
             'branch_id' => $branchId,
-            'voucher_type_id' => 2,
+            'voucher_type_id' => DB::table('voucher_types')->where('type_code','PAYMENT')->sole()->id,
             'voucher_number' => $voucherNumber,
             'voucher_date' => $request->loan_date,
             'reference_type' => 'WORKER_LOAN',
             'reference_id' => 0,
             'amount' => $request->amount,
+            'financial_account_id' => $fa->id,
+            'cash_account_id' => $fa->gl_account_id,
+            'currency_code' => $fa->currency_code,
+            'exchange_rate' => 1,
+            'created_by' => auth()->id(),
             'payment_method' => $request->payment_method ?? 'CASH',
             'notes' => 'سند صرف سلفة عامل',
             'created_at' => now(),
@@ -206,7 +216,7 @@ class WorkerController extends Controller
             'payment_method' => $request->payment_method ?? 'CASH',
             'voucher_id' => $voucherId,
             'notes' => $request->notes,
-            'created_by' => request()->header('X-User-ID'),
+            'created_by' => auth()->id(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -219,8 +229,7 @@ class WorkerController extends Controller
                 'updated_at' => now(),
             ]);
 
-        $loanAccount = $accounting->settingAccount($companyId, 'WORKER_LOAN_ACCOUNT');
-        $cashAccount = $accounting->settingAccount($companyId, 'CASH_ACCOUNT');
+        $cashAccount = (int)$fa->gl_account_id;
 
         $entryId = $accounting->post([
             'company_id' => $companyId,
@@ -229,15 +238,18 @@ class WorkerController extends Controller
             'source_type' => 'WORKER_LOAN',
             'source_id' => $loanId,
             'description' => 'صرف سلفة عامل رقم ' . $loanId,
+            'created_by' => auth()->id(),
             'lines' => [
                 [
                     'account_id' => $loanAccount,
+                    'party_type' => 'WORKER', 'party_id' => (int)$id,
                     'debit' => $request->amount,
                     'credit' => 0,
                     'description' => 'سلفة عامل',
                 ],
                 [
                     'account_id' => $cashAccount,
+                    'financial_account_id' => (int)$fa->id,
                     'debit' => 0,
                     'credit' => $request->amount,
                     'description' => 'صرف نقدي لسلفة عامل',
@@ -251,6 +263,7 @@ class WorkerController extends Controller
                 'journal_entry_id' => $entryId,
                 'updated_at' => now(),
             ]);
+        DB::table('vouchers')->where('company_id',$companyId)->where('id',$voucherId)->update(['journal_entry_id'=>$entryId]);
 
         return response()->json([
             'status' => true,
@@ -264,18 +277,27 @@ class WorkerController extends Controller
 
     public function addCommission(Request $request, $id, AccountingService $accounting)
     {
-    $companyId = $this->companyId();
-    $branchId = $request->branch_id ?? $this->branchId();
+    $support=app(\App\Services\Payroll\WorkerAccountingSupport::class);
+    $companyId = $support->authorize();
+    $branchId = $support->branch($support->worker((int)$id));
 
     $request->validate([
         'commission_date' => 'required|date',
         'amount' => 'required|numeric|min:0.001',
         'status' => 'nullable|in:PENDING,APPROVED,PAID',
+        'payment_method' => 'nullable|string|max:50',
+        'financial_account_id' => 'nullable|integer|min:1',
     ]);
+    foreach(['shipment_id'=>'shipments','sales_invoice_id'=>'sales_invoices'] as $field=>$table){
+        if($request->input($field))abort_unless(DB::table($table)->where('company_id',$companyId)->where('branch_id',$branchId)->where('id',$request->input($field))->exists(),422,'المصدر المرتبط غير صالح لهذا العامل.');
+    }
 
     return DB::transaction(function () use ($request, $id, $companyId, $branchId, $accounting) {
 
-        $status = $request->status ?? 'PENDING';
+        app(\App\Services\SulbDocumentSequenceService::class)->lockVoucherCompany((int)$companyId);
+        $support=app(\App\Services\Payroll\WorkerAccountingSupport::class);
+        abort_unless($support->branch($support->worker((int)$id))===(int)$branchId,403,'تغير نطاق العامل أثناء العملية.');
+        $status = $request->status === 'PAID' ? 'APPROVED' : ($request->status ?? 'PENDING');
 
         $commissionId = DB::table('worker_commissions')->insertGetId([
             'company_id' => $companyId,
@@ -294,8 +316,9 @@ class WorkerController extends Controller
         $journalEntryId = null;
 
         if (in_array($status, ['APPROVED', 'PAID'])) {
-            $expenseAccount = $accounting->settingAccount($companyId, 'WORKER_COMMISSION_EXPENSE_ACCOUNT');
-            $payableAccount = $accounting->settingAccount($companyId, 'WORKER_PAYABLE_ACCOUNT');
+            $support=app(\App\Services\Payroll\WorkerAccountingSupport::class);
+            $expenseAccount = $support->setting((int)$companyId, 'WORKER_COMMISSION_EXPENSE_ACCOUNT');
+            $payableAccount = $support->setting((int)$companyId, 'WORKER_PAYABLE_ACCOUNT');
 
             $journalEntryId = $accounting->post([
                 'company_id' => $companyId,
@@ -304,6 +327,7 @@ class WorkerController extends Controller
                 'source_type' => 'WORKER_COMMISSION',
                 'source_id' => $commissionId,
                 'description' => 'اعتماد عمولة عامل رقم ' . $commissionId,
+                'created_by' => auth()->id(),
                 'lines' => [
                     [
                         'account_id' => $expenseAccount,
@@ -313,6 +337,7 @@ class WorkerController extends Controller
                     ],
                     [
                         'account_id' => $payableAccount,
+                        'party_type' => 'WORKER', 'party_id' => (int)$id,
                         'debit' => 0,
                         'credit' => $request->amount,
                         'description' => 'استحقاق عمولة عامل',
@@ -327,6 +352,8 @@ class WorkerController extends Controller
                     'updated_at' => now(),
                 ]);
         }
+
+        if($request->status==='PAID')$this->payCommission($commissionId,$accounting);
 
         return response()->json([
             'status' => true,
@@ -406,14 +433,12 @@ class WorkerController extends Controller
     }
     public function approveCommission($commissionId, \App\Services\AccountingService $accounting)
 {
-    $companyId = $this->companyId();
+    $companyId = app(\App\Services\Payroll\WorkerAccountingSupport::class)->authorize();
 
     return DB::transaction(function () use ($commissionId, $companyId, $accounting) {
-
-        $commission = DB::table('worker_commissions')
-            ->where('company_id', $companyId)
-            ->where('id', $commissionId)
-            ->first();
+        app(\App\Services\SulbDocumentSequenceService::class)->lockVoucherCompany((int)$companyId);
+        $support=app(\App\Services\Payroll\WorkerAccountingSupport::class);
+        $commission = $support->commission((int)$commissionId);
 
         if (!$commission) {
             return response()->json(['status' => false, 'message' => 'العمولة غير موجودة'], 404);
@@ -423,8 +448,8 @@ class WorkerController extends Controller
             return response()->json(['status' => false, 'message' => 'لا يمكن اعتماد عمولة ليست معلقة'], 400);
         }
 
-        $expenseAccount = $accounting->settingAccount($companyId, 'WORKER_COMMISSION_EXPENSE_ACCOUNT');
-        $payableAccount = $accounting->settingAccount($companyId, 'WORKER_PAYABLE_ACCOUNT');
+        $expenseAccount = $support->setting((int)$companyId, 'WORKER_COMMISSION_EXPENSE_ACCOUNT');
+        $payableAccount = $support->setting((int)$companyId, 'WORKER_PAYABLE_ACCOUNT');
 
         $entryId = $accounting->post([
             'company_id' => $companyId,
@@ -433,9 +458,10 @@ class WorkerController extends Controller
             'source_type' => 'WORKER_COMMISSION',
             'source_id' => $commission->id,
             'description' => 'اعتماد عمولة عامل رقم ' . $commission->id,
+            'created_by' => auth()->id(),
             'lines' => [
                 ['account_id' => $expenseAccount, 'debit' => $commission->amount, 'credit' => 0, 'description' => 'مصروف عمولة عامل'],
-                ['account_id' => $payableAccount, 'debit' => 0, 'credit' => $commission->amount, 'description' => 'استحقاق عمولة عامل'],
+                ['account_id' => $payableAccount, 'party_type'=>'WORKER','party_id'=>(int)$commission->worker_id, 'debit' => 0, 'credit' => $commission->amount, 'description' => 'استحقاق عمولة عامل'],
             ],
         ]);
 
@@ -453,14 +479,15 @@ class WorkerController extends Controller
 
 public function payCommission($commissionId, \App\Services\AccountingService $accounting)
 {
-    $companyId = $this->companyId();
+    $companyId = app(\App\Services\Payroll\WorkerAccountingSupport::class)->authorize();
+    request()->validate(['payment_method'=>'nullable|string|max:50','financial_account_id'=>'nullable|integer|min:1']);
 
     return DB::transaction(function () use ($commissionId, $companyId, $accounting) {
 
-        $commission = DB::table('worker_commissions')
-            ->where('company_id', $companyId)
-            ->where('id', $commissionId)
-            ->first();
+        app(\App\Services\SulbDocumentSequenceService::class)->lockVoucherCompany((int)$companyId);
+
+        $support=app(\App\Services\Payroll\WorkerAccountingSupport::class);
+        $commission = $support->commission((int)$commissionId);
 
         if (!$commission) {
             return response()->json(['status' => false, 'message' => 'العمولة غير موجودة'], 404);
@@ -470,26 +497,27 @@ public function payCommission($commissionId, \App\Services\AccountingService $ac
             return response()->json(['status' => false, 'message' => 'لا يمكن دفع عمولة غير معتمدة'], 400);
         }
 
-        $lastId = DB::table('vouchers')->where('company_id', $companyId)->max('id') ?? 0;
-        $voucherNumber = 'PAY-' . date('Y') . '-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+        $voucherNumber = app(\App\Services\SulbDocumentSequenceService::class)->reserveVoucher((int)$companyId,'PAYMENT',date('Y-m-d'));
+        $payableAccount=$support->payable($commission);
+        $fa=$support->payment((int)$companyId,(int)$commission->branch_id,request()->payment_method??'CASH',request()->financial_account_id?(int)request()->financial_account_id:null);
 
         $voucherId = DB::table('vouchers')->insertGetId([
             'company_id' => $companyId,
             'branch_id' => $commission->branch_id,
-            'voucher_type_id' => 2,
+            'voucher_type_id' => DB::table('voucher_types')->where('type_code','PAYMENT')->sole()->id,
             'voucher_number' => $voucherNumber,
             'voucher_date' => date('Y-m-d'),
             'reference_type' => 'WORKER_COMMISSION',
             'reference_id' => $commission->id,
             'amount' => $commission->amount,
-            'payment_method' => 'CASH',
+            'financial_account_id'=>$fa->id,'cash_account_id'=>$fa->gl_account_id,'currency_code'=>$fa->currency_code,'exchange_rate'=>1,'created_by'=>auth()->id(),
+            'payment_method' => request()->payment_method ?? 'CASH',
             'notes' => 'سند صرف عمولة عامل رقم ' . $commission->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        $payableAccount = $accounting->settingAccount($companyId, 'WORKER_PAYABLE_ACCOUNT');
-        $cashAccount = $accounting->settingAccount($companyId, 'CASH_ACCOUNT');
+        $cashAccount = (int)$fa->gl_account_id;
 
         $paymentEntryId = $accounting->post([
             'company_id' => $companyId,
@@ -498,9 +526,10 @@ public function payCommission($commissionId, \App\Services\AccountingService $ac
             'source_type' => 'WORKER_COMMISSION_PAYMENT',
             'source_id' => $commission->id,
             'description' => 'دفع عمولة عامل رقم ' . $commission->id,
+            'created_by' => auth()->id(),
             'lines' => [
-                ['account_id' => $payableAccount, 'debit' => $commission->amount, 'credit' => 0, 'description' => 'تسوية مستحق عمولة عامل'],
-                ['account_id' => $cashAccount, 'debit' => 0, 'credit' => $commission->amount, 'description' => 'صرف نقدي لعمولة عامل'],
+                ['account_id' => $payableAccount,'party_type'=>'WORKER','party_id'=>(int)$commission->worker_id, 'debit' => $commission->amount, 'credit' => 0, 'description' => 'تسوية مستحق عمولة عامل'],
+                ['account_id' => $cashAccount,'financial_account_id'=>(int)$fa->id, 'debit' => 0, 'credit' => $commission->amount, 'description' => 'صرف نقدي لعمولة عامل'],
             ],
         ]);
 
@@ -512,6 +541,7 @@ public function payCommission($commissionId, \App\Services\AccountingService $ac
                 'paid_at' => now(),
                 'updated_at' => now(),
             ]);
+        DB::table('vouchers')->where('company_id',$companyId)->where('id',$voucherId)->update(['journal_entry_id'=>$paymentEntryId]);
 
         return response()->json([
             'status' => true,

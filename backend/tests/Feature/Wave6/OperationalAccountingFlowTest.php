@@ -17,6 +17,7 @@ class OperationalAccountingFlowTest extends PlatformControlPlaneTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        require_once __DIR__.'/../../Support/InventorySequenceFixture.php';\Tests\Support\InventorySequenceFixture::install();
         foreach(['inventory_lot_movements','inventory_lots','tax_codes','company_settings']as$table)Schema::dropIfExists($table);
         Schema::create('inventory_lots',function(Blueprint$t):void{$t->id();foreach(['parent_lot_id','origin_lot_id','company_id','branch_id','item_id','car_id','shipment_id','shipment_item_id','purchase_invoice_id','purchase_invoice_line_id','source_id','inventory_operation_id','created_by']as$c)$t->unsignedBigInteger($c)->nullable();$t->string('lot_number');$t->string('source_type')->nullable();$t->dateTime('received_at');foreach(['qty_received_kg','qty_remaining_kg','qty_sold_kg','base_cost','allocated_cost','total_cost','unit_cost_per_kg']as$c)$t->decimal($c,18,6)->default(0);$t->string('lot_status');$t->text('notes')->nullable();$t->timestamps();});
         Schema::create('inventory_lot_movements',function(Blueprint$t):void{$t->id();foreach(['company_id','branch_id','inventory_lot_id','item_id','source_id','created_by']as$c)$t->unsignedBigInteger($c)->nullable();$t->string('movement_type');$t->string('source_type');$t->dateTime('movement_at');foreach(['qty_kg','unit_cost_per_kg','total_cost']as$c)$t->decimal($c,18,6)->default(0);$t->text('notes')->nullable();$t->timestamps();});
@@ -26,7 +27,7 @@ class OperationalAccountingFlowTest extends PlatformControlPlaneTestCase
 
     public function test_fifo_depletes_oldest_lot_and_preserves_exact_remaining_value():void
     {
-        $lots=app(InventoryLotService::class);$a=$lots->createInboundLot(['company_id'=>1,'branch_id'=>1,'item_id'=>1,'qty_kg'=>100,'base_cost'=>1000,'received_at'=>'2026-01-01']);$b=$lots->createInboundLot(['company_id'=>1,'branch_id'=>1,'item_id'=>1,'qty_kg'=>100,'base_cost'=>1200,'received_at'=>'2026-01-02']);
+        $lots=app(InventoryLotService::class);[$a,$b]=DB::transaction(fn()=>[$lots->createInboundLot(['company_id'=>1,'branch_id'=>1,'item_id'=>1,'qty_kg'=>100,'base_cost'=>1000,'received_at'=>'2026-01-01']),$lots->createInboundLot(['company_id'=>1,'branch_id'=>1,'item_id'=>1,'qty_kg'=>100,'base_cost'=>1200,'received_at'=>'2026-01-02'])]);
         $result=DB::transaction(fn()=>$lots->consumeFifo(1,1,1,150,'SALE',77));
         self::assertSame(1600.0,$result['total_cost']);self::assertSame([100.0,50.0],array_column($result['allocations'],'qty_kg'));
         self::assertSame(0.0,(float)DB::table('inventory_lots')->where('id',$a)->value('qty_remaining_kg'));self::assertSame(50.0,(float)DB::table('inventory_lots')->where('id',$b)->value('qty_remaining_kg'));
@@ -35,7 +36,7 @@ class OperationalAccountingFlowTest extends PlatformControlPlaneTestCase
 
     public function test_insufficient_fifo_stock_rejects_without_partial_consumption():void
     {
-        $lots=app(InventoryLotService::class);$id=$lots->createInboundLot(['company_id'=>1,'branch_id'=>1,'item_id'=>1,'qty_kg'=>100,'base_cost'=>1000,'received_at'=>'2026-01-01']);
+        $lots=app(InventoryLotService::class);$id=DB::transaction(fn()=>$lots->createInboundLot(['company_id'=>1,'branch_id'=>1,'item_id'=>1,'qty_kg'=>100,'base_cost'=>1000,'received_at'=>'2026-01-01']));
         try{DB::transaction(fn()=>$lots->consumeFifo(1,1,1,101,'SALE',78));self::fail('Insufficient sale was accepted.');}catch(RuntimeException){self::assertSame(100.0,(float)DB::table('inventory_lots')->where('id',$id)->value('qty_remaining_kg'));self::assertSame(1,DB::table('inventory_lot_movements')->count());}
     }
 

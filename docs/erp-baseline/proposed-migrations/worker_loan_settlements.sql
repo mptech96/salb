@@ -1,0 +1,32 @@
+-- Isolated proposal only; no runtime migration/backfill.
+CREATE TABLE worker_loan_settlements (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ company_id BIGINT NOT NULL,
+ branch_id BIGINT UNSIGNED NOT NULL,
+ worker_id BIGINT NOT NULL,
+ loan_id BIGINT UNSIGNED NOT NULL,
+ receipt_voucher_id BIGINT NULL,
+ salary_line_id BIGINT UNSIGNED NULL,
+ source_kind VARCHAR(7) GENERATED ALWAYS AS (IF(receipt_voucher_id IS NULL,'PAYROLL','RECEIPT')) STORED,
+ source_id BIGINT UNSIGNED GENERATED ALWAYS AS (COALESCE(receipt_voucher_id,salary_line_id)) STORED,
+ journal_entry_id BIGINT UNSIGNED NOT NULL,
+ journal_line_id BIGINT UNSIGNED NOT NULL,
+ amount DECIMAL(15,3) NOT NULL,
+ actor_id BIGINT UNSIGNED NOT NULL,
+ actor_name VARCHAR(255) NOT NULL,
+ created_at TIMESTAMP NOT NULL,
+ UNIQUE KEY worker_settlement_source(company_id,source_kind,source_id,loan_id),
+ KEY worker_settlement_balance(company_id,loan_id),
+ FOREIGN KEY(company_id) REFERENCES companies(id) ON DELETE RESTRICT,
+ FOREIGN KEY(branch_id) REFERENCES branches(id) ON DELETE RESTRICT,
+ FOREIGN KEY(worker_id) REFERENCES workers(id) ON DELETE RESTRICT,
+ FOREIGN KEY(loan_id) REFERENCES worker_loans(id) ON DELETE RESTRICT,
+ FOREIGN KEY(receipt_voucher_id) REFERENCES vouchers(id) ON DELETE RESTRICT,
+ FOREIGN KEY(salary_line_id) REFERENCES worker_salary_lines(id) ON DELETE RESTRICT,
+ FOREIGN KEY(journal_entry_id) REFERENCES journal_entries(id) ON DELETE RESTRICT,
+ FOREIGN KEY(journal_line_id) REFERENCES journal_entry_lines(id) ON DELETE RESTRICT,
+ FOREIGN KEY(actor_id) REFERENCES users(id) ON DELETE RESTRICT,
+ CHECK(amount>0),
+ CHECK((receipt_voucher_id IS NOT NULL AND receipt_voucher_id>0 AND salary_line_id IS NULL) OR
+       (receipt_voucher_id IS NULL AND salary_line_id IS NOT NULL AND salary_line_id>0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

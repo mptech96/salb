@@ -195,6 +195,9 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
 
     Route::middleware(['company.context', 'support.access', 'subscription.access', 'tenant.scope', 'feature.entitlement', 'usage.limit', 'route.permission'])->group(function () {
         Route::get('/items/meta', [ItemController::class, 'meta']);
+        Route::get('/items/{id}/units', [\App\Http\Controllers\Api\ItemUnitController::class, 'show']);
+        Route::post('/items/{id}/units/mappings', [\App\Http\Controllers\Api\ItemUnitController::class, 'mapping']);
+        Route::post('/items/{id}/units/prices', [\App\Http\Controllers\Api\ItemUnitController::class, 'price']);
         Route::post('/item-groups', [ItemController::class, 'storeGroup']);
         Route::post('/item-categories', [ItemController::class, 'storeCategory']);
         Route::apiResource('items', ItemController::class);
@@ -206,6 +209,17 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
         Route::apiResource('drivers', DriverController::class);
         Route::apiResource('workers', WorkerController::class);
         Route::get('/vouchers/meta', [VoucherController::class, 'meta']);
+        Route::get('/accounts/options', [AccountController::class, 'options']);
+        Route::get('/financial-setup/gl-options', [AccountController::class, 'options']);
+        Route::get('/financial-accounts/gl-options', [AccountController::class, 'options']);
+        Route::get('/items/gl-options', [AccountController::class, 'options']);
+        Route::get('/inventory-operations/account-options', [FinancialAccountController::class, 'options']);
+        Route::get('/shipments/account-options', [FinancialAccountController::class, 'options']);
+        Route::get('/opening-balances/gl-options', [AccountController::class, 'options']);
+        Route::get('/opening-balances/account-options', [FinancialAccountController::class, 'options']);
+        Route::get('/vouchers/account-options', [FinancialAccountController::class, 'options']);
+        Route::get('/expenses/account-options', [FinancialAccountController::class, 'options']);
+        Route::get('/payroll/account-options', [FinancialAccountController::class, 'options']);
         Route::apiResource('vouchers', VoucherController::class);
         Route::get('/expenses/meta', [ExpenseController::class, 'meta']);
         Route::apiResource('expenses', ExpenseController::class);
@@ -271,14 +285,19 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
             Route::get('/inventory/movements', 'movements');
             Route::get('/inventory/valuation', 'valuation');
             Route::post('/inventory/adjustment', 'adjustment');
+            Route::post('/inventory/adjustments/{id}/void', 'voidAdjustment');
         });
 
         Route::get('/inventory-operations', [InventoryOperationController::class, 'index']);
+        Route::get('/inventory/recipes', [\App\Http\Controllers\Api\ProcessingRecipeController::class, 'index']);
+        Route::post('/inventory/recipes', [\App\Http\Controllers\Api\ProcessingRecipeController::class, 'store']);
+        Route::post('/inventory/recipes/{id}/approve', [\App\Http\Controllers\Api\ProcessingRecipeController::class, 'approve']);
         Route::get('/inventory-operations-meta', [InventoryOperationController::class, 'meta']);
         Route::get('/inventory-operations/meta', [InventoryOperationController::class, 'meta']);
         Route::post('/inventory-operations', [InventoryOperationController::class, 'store']);
         Route::get('/inventory-operations/{id}', [InventoryOperationController::class, 'show']);
         Route::post('/inventory-operations/{id}/approve', [InventoryOperationController::class, 'approve']);
+        Route::post('/inventory-operations/{id}/void', [InventoryOperationController::class, 'void']);
         Route::delete('/inventory-operations/{id}', [InventoryOperationController::class, 'destroy']);
 
         Route::get('/weighbridge/cards', [WeighbridgeController::class, 'index']);
@@ -403,6 +422,8 @@ Route::middleware(['auth:sanctum', 'auth.context'])->group(function () {
         Route::post('/imports/preview/{entity}', [DataImportController::class, 'preview']);
         Route::post('/imports/{entity}', [DataImportController::class, 'import']);
 
+        Route::get('/statements/driver-shipment-entities', [\App\Http\Controllers\Api\DriverShipmentStatementController::class, 'drivers']);
+        Route::get('/statements/driver-shipments/{id}', [\App\Http\Controllers\Api\DriverShipmentStatementController::class, 'show']);
         Route::get('/statements/entities/{kind}', [AccountStatementController::class, 'entities']);
         Route::get('/statements/account/{id}', [AccountStatementController::class, 'account']);
         Route::get('/statements/account/{id}/export', [AccountStatementController::class, 'accountExport']);

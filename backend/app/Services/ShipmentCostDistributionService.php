@@ -9,7 +9,11 @@ class ShipmentCostDistributionService
 
     public function distributeByShipmentId(int $cid,int $sid): array
     {
-        return DB::transaction(function()use($cid,$sid){
+        $nested=DB::transactionLevel()>0;
+        if($nested)app(ShipmentInventoryLockScope::class)->assertPrepared($cid,$sid);
+        elseif(DB::connection()->getPdo()->inTransaction())throw new \RuntimeException('SHIPMENT_SCOPE_FOREIGN_PDO');
+        return DB::transaction(function()use($cid,$sid,$nested){
+            if(!$nested)app(ShipmentInventoryLockScope::class)->prepare($cid,[$sid]);
             $shipment=DB::table('shipments')->where('company_id',$cid)->where('id',$sid)->lockForUpdate()->first();
             if(!$shipment)throw new \RuntimeException('الشحنة غير موجودة.');
             $items=DB::table('shipment_items')->where('company_id',$cid)->where('shipment_id',$sid)->orderBy('sorting_order')->lockForUpdate()->get();
@@ -17,16 +21,21 @@ class ShipmentCostDistributionService
             $pending=DB::table('shipment_costs')->where('company_id',$cid)->where('shipment_id',$sid)->where('cost_status','POSTED')->where('capitalizable',1)->where('distributed',0)->lockForUpdate()->get();
             $newCost=round((float)$pending->sum('amount'),3);
             if($newCost<=0)return ['shipment_id'=>$sid,'new_distributed_cost'=>0,'items'=>[]];
+            if($items->contains(fn($row)=>\App\Services\Uom\OperationalDocument::isBase($row)))return app(\App\Services\Uom\BaseShipmentDistribution::class)->distribute($cid,$sid,$items,$pending);
 
             foreach($items as$it){
                 if(!$it->inventory_lot_id)throw new \RuntimeException('لم تُنشأ دفعة مخزون لأحد أصناف الشحنة بعد.');
                 $lot=DB::table('inventory_lots')->where('company_id',$cid)->where('id',$it->inventory_lot_id)->lockForUpdate()->first();
                 if(!$lot)throw new \RuntimeException('دفعة المخزون غير موجودة.');
+                if((int)$lot->item_id!==(int)$it->item_id||(int)$lot->branch_id!==(int)$shipment->branch_id)throw new \RuntimeException('SHIPMENT_SCOPE_LOT_MISMATCH');
                 if(round((float)$lot->qty_remaining_kg,3)<round((float)$lot->qty_received_kg,3))throw new \RuntimeException('لا يمكن رسملة تكلفة جديدة بعد بدء الصرف من مخزون هذه الشحنة.');
             }
 
+            $receiptShares=config('shipment_allocation.enabled')
+                ?app(ShipmentAllocationLedger::class)->sharesForDistribution($cid,$sid,$pending):null;
             $method=strtoupper((string)($shipment->cost_allocation_method??'WEIGHT'));
             $basis=[];$basisTotal=0.0;
+            if($receiptShares===null){
             foreach($items as$it){
                 $v=match($method){
                     'RELATIVE_VALUE'=>(float)($it->base_cost??0),
@@ -38,10 +47,12 @@ class ShipmentCostDistributionService
             }
             if($basisTotal<=0){foreach($items as$it){$basis[$it->id]=max(0,(float)($it->accepted_qty_kg??$it->qty_kg??0));$basisTotal+=$basis[$it->id];}}
             if($basisTotal<=0)throw new \RuntimeException('لا يوجد أساس صالح لتوزيع تكلفة الشحنة.');
+            }
 
             $remain=$newCost;$last=(int)$items->last()->id;$out=[];
             foreach($items as$it){
-                $share=(int)$it->id===$last?$remain:round($newCost*($basis[$it->id]/$basisTotal),3);$remain=round($remain-$share,3);
+                $share=$receiptShares!==null?(float)($receiptShares[(int)$it->id]??'0.000')
+                    :((int)$it->id===$last?$remain:round($newCost*($basis[$it->id]/$basisTotal),3));$remain=round($remain-$share,3);
                 $newAlloc=round((float)($it->allocated_cost??0)+$share,3);$base=round((float)($it->base_cost??0),3);$final=round($base+$newAlloc,3);$kg=(float)($it->accepted_qty_kg??$it->qty_kg??0);$unitKg=$kg>0?round($final/$kg,6):0;
                 $this->lots->addCapitalizedCost($cid,(int)$it->inventory_lot_id,$share);
                 DB::table('shipment_items')->where('id',$it->id)->update(['allocated_cost'=>$newAlloc,'distributed_cost'=>$newAlloc,'final_cost'=>$final,'final_unit_cost_per_kg'=>$unitKg,'average_cost'=>round($unitKg*1000,3),'updated_at'=>now()]);

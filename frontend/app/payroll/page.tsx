@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import AccountSearchSelect from "@/components/finance/AccountSearchSelect";
 
 import ERPPage from "@/components/erp/layout/ERPPage";
 import ERPToolbar from "@/components/erp/layout/ERPToolbar";
@@ -838,11 +839,12 @@ function PaymentDialog({
             ]}
           />
 
-          <ERPSelect
+          <AccountSearchSelect
+            endpoint="/payroll/account-options"
+            branch={String(run.branch_id || "")}
             label="الخزينة / البنك المستخدم"
             value={financialAccountId}
             onChange={setFinancialAccountId}
-            options={[{ id: "", name: "استخدام الافتراضي للفرع" }, ...accounts.map((x: any) => ({ id: x.id, name: `${x.account_name} — ${x.branch_name || "مركزي"} — ${x.currency_code || ""}` }))]}
           />
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-7 text-amber-900">

@@ -81,6 +81,8 @@ class EnsureRoutePermission
         $method = strtoupper($request->method());
 
         // SULB Stage6: صلاحيات على مستوى الإجراء، وليس الشاشة فقط.
+        if($uri==='journal-entries'&&$method==='POST')return 'journals.post';
+        if($uri==='journal-entries/{id}/reverse'&&$method==='POST')return 'journals.reverse';
         if ($uri === 'permission-matrix' || str_starts_with($uri, 'permission-matrix/')) return 'users.permissions.manage';
         if ($uri === 'tax-reports' || str_starts_with($uri, 'tax-reports/')) return 'tax_reports.view';
         if ($uri === 'accounting-integrity' || str_starts_with($uri, 'accounting-integrity/')) return 'accounting.integrity.view';
@@ -131,10 +133,12 @@ class EnsureRoutePermission
         if (str_starts_with($uri,'sales-invoices')) return in_array($method,['GET','HEAD'],true) ? 'sales.view' : 'sales.draft';
 
         if ($uri === 'inventory-operations/{id}/approve') return 'inventory.process.post';
+        if ($uri === 'inventory-operations/{id}/void') return 'inventory.process.post';
         if ($uri === 'inventory-operations/meta') return 'inventory.view';
         if (str_starts_with($uri,'inventory-operations')) return in_array($method,['GET','HEAD'],true) ? 'inventory.view' : 'inventory.process';
 
         if ($uri === 'items/meta') return 'items.view';
+        if (preg_match('#^items/\{id\}/units(?:/(?:mappings|prices))?$#D', $uri)) return in_array($method, ['GET','HEAD'], true) ? 'items.view' : 'items.update';
         if ($uri === 'item-groups' || $uri === 'item-categories') return 'items.create';
         if ($uri === 'cars/meta') return 'cars.view';
         if ($uri === 'drivers/meta') return 'drivers.view';
@@ -142,7 +146,7 @@ class EnsureRoutePermission
             [$all,$resource,$action] = $m;
             if ($resource === 'users') return 'users.view';
             if ($resource === 'drivers') return in_array($action,['index','show'],true) ? 'drivers.view' : 'drivers.manage';
-            if ($resource === 'workers') return 'workers.view';
+            if ($resource === 'workers') return in_array($action,['index','show'],true)?'workers.view':'workers.manage';
             if (isset(self::RESOURCE_MAP[$resource])) {
                 $module = self::RESOURCE_MAP[$resource];
                 return match ($action) {
@@ -158,6 +162,8 @@ class EnsureRoutePermission
         if ($uri === 'sales-invoices/meta') return 'sales.view';
         if ($uri === 'purchase-invoices/meta') return 'purchases.view';
         if ($uri === 'vouchers/meta') return 'vouchers.view';
+        if ($uri === 'vouchers/account-options') return 'vouchers.view';
+        if ($uri === 'expenses/account-options') return 'expenses.view';
         if ($uri === 'expenses/meta') return 'expenses.view';
         if (str_starts_with($uri, 'expense-types')) {
             return match ($method) {
@@ -179,6 +185,10 @@ class EnsureRoutePermission
         if (str_starts_with($uri, 'official-documents')) return 'official_documents.view';
         if (str_starts_with($uri, 'road-waybills')) return 'official_documents.view';
         if (str_starts_with($uri, 'inventory-operations')) return in_array($method,['GET','HEAD'],true) ? 'inventory.view' : 'inventory.process';
+        if ($uri === 'inventory/adjustment' && $method === 'POST') return 'inventory.process.post';
+        if ($uri === 'inventory/recipes') return in_array($method,['GET','HEAD'],true)?'inventory.view':'inventory.process';
+        if ($uri === 'inventory/recipes/{id}/approve') return 'inventory.process.post';
+        if ($uri === 'inventory/adjustments/{id}/void' && $method === 'POST') return 'inventory.process.post';
         if (str_starts_with($uri, 'inventory')) return 'inventory.view';
         if (str_starts_with($uri, 'imports/export/')) return 'imports.export';
         if (str_starts_with($uri, 'imports')) return in_array($method,['GET','HEAD'],true) ? 'imports.view' : 'imports.execute';
@@ -190,8 +200,9 @@ class EnsureRoutePermission
         if ($uri === 'shipments/{id}/approve') return 'shipments.approve';
         if (str_starts_with($uri, 'shipment-costs') || str_contains($uri, '/costs')) return in_array($method,['GET','HEAD'],true) ? 'shipments.view' : 'shipments.update';
         if (str_starts_with($uri, 'drivers')) return in_array($method,['GET','HEAD'],true) ? 'drivers.view' : 'drivers.manage';
-        if (str_starts_with($uri, 'workers') || str_starts_with($uri, 'payroll')) return 'workers.view';
-        if (str_starts_with($uri, 'fixed-asset')) return 'dashboard.view';
+        if (str_starts_with($uri, 'workers')) return in_array($method,['GET','HEAD'],true)?'workers.view':'workers.manage';
+        if (str_starts_with($uri, 'payroll')) return in_array($method,['GET','HEAD'],true)?'workers.view':'payroll.manage';
+        if (str_starts_with($uri, 'fixed-asset')) return in_array($method,['GET','HEAD'],true)?'dashboard.view':'fixed_assets.manage';
         return null;
     }
 
