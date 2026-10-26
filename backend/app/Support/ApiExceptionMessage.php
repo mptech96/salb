@@ -8,6 +8,9 @@ final class ApiExceptionMessage
     {
         $databaseFailure=false;$knownCode=0;
         for($cause=$failure;$cause!==null;$cause=$cause->getPrevious()) {
+            // Some legacy posting adapters retain only the error message, losing
+            // the PDO cause. Redact a recognizable SQL diagnostic there as well.
+            if(preg_match('/SQLSTATE\[[0-9A-Z]{5}\]|(?:Connection|Database|Host):[^\r\n]*\bSQL:/i',$cause->getMessage()))$databaseFailure=true;
             if($cause instanceof \PDOException) {
                 $databaseFailure=true;
                 $code=(int)($cause->errorInfo[1]??0);

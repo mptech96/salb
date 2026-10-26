@@ -62,6 +62,10 @@ final class HistoricalLotBackfill
                     $preservedBase[]=['lot_id'=>$lot->id,'remaining_quantity'=>$lot->remaining_base_qty,'remaining_value'=>$baseValue,'action'=>'PRESERVE_EXISTING_BASE_VALUE'];continue;
                 }
                 $recipeReceipt=$lot->source_type==='INVENTORY_OPERATION';
+                if(!$recipeReceipt&&$lot->source_type==='PURCHASE'&&!self::same($lot->allocated_cost,'0')){
+                    require_once __DIR__.'/LegacyCapitalizedLotEvidence.php';$row=LegacyCapitalizedLotEvidence::row($lot,$snapshot);
+                    $key=$lot->branch_id.':'.$item->inventory_account_id;$scopeValues[$key]=bcadd($scopeValues[$key]??'0',$row['remaining_value'],3);$rows[]=$row;continue;
+                }
                 if($recipeReceipt){
                     if(!self::same($lot->allocated_cost,'0'))throw new \RuntimeException('SOURCE_OR_CAPITALIZATION_REVIEW_REQUIRED');
                     self::legacyProcessingEvidence($lot,$snapshot,(int)$lot->source_id,'IN',$lot->qty_received_kg,$lot->total_cost,false);

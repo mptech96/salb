@@ -1367,3 +1367,96 @@ semantic/security review and remaining L3 permutations; production backup/write-
 fence/compatible rollback rehearsal. Local source review and focused tests do not
 manufacture those missing approvals. The comprehensive candidate may be inspected
 from GitHub, but no partial or complete production release is authorized.
+
+## Critical closure continuation — 2026-10-27
+
+This continuation updates the same comprehensive candidate and supersedes the
+earlier blanket legacy-capitalization exception only for the narrow proven scope
+below. No Git/path baseline or accepted UOM/browser/PDF suite was repeated.
+
+### Proven security defects fixed
+
+1. Actual HTTP Worker failure exposed SQLSTATE, database name, SQL and bound values
+   including identity/bank-field positions. Replaced raw exception output across
+   the changed Worker/Payroll/InventoryOperation/ShipmentCost/Account/AccountStatement/
+   FinancialAccount/Voucher controllers with the shared safe formatter. Legacy
+   adapters that discard the PDO cause but keep a SQL diagnostic string are also
+   redacted. Ordinary business errors and safe1205/1213 retry codes are preserved.
+   Voucher late financial failures are caught only after transaction rollback.
+2. Actual branch-actor payroll generation included another branch's worker. New
+   drafts now require an active company branch and select workers only from it;
+   commission/loan calculations use the run's branch. The existing company/month
+   uniqueness is deliberately unchanged: this fix does not introduce a new
+   multi-branch/month payroll contract or silently migrate old payroll records.
+3. Actual foreign-branch salary-slip request returned200. Added scoped run lookup
+   for the nested runId route and controller queries; foreign branch now gets404.
+   A historical local run containing foreign-branch worker lines returns an explicit
+   review error; no full mixed run or foreign worker slip is disclosed or recomputed.
+
+Final new HTTP security group: **9/9 PASS,76 assertions**, real MariaDB failure
+triggers and complete route middleware (no bypass). Covers Worker, Payroll,
+ShipmentCost INSERT/UPDATE/DELETE, inventory draft delete/child rollback, Account,
+FinancialAccount and late Voucher GL failure/sequence rollback. First reproductions
+failed as described; fixture entitlement omissions were corrected before assessing
+the payroll/processing/shipment paths. Neither failure nor denial was counted PASS.
+Additional new string-only/wrapped-PDO formatter tests: **2/2 PASS,11 assertions**.
+Affected tenant checks: **3/3 PASS,18 assertions**. Affected existing Wave6 source
+contract check: **1/1 PASS,30 assertions**, explicitly a source-contract check.
+Changed18 PHP files passed syntax; raw getMessage output is absent from controllers
+listed in the candidate source manifest. This does not certify every production
+configuration or every accumulated semantic path; the complete-security gate stays
+false pending the remaining review and staging evidence.
+
+### Fourteen migrations plus Backfill: new integration evidence
+
+A new combined QA case installs001–014 and dependencies, posts a synthetic legacy
+purchase, takes a non-writing Dry Run, injects an actual balance INSERT failure,
+verifies no partial balances/audit rows or financial mutation, applies/restarts the
+same approved plan, then posts a FIFO sale with the value ledger enabled. Final
+replayed LOT value and inventory GL are both60.000. LOT sequence preparation also
+passes. This is a new combined scenario, not a rerun of the accepted schema-only
+or backup tests. It does not qualify the actual production migration executor.
+
+New `LegacyCapitalizedLotEvidence` is QA-only and requires original purchase line/
+quantity/base value, one frozen L3 recipient per LOT/cost, exact receipt hash and
+allocated sum, original inventory GL by account and the original/reversal source
+chain. It supports only an untouched LOT or a wholly purchase-reversed LOT with
+the exact two movements and matching opposite GL. It never recalculates allocation
+percentages or infers weights, unit values or missing money. Partial issue ordering,
+missing source/receipt, changed values and other unsupported history stay exceptions.
+
+Final affected capitalization/history run: **3/3 PASS,34 assertions**, including
+the previously blocked mixed paid purchase-void race and the unchanged missing-
+evidence exception matrix. Untouched mixed inventory qualifies at LOT=GL240.001;
+after full reversal both are0.000. Apply restart is idempotent; a changed allocated
+amount is refused. This closes that narrowly documented synthetic-history gap,
+not representative production-history validation.
+
+### Approval and production action
+
+Manifest remains **NO-GO**, deployment_authorized=false. The existing single
+deployment workflow additionally pins a separate `sulb_backup_ro` account and
+checks nonempty logical backup plus archive checksums. It still cannot execute
+before the existing schema/history/staging/security/backup compatibility gates;
+checksums are not represented as a production restore rehearsal. No live database
+restore or destructive schema rollback is added.
+
+Production-equivalent Staging cannot yet be certified: actual VPS runtime/schema/
+migration metadata and an approved representative anonymized historical fixture
+have not been supplied. Earlier user approval covers synthetic QA, not a claim
+that it represents real history. Neither absent input is manufactured. FPM runtime,
+active flags, complete trigger visibility, partial legacy history, write fencing
+and the production executor/restore rehearsal still need explicit evidence.
+
+The one immediate operator action is to run the dedicated-reader read-only
+preflight from the staging checkout and return its protected metadata archive.
+It does not use MySQL root, application credentials, migration or service changes.
+The final deployment command remains withheld until evidence-based GO and separate
+human deployment approval. All edits, QA records and the one comprehensive release
+candidate are preserved; no production action was performed.
+
+For the backup-account/checksum draft change, automatic review refused invoking
+the deployment script with `--execute` even as a negative local test, because the
+mode could touch production if gates changed. That invocation did not run and was
+not bypassed. The safe alternative passed: Bash syntax plus the standalone
+read-only approval checker returning78/NO-GO. No production execution is claimed.

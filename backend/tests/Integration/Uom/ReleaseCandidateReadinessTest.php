@@ -44,6 +44,23 @@ final class ReleaseCandidateReadinessTest extends \Tests\TestCase
         if(proc_close($p)!==0)throw new \RuntimeException('QA_CLIENT_FAILED: '.$err);
         return $out;
     }
+    public function test_fourteen_migrations_then_dry_run_backfill_rollback_restart_and_fifo_gl_reconcile():void
+    {
+        $this->install();config(['inventory_value.enabled'=>false,'uom.operational_enabled'=>true,'shipment_allocation.enabled'=>false,'shipment_cost_read.enabled'=>false]);
+        foreach([[31,'REVENUE','CREDIT'],[32,'EXPENSE','DEBIT'],[33,'ASSET','DEBIT']]as[$id,$type,$side])DB::table('accounts')->insert(['id'=>$id,'company_id'=>1,'account_code'=>'QA-CHAIN-'.$id,'account_name'=>'QA chain','account_type'=>$type,'normal_side'=>$side,'allow_posting'=>1,'allow_cost_center'=>0]);
+        DB::table('items')->where('id',1)->update(['sales_account_id'=>31,'cogs_account_id'=>32]);DB::table('customers')->insert(['id'=>1,'company_id'=>1,'customer_name'=>'QA chain customer','ledger_account_id'=>33,'scope_all_branches'=>1]);
+        $invoice=\Tests\Support\UomOperationalLockFixture::purchase(1,1);$service=app(\App\Services\EnterpriseInvoiceService::class);$service->post('PURCHASE',1,$invoice,1,1);
+        require_once __DIR__.'/../../Support/HistoricalLotBackfill.php';\Tests\Support\HistoricalLotBackfill::install();
+        $source=function(){return serialize([DB::table('inventory_lots')->get(),DB::table('inventory_lot_movements')->get(),DB::table('journal_entries')->get(),DB::table('journal_entry_lines')->get(),DB::table('stock_movements')->get()]);};
+        $before=$source();$plan=\Tests\Support\HistoricalLotBackfill::plan(1);self::assertTrue($plan['ready'],json_encode($plan['exceptions']));self::assertSame($before,$source());self::assertSame('100.000',$plan['financial']['1:11']['gl_value']);self::assertSame(0,DB::table('inventory_lot_value_balances')->count());
+        DB::unprepared("CREATE TRIGGER qa_chain_backfill_failure BEFORE INSERT ON inventory_lot_value_balances FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='QA_CHAIN_BACKFILL_ROLLBACK'");
+        try{\Tests\Support\HistoricalLotBackfill::apply($plan,true);self::fail('Partial backfill accepted');}catch(\Illuminate\Database\QueryException $e){self::assertStringContainsString('QA_CHAIN_BACKFILL_ROLLBACK',$e->getMessage());}
+        self::assertSame(0,DB::table('inventory_lot_value_balances')->count());self::assertSame(0,DB::table('qa_lot_backfill_runs')->count());self::assertSame($before,$source());DB::unprepared('DROP TRIGGER qa_chain_backfill_failure');
+        $run=\Tests\Support\HistoricalLotBackfill::apply($plan,true);self::assertSame($run,\Tests\Support\HistoricalLotBackfill::apply($plan,true));self::assertSame(1,DB::table('inventory_lot_value_balances')->count());self::assertSame(1,DB::table('qa_lot_backfill_runs')->count());
+        config(['inventory_value.enabled'=>true]);$sale=$service->saveDraft('SALE',['customer_id'=>1,'invoice_date'=>'2026-10-27','currency_code'=>'SAR','items'=>[['item_id'=>1,'qty_kg'=>'4','unit_price'=>'15','price_unit'=>'KG','vat_percent'=>0]]],1,1,1);$service->post('SALE',1,$sale,1,1);
+        $after=\Tests\Support\HistoricalLotBackfill::plan(1);self::assertTrue($after['ready'],json_encode($after['exceptions']));self::assertSame(['replayed_value'=>'60.000','gl_value'=>'60.000'],$after['financial']['1:11']);self::assertSame('60.000',DB::table('inventory_lot_value_balances')->value('remaining_value'));
+        $next=\Tests\Support\HistoricalLotBackfill::prepareSequence(1,2026,true);self::assertGreaterThanOrEqual(2,$next);self::assertSame(0,DB::transactionLevel());
+    }
     public function test_logical_backup_restores_to_new_schema_without_replacing_new_source_transactions():void
     {
         $this->install();$config=DB::connection()->getConfig();$source=$config['database'];

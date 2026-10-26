@@ -62,6 +62,7 @@ class PayrollController extends Controller
         $query = DB::table('worker_salary_runs as sr')
             ->leftJoin('branches as b', 'b.id', '=', 'sr.branch_id')
             ->where('sr.company_id', $this->companyId())
+            ->when(\App\Support\TenantScope::branchId()!==null,fn($q)=>$q->where('sr.branch_id',\App\Support\TenantScope::branchId()))
             ->select(
                 'sr.*',
                 'b.branch_name',
@@ -122,7 +123,7 @@ class PayrollController extends Controller
         try {
             $data = $this->payroll->generate([
                 'company_id' => $this->companyId(),
-                'branch_id' => $validated['branch_id'] ?? $this->branchId(),
+                'branch_id' => app(AccountingContext::class)->branchForOperation($request),
                 'salary_month' => $validated['salary_month'],
             ]);
 
@@ -134,7 +135,7 @@ class PayrollController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\ApiExceptionMessage::for($e),
             ], 422);
         }
     }
@@ -149,6 +150,7 @@ class PayrollController extends Controller
             ->leftJoin('branches as b', 'b.id', '=', 'sr.branch_id')
             ->where('sr.company_id', $this->companyId())
             ->where('sr.id', $id)
+            ->when(\App\Support\TenantScope::branchId()!==null,fn($q)=>$q->where('sr.branch_id',\App\Support\TenantScope::branchId()))
             ->select('sr.*', 'b.branch_name')
             ->first();
 
@@ -173,8 +175,13 @@ class PayrollController extends Controller
                 'w.job_title',
                 'w.department'
             )
+            ->addSelect('w.branch_id as worker_branch_id')
             ->orderBy('w.worker_name')
             ->get();
+
+        if($run->branch_id!==null && $lines->contains(fn($line)=>(int)$line->worker_branch_id!==(int)$run->branch_id)){
+            return response()->json(['status'=>false,'message'=>'مسير تاريخي يتضمن عمالًا خارج فرعه؛ تلزم مراجعة دون إعادة احتساب تلقائي.'],422);
+        }
 
         return response()->json([
             'status' => true,
@@ -200,7 +207,7 @@ class PayrollController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\ApiExceptionMessage::for($e),
             ], 422);
         }
     }
@@ -234,7 +241,7 @@ class PayrollController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => \App\Support\ApiExceptionMessage::for($e),
             ], 422);
         }
     }
@@ -258,6 +265,8 @@ class PayrollController extends Controller
             ->where('sl.company_id', $this->companyId())
             ->where('sl.salary_run_id', $runId)
             ->where('sl.worker_id', $workerId)
+            ->when(\App\Support\TenantScope::branchId()!==null,fn($q)=>$q->where('sr.branch_id',\App\Support\TenantScope::branchId()))
+            ->where(fn($q)=>$q->whereNull('sr.branch_id')->orWhereColumn('w.branch_id','sr.branch_id'))
             ->select(
                 'sl.*',
                 'sr.run_number',

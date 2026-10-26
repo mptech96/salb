@@ -241,7 +241,7 @@ class InventoryOperationController extends Controller
             );
             return response()->json(['status' => true, 'message' => 'تم حذف المسودة.']);
         } catch (\Throwable $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
+            return response()->json(['status' => false, 'message' => \App\Support\ApiExceptionMessage::for($e)], 422);
         }
     }
 }

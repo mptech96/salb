@@ -133,8 +133,15 @@ final class ShipmentBaseCycleTest extends \Tests\TestCase
         self::assertSame(1,DB::table('shipment_costs')->where('recreated_from_cost_id',$s['cost'])->where('cost_status','DRAFT')->count());
         self::assertSame(1,DB::table('shipment_cost_allocation_receipts')->count());self::assertSame(1,DB::table('uom_lot_capitalization_events')->count());
         require_once __DIR__.'/../../Support/HistoricalLotBackfill.php';\Tests\Support\HistoricalLotBackfill::install();$plan=\Tests\Support\HistoricalLotBackfill::plan(1);
-        // Legacy capitalized history is deliberately NOT qualified by a BASE event.
-        // Keep the exact exception visible rather than inventing an opening value.
-        $legacyLot=DB::table('inventory_lots')->where('item_id',2)->value('id');self::assertFalse($plan['ready']);self::assertSame([['lot_id'=>$legacyLot,'reason'=>'SOURCE_OR_CAPITALIZATION_REVIEW_REQUIRED']],$plan['exceptions']);self::assertSame('0.000',$plan['financial']['1:11']['replayed_value']);
+        // Legacy value is qualified by its own frozen receipt and original/reversal GL.
+        self::assertTrue($plan['ready'],json_encode($plan['exceptions']));self::assertSame('0.000',$plan['financial']['1:11']['replayed_value']);
+    }
+    public function test_untouched_legacy_capitalized_receipts_backfill_without_guessing_and_reject_changed_sources():void
+    {
+        $s=$this->purchase(true,true);app(EnterpriseInvoiceService::class)->post('PURCHASE',1,$s['invoice'],1,1);require_once __DIR__.'/../../Support/HistoricalLotBackfill.php';\Tests\Support\HistoricalLotBackfill::install();
+        $before=serialize([DB::table('inventory_lots')->get(),DB::table('journal_entry_lines')->get()]);$plan=\Tests\Support\HistoricalLotBackfill::plan(1);self::assertTrue($plan['ready'],json_encode($plan['exceptions']));self::assertSame(['replayed_value'=>'240.001','gl_value'=>'240.001'],$plan['financial']['1:11']);self::assertSame('109.091',$plan['rows'][0]['remaining_value']);self::assertSame($before,serialize([DB::table('inventory_lots')->get(),DB::table('journal_entry_lines')->get()]));
+        $run=\Tests\Support\HistoricalLotBackfill::apply($plan,true);self::assertSame($run,\Tests\Support\HistoricalLotBackfill::apply($plan,true));
+        $lot=DB::table('inventory_lots')->where('item_id',2)->first();DB::table('inventory_lots')->where('id',$lot->id)->update(['allocated_cost'=>bcadd($lot->allocated_cost,'0.001',3)]);$bad=\Tests\Support\HistoricalLotBackfill::plan(1);self::assertFalse($bad['ready']);self::assertContains('SOURCE_OR_CAPITALIZATION_REVIEW_REQUIRED',array_column($bad['exceptions'],'reason'));
+        try{\Tests\Support\HistoricalLotBackfill::apply($bad,true);self::fail('Guessed capitalized value applied');}catch(\RuntimeException $e){self::assertSame('UNRESOLVED_HISTORY',$e->getMessage());}
     }
 }

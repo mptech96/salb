@@ -74,7 +74,7 @@ class WorkerController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => false,
-                'message' => 'فشل حفظ العامل: ' . $e->getMessage()
+                'message' => 'فشل حفظ العامل: ' . \App\Support\ApiExceptionMessage::for($e)
             ], 500);
         }
     }
@@ -150,7 +150,7 @@ class WorkerController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => false,
-                'message' => 'فشل تعديل العامل: ' . $e->getMessage()
+                'message' => 'فشل تعديل العامل: ' . \App\Support\ApiExceptionMessage::for($e)
             ], 500);
         }
     }

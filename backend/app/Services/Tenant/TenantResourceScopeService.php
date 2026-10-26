@@ -52,6 +52,7 @@ final class TenantResourceScopeService
         'weighbridge/cards/{id}' => ['table' => 'weighbridge_cards', 'param' => 'id', 'branch' => true],
         'weighbridge/weights/{weightId}' => ['table' => 'shipment_weights', 'param' => 'weightId', 'branch' => true],
         'payroll/{id}' => ['table' => 'worker_salary_runs', 'param' => 'id', 'branch' => true],
+        'payroll/{runId}/salary-slip/{workerId}' => ['table' => 'worker_salary_runs', 'param' => 'runId', 'branch' => true],
         'fixed-assets/{id}' => ['table' => 'fixed_assets', 'param' => 'id', 'branch' => true],
         'imports/batch/{id}' => ['table' => 'data_import_batches', 'param' => 'id', 'branch' => true],
         'commercial-returns/{commercial_return}' => ['table' => 'commercial_returns', 'param' => 'commercial_return', 'branch' => true],

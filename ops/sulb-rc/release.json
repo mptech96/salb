@@ -12,6 +12,16 @@
   "expected_production_schema_sha256": null,
   "approved_migration_paths": [],
   "feature_flags_to_enable": [],
+  "local_security_closure": {
+    "new_http_tests_passed": 9,
+    "new_http_assertions": 76,
+    "sql_diagnostics_redacted_in_changed_controllers": true,
+    "payroll_branch_generation_and_salary_slip_idor_fixed": true,
+    "historical_mixed_branch_payroll_requires_review": true
+  },
+  "schema_chain_backfill_qa_passed": true,
+  "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
+  "staging_blocked_inputs": ["actual VPS runtime/schema/migration evidence", "approved representative anonymized history"],
   "minimum_php": "8.3.0",
   "minimum_node": "20.9.0",
   "required_php_extensions": ["bcmath", "pdo_mysql", "mbstring", "openssl", "fileinfo", "xml", "ctype", "tokenizer", "filter", "session", "dom"],

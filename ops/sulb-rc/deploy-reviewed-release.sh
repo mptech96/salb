@@ -28,10 +28,12 @@ backup=$(mktemp -d /home/mgye-api-sulb/sulb-release-backup.XXXXXXXX)
 php "$tools/preflight.php" > "$backup/preflight.json"
 php -r '$m=json_decode(file_get_contents($argv[1]),true);if(($m["schema_matches_approved_baseline"]??false)!==true)exit(78);' "$backup/preflight.json"
 if command -v mariadb-dump >/dev/null; then dump=mariadb-dump; else dump=mysqldump; fi
-"$dump" --defaults-extra-file="$SULB_BACKUP_CNF" --single-transaction --routines --triggers --events --hex-blob --databases sulbprod > "$backup/database.sql"
+"$dump" --defaults-extra-file="$SULB_BACKUP_CNF" --user=sulb_backup_ro --single-transaction --routines --triggers --events --hex-blob --databases sulbprod > "$backup/database.sql"
+test -s "$backup/database.sql"
 tar -czf "$backup/backend.tar.gz" -C "$backend" .
 tar -czf "$backup/frontend.tar.gz" -C "$frontend" .
 (cd "$backup" && sha256sum database.sql backend.tar.gz frontend.tar.gz > SHA256SUMS)
+(cd "$backup" && sha256sum --check SHA256SUMS)
 printf 'BACKUP_DIR=%s\n' "$backup"
 trap 'echo "STOP: retain write fence; do not restore database over live transactions. Reviewed forward repair or compatible code-only rollback required." >&2' ERR
 php "$backend/artisan" down --retry=60

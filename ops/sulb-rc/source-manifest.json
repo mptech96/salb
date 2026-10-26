@@ -16,11 +16,11 @@
     "path": "backend/app/Domain/Accounting/Services/JournalService.php"
   },
   {
-    "sha256": "13c0deef85c82dec718d9b3526266fd09232d82aa6b63ecac07c40bbdfa90f3e",
+    "sha256": "e72d2907b1b25ce6c4429b2855658e8cf28c1d1c978715a41402fedf412afbee",
     "path": "backend/app/Http/Controllers/Api/AccountController.php"
   },
   {
-    "sha256": "ecf455734901994add96e11ef970df1b67e7960a6e5aa7517c35a639139a227e",
+    "sha256": "3de5958aaf881218da9b9263456cd9c6e811f4ab490bccb3d507397e75dd1d20",
     "path": "backend/app/Http/Controllers/Api/AccountStatementController.php"
   },
   {
@@ -44,7 +44,7 @@
     "path": "backend/app/Http/Controllers/Api/DriverShipmentStatementController.php"
   },
   {
-    "sha256": "e78566040ca8a7ca5a64e797c477078bd1f98f13c56248e58711fe681e30bcb1",
+    "sha256": "82999c331a8fb5dfe64af09e6ac1b58f2ad6fb40667477dd53802493508754ee",
     "path": "backend/app/Http/Controllers/Api/FinancialAccountController.php"
   },
   {
@@ -56,7 +56,7 @@
     "path": "backend/app/Http/Controllers/Api/InventoryController.php"
   },
   {
-    "sha256": "aa5520db5bf00ca69133670edbb1c3c21390c3ccceb7a160774457312ff13766",
+    "sha256": "20e8973306a512007abf3e10cc968297cc10d8fa77cacfe085d2493c807559ac",
     "path": "backend/app/Http/Controllers/Api/InventoryOperationController.php"
   },
   {
@@ -76,7 +76,7 @@
     "path": "backend/app/Http/Controllers/Api/OpeningBalanceController.php"
   },
   {
-    "sha256": "a02164f6b41d1bd72df457d3dd834f7a8e0ea9fb934a788473eff198e18989c0",
+    "sha256": "ae6101f7451b5355ea8f6f18d097099abe3899f60065f4a1439251ffcb3af910",
     "path": "backend/app/Http/Controllers/Api/PayrollController.php"
   },
   {
@@ -96,15 +96,15 @@
     "path": "backend/app/Http/Controllers/Api/ShipmentController.php"
   },
   {
-    "sha256": "164aa0d505d96185755acd75b128bab0d1f074d5684044258131e1274b162264",
+    "sha256": "778bc746648c7d4796a3250f132efd700b83c6f87e97977758022c2a787932bb",
     "path": "backend/app/Http/Controllers/Api/ShipmentCostController.php"
   },
   {
-    "sha256": "fb865509efe7a7cdc36e2cc285ac0c153882e7654f3ea638a2fa674862a8b2e6",
+    "sha256": "3cab98d5340b02c546c99fb5b3d04f86a54114f1bd7945f19bbcd21ccdff7f79",
     "path": "backend/app/Http/Controllers/Api/VoucherController.php"
   },
   {
-    "sha256": "649db1b0855a0e61e76e197454eef917dd382564a6309de0e66ad658015a143d",
+    "sha256": "f00e7ad1511f264c46cd1f07c0f8aabae9ae6beb1177821c0739e58a791c4978",
     "path": "backend/app/Http/Controllers/Api/WorkerController.php"
   },
   {
@@ -256,6 +256,14 @@
     "path": "backend/app/Services/Payroll/PayrollPayment.php"
   },
   {
+    "path": "backend/app/Services/Payroll/PayrollService.php",
+    "sha256": "e21cabde8effb7e55cec9fba6c4b10981774668887a159c895de2357dc3251cc"
+  },
+  {
+    "path": "backend/app/Services/Payroll/SalaryCalculator.php",
+    "sha256": "22fb988f74efdbccdf3f4d81206ec6e7ed4d444e8a69b0a92740444db49c412f"
+  },
+  {
     "sha256": "5eebe7cc4ab5391b6dcb2e4a084a5664a9ea5bc8e0a49b77ebd1202e815e03e7",
     "path": "backend/app/Services/Payroll/WorkerAccountingSupport.php"
   },
@@ -332,7 +340,7 @@
     "path": "backend/app/Services/SulbDocumentSequenceService.php"
   },
   {
-    "sha256": "81f32a104ec767eddbff9ded0d815da496d3651854a66145d271289d4dcefa97",
+    "sha256": "e27727bdab56fe9becd760dba737eb49b0b9610064d07215a6eddf56629c1005",
     "path": "backend/app/Services/Tenant/TenantResourceScopeService.php"
   },
   {
@@ -460,7 +468,7 @@
     "path": "backend/app/Services/WeighbridgeService.php"
   },
   {
-    "sha256": "5de8ed2389c929edf4f348320cdb99df30f1aafa505c6654e1a361e742ee9eca",
+    "sha256": "3e5d95d919d520878f8bc23c71d5d40e31ff4ae12c1a0781820fa6f16b149124",
     "path": "backend/app/Support/ApiExceptionMessage.php"
   },
   {
@@ -928,11 +936,11 @@
     "path": "backend/tests/Integration/Uom/PurchaseVoidRollbackClosureTest.php"
   },
   {
-    "sha256": "09c4c974553c35836c70f175329510cf29b6f8b1163ce131517e9f1399ad518c",
+    "sha256": "a9716d95e99618c5586fcb135ea909b036802460d399b09e2be39736e2e43ca0",
     "path": "backend/tests/Integration/Uom/ReleaseCandidateReadinessTest.php"
   },
   {
-    "sha256": "52c7892483c14679efcd3c99260bdfee2613d4286e43ba30df76f3ac7e01a148",
+    "sha256": "250b753470a96f658b7956341c9b41a741ecee5e6b0a9ee4c400003237bc46f0",
     "path": "backend/tests/Integration/Uom/ReleaseSecurityClosureTest.php"
   },
   {
@@ -948,7 +956,7 @@
     "path": "backend/tests/Integration/Uom/ShipmentAllocationReceiptSchemaTest.php"
   },
   {
-    "sha256": "40178e5504b389e78952cc7dc16f0fdb34da3153c3d3e6c673b65d3ee84c7055",
+    "sha256": "cb4e95922956f444474ced29a53516b13a907d53e9b4e6854d4b539d83761a3d",
     "path": "backend/tests/Integration/Uom/ShipmentBaseCycleTest.php"
   },
   {
@@ -1040,12 +1048,16 @@
     "path": "backend/tests/Support/DriverGatewayPrototype.php"
   },
   {
-    "sha256": "26b34fac6f655ad51d7e1984f0094562995f1bd784628c2a68100f5cd7df8b79",
+    "sha256": "8a9e7c010e83aef1525c006e8d089ffbb157886be73ed14ed476f1e8b73918fc",
     "path": "backend/tests/Support/HistoricalLotBackfill.php"
   },
   {
     "sha256": "a140ecb3003c316df5afa0ba81ce0b811d7882a157cb3c066563fc8042f6df5e",
     "path": "backend/tests/Support/InventorySequenceFixture.php"
+  },
+  {
+    "path": "backend/tests/Support/LegacyCapitalizedLotEvidence.php",
+    "sha256": "f6088d275ea4f99270956d9bbafce47eb122ffebd41d79dce03a395cde3faffb"
   },
   {
     "sha256": "889305494dcdae6e1438f2902b9d68ca6ca95abf6a466b9e08d4aab42cf4bd65",
@@ -1106,6 +1118,10 @@
   {
     "sha256": "f73e1a88cb34b32a179aedb51488b1da775f6fe0c9c1f3189005f597dcdb8e35",
     "path": "backend/tests/Unit/ApiExceptionMessageTest.php"
+  },
+  {
+    "path": "backend/tests/Unit/ApiExceptionPrivacyTest.php",
+    "sha256": "11592cd612305b3c50bd5a8291b1af4730846b937bbcaf44c8d5a99dfcc3c63b"
   },
   {
     "sha256": "0f7f866d826a1a0b42b1d3c8e6602ff1877c6a982f2c9e7b520b9316a9e906a4",

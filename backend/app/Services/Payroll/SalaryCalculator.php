@@ -12,8 +12,10 @@ class SalaryCalculator
 
         $basic = $this->basicSalary($worker);
         $overtime = $this->overtimeAmount($worker, $salaryRun);
-        $commission = $this->approvedCommissions($companyId, $worker->id, $salaryRun->salary_month);
-        $loanDeduction = $this->loanDeduction($companyId, $worker->id);
+        $branchId = isset($salaryRun->branch_id) ? (int)$salaryRun->branch_id : null;
+        if($branchId!==null && (int)($worker->branch_id??0)!==$branchId)throw new \RuntimeException('عامل خارج نطاق فرع مسير الرواتب.');
+        $commission = $this->approvedCommissions($companyId, $worker->id, $salaryRun->salary_month, $branchId);
+        $loanDeduction = $this->loanDeduction($companyId, $worker->id, $branchId);
 
         $allowance = 0;
         $bonus = 0;
@@ -52,23 +54,25 @@ class SalaryCalculator
         return 0;
     }
 
-    private function approvedCommissions(int $companyId, int $workerId, string $salaryMonth): float
+    private function approvedCommissions(int $companyId, int $workerId, string $salaryMonth, ?int $branchId): float
     {
         $from = date('Y-m-01', strtotime($salaryMonth));
         $to = date('Y-m-t', strtotime($salaryMonth));
 
         return (float) DB::table('worker_commissions')
             ->where('company_id', $companyId)
+            ->when($branchId!==null,fn($q)=>$q->where('branch_id',$branchId))
             ->where('worker_id', $workerId)
             ->where('status', 'APPROVED')
             ->whereBetween('commission_date', [$from, $to])
             ->sum('amount');
     }
 
-    private function loanDeduction(int $companyId, int $workerId): float
+    private function loanDeduction(int $companyId, int $workerId, ?int $branchId): float
     {
         return (float) DB::table('worker_loans')
             ->where('company_id', $companyId)
+            ->when($branchId!==null,fn($q)=>$q->where('branch_id',$branchId))
             ->where('worker_id', $workerId)
             ->whereNull('salary_run_id')
             ->sum('amount');

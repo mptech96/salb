@@ -16,6 +16,9 @@ class PayrollService
 
             $companyId = (int) $data['company_id'];
             $branchId  = $data['branch_id'] ?? null;
+            if (!$branchId || !DB::table('branches')->where('company_id',$companyId)->where('id',$branchId)->where('is_active',1)->exists()) {
+                throw new \RuntimeException('يلزم فرع فعال ضمن الشركة لإنشاء مسير الرواتب.');
+            }
             $month     = date('Y-m-01', strtotime($data['salary_month']));
 
             $exists = DB::table('worker_salary_runs')
@@ -42,6 +45,7 @@ class PayrollService
 
             $workers = DB::table('workers')
                 ->where('company_id', $companyId)
+                ->where('branch_id', $branchId)
                 ->where('is_active', 1)
                 ->where('worker_status', 'ACTIVE')
                 ->get();

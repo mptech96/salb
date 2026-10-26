@@ -75,14 +75,14 @@ class AccountStatementController extends Controller
                     'party_type'=>'nullable|string|max:30','party_id'=>'nullable|integer','page'=>'nullable|integer|min:1','per_page'=>'nullable|integer|in:25,50,100','search'=>'nullable|string|max:200',
                 ])
             ),
-        ]);}catch(\Throwable$e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        ]);}catch(\Throwable$e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     public function accountExport(Request $request,int $id,AccountingReportService $service,AccountingContext $context)
     {
         $filters=$request->validate(['format'=>'required|in:csv,xls','financial_year_id'=>'nullable|integer','from_date'=>'nullable|date','to_date'=>'nullable|date|after_or_equal:from_date','cost_center_id'=>'nullable|integer','party_type'=>'nullable|string|max:30','party_id'=>'nullable|integer','search'=>'nullable|string|max:200']);
         $format=$filters['format'];unset($filters['format']);$companyId=$context->companyId($request);$branchId=$this->resolvedBranchId($request,$context);
-        try{$service->ledger($companyId,$branchId,$id,[...$filters,'page'=>1,'per_page'=>25]);}catch(\Throwable$e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        try{$service->ledger($companyId,$branchId,$id,[...$filters,'page'=>1,'per_page'=>25]);}catch(\Throwable$e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
         // تنفيذ التصدير على الخادم وبنفس مرشحات الأستاذ، على دفعات 100 سجل دون تحميل النطاق في المتصفح.
         return response()->streamDownload(function()use($service,$companyId,$branchId,$id,$filters,$format){
             $out=fopen('php://output','w');if($format==='csv')fwrite($out,"\xEF\xBB\xBF");
