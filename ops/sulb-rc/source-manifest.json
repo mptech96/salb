@@ -224,7 +224,7 @@
     "path": "backend/app/Services/InventoryService.php"
   },
   {
-    "sha256": "a3ffd20b4894dc539eab45939470cd5e7aaf58b252132745d45f8e5ad98ccef4",
+    "sha256": "20a9b975cfd3c34b98c326cd32bf6bea3e6d2bdeb3e1881a49118d91e4dee985",
     "path": "backend/app/Services/InventoryTransferTransactionOwner.php"
   },
   {
@@ -292,7 +292,7 @@
     "path": "backend/app/Services/ShipmentCostPayee.php"
   },
   {
-    "sha256": "24dcf41bca59131494b23b078e31a30e365d95439a278c21d845590232764a5c",
+    "sha256": "96bb9303dae9c879ccd7cede9f2dada02483531228c1e8f36836892383d90866",
     "path": "backend/app/Services/ShipmentCostReadIsolation.php"
   },
   {
@@ -472,6 +472,10 @@
     "path": "backend/app/Support/ApiExceptionMessage.php"
   },
   {
+    "path": "backend/app/Support/DatabaseIsolation.php",
+    "sha256": "581eb375d45cfd9f0423604f093d5c6f67f440b688b9d3e40b27015aed596b99"
+  },
+  {
     "sha256": "2d523453dbcb63869c34586af27ecc2da56e205834ee12fd89744ed3cdcad385",
     "path": "backend/config/inventory_transfer.php"
   },
@@ -516,15 +520,15 @@
     "path": "backend/database/uom-migrations/2026_10_14_000002_uom_contracts.php"
   },
   {
-    "sha256": "aa47ad93f233eb84fa8339517d7ed57f03dddc06f98d7f775cea425254f6ae6e",
+    "sha256": "986ad1b537f9bcc08e64b497f4ef002cb755efd66575648481a46f99d1cfd6dc",
     "path": "backend/database/uom-migrations/2026_10_24_000003_uom_operational.php"
   },
   {
-    "sha256": "53fa1dc45c997376f68cd4d1ba6ae6c0f548a98135d207ead3502a6534b808f9",
+    "sha256": "9693a42115c69934259f9e6209187e8f427ef0a8fb456905d38f99117d57ee32",
     "path": "backend/database/uom-migrations/2026_10_25_000004_commercial_snapshots.php"
   },
   {
-    "sha256": "78e6f1d302c8897640dcb97b56943ce4b92d9f8a22817f2b20da6e260f97c6a7",
+    "sha256": "63853538e9b6585ceec65096954fc09942a1d0359bb52dcd8b6d1cc423f50dcf",
     "path": "backend/database/uom-migrations/2026_10_25_000005_opening_snapshots.php"
   },
   {
@@ -532,27 +536,27 @@
     "path": "backend/database/uom-migrations/2026_10_25_000006_base_adjustments.php"
   },
   {
-    "sha256": "fb48f8aa0093490cd337a760b3922d54df9fb040128cd23058dbf0dda9d858a0",
+    "sha256": "2e8e450618fbd79425bfa29f675170ad989b465394a487b1be1c3286e7663119",
     "path": "backend/database/uom-migrations/2026_10_25_000007_shipment_snapshots.php"
   },
   {
-    "sha256": "2ff38eb2b71861dcd80eddb2ceb1c390141a37b0beaf822f00f48eb929aba54d",
+    "sha256": "ac7465982aa962156336aeff2821431474f47e5cdd0142ee2411fdfffdee40fc",
     "path": "backend/database/uom-migrations/2026_10_25_000008_processing_recipes.php"
   },
   {
-    "sha256": "da9d8aef46dc3de79cd8f974dac38ab58b0e57e27e05d64546b16af8150776cb",
+    "sha256": "7f251e5ef1c4a5c9eb6e7997b658f4a41f8ec34329db2fe3c37d05501a801ca9",
     "path": "backend/database/uom-migrations/2026_10_25_000009_processing_commands.php"
   },
   {
-    "sha256": "114de0c4eeb5c6b18d788bc0fb39361384d6d170c68aec1f4dbf3ab3a5677d5b",
+    "sha256": "ae2e057d1be633f5ff7213f23ed80401043e98644ffc068c5be8ae7eb1726648",
     "path": "backend/database/uom-migrations/2026_10_26_000010_base_capitalization.php"
   },
   {
-    "sha256": "517f4458de5434aa0d7311cf4acc93acffda9e14f263d2a4bb528fd01f9657e8",
+    "sha256": "c15c8f79685d187c6a1d65ea351d6bcb42f989d5831d9e9e95f7faa1d58b878b",
     "path": "backend/database/uom-migrations/2026_10_26_000011_invoice_header_cost.php"
   },
   {
-    "sha256": "7d1b9a849aa3d5ced17a65c823eb887aa7214b56c9936a7bed792dde6dd86607",
+    "sha256": "03ce488d3cb7093697ac3a67e5a20a609f30f137eb7b669d8731d352afc36b7c",
     "path": "backend/database/uom-migrations/2026_10_26_000012_processing_cost_sources.php"
   },
   {
@@ -664,11 +668,19 @@
     "path": "backend/scripts/qa_base_adapter_worker.php"
   },
   {
+    "path": "backend/scripts/qa_engine_shutdown.php",
+    "sha256": "59ba6e65677fcc80efb20127137c4be384d115a117916cb11a217270cfed8174"
+  },
+  {
     "sha256": "e50f0d623cd9eec5612597ad117d42f5211ac78835f766b839bc259c4d623673",
     "path": "backend/scripts/qa_lot_upgrade_dry_run.php"
   },
   {
-    "sha256": "a898cf29e64074a1483d3715f850da86ae788f3ea7a95fc4ac5652f5bde04054",
+    "path": "backend/scripts/qa_metadata_engine_acceptance.php",
+    "sha256": "52b2f8b2ffa1ce515ecac7ddd4eec724b1f36977cbd4baf7891e1496c6eefd73"
+  },
+  {
+    "sha256": "b96ff3a26a59c92736055567c3d955c2626c01233eb4c867f3fa65ece438738b",
     "path": "backend/scripts/qa_release_baseline_probe.php"
   },
   {
@@ -676,7 +688,7 @@
     "path": "backend/scripts/qa_uom_browser_seed.php"
   },
   {
-    "sha256": "3dca554f33bd00d0fb5feaaeb7c2f057c70949ad8902719d40f746e15880bcbc",
+    "sha256": "ca071bab160325f4022b081a536d9e2f8e1e8d51b2ae2ca834d1b9bf1017f309",
     "path": "backend/scripts/release_metadata_collect.php"
   },
   {
@@ -684,7 +696,7 @@
     "path": "backend/scripts/release_runtime_baseline.php"
   },
   {
-    "sha256": "3bc2d443965fbec3f3ee8d22cac33525463ad3a5d8807c4e8eee7b04d928672a",
+    "sha256": "6032e307c86a49084faf182cc65d3599dfa0fcbfd5ebf4c7b9ea656ceb98b9f0",
     "path": "backend/scripts/release_schema_baseline_readonly.sql"
   },
   {
@@ -712,7 +724,7 @@
     "path": "backend/scripts/test_historical_accounting_isolated.php"
   },
   {
-    "sha256": "c9814d46202acbc7c5e47850863b5994bbce49b48c52d16ab88204fdbadcc49d",
+    "sha256": "1cea8f216779425a3e90335cba6794f512bb3ec139c048d1bb40a5942193cbd5",
     "path": "backend/scripts/test_shipment_stage_one.php"
   },
   {
@@ -936,7 +948,7 @@
     "path": "backend/tests/Integration/Uom/PurchaseVoidRollbackClosureTest.php"
   },
   {
-    "sha256": "a9716d95e99618c5586fcb135ea909b036802460d399b09e2be39736e2e43ca0",
+    "sha256": "5b3a4c25d9c8a85d48e4edbd7bbadc57215df041a2f10556d495ad622109092b",
     "path": "backend/tests/Integration/Uom/ReleaseCandidateReadinessTest.php"
   },
   {
@@ -944,7 +956,7 @@
     "path": "backend/tests/Integration/Uom/ReleaseSecurityClosureTest.php"
   },
   {
-    "sha256": "f6850d81540a070dc081ac837167c6840cd9e28772cccf712a17f428e7a801bc",
+    "sha256": "98c973f4ffc462e51ea718c922df891f20816920154c2e8071fd316f3045e45d",
     "path": "backend/tests/Integration/Uom/ReleaseTransferLockAcceptanceTest.php"
   },
   {
@@ -1036,7 +1048,7 @@
     "path": "backend/tests/Integration/Uom/UomUnifiedReaderTest.php"
   },
   {
-    "sha256": "a727bdd8661b9b2541449388414c593e21f77f1768f50f35f7f06247b2ea4c14",
+    "sha256": "ff2e668ac82167d920ffd5f6814d711e4cb596f7f5fcc21788e3aefef50bc883",
     "path": "backend/tests/Support/BaseAdapterRace.php"
   },
   {
@@ -1070,6 +1082,10 @@
   {
     "sha256": "3e3142ece3153e373060a242fb19a6abd49fc38e842481d81f4569081be20ac9",
     "path": "backend/tests/Support/OperationalUomFixture.php"
+  },
+  {
+    "path": "backend/tests/Support/QaEngineSchema.php",
+    "sha256": "269a6d72bdb94bb1e343a006e2bd8ef6715d80ea9d0ccbaa31a715f57b4fc806"
   },
   {
     "sha256": "42b2853c8ad15fbb9af6b96da4d641d352d314d713f1059227a3266fa127ffbd",

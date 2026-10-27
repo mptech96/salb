@@ -1460,3 +1460,93 @@ the deployment script with `--execute` even as a negative local test, because th
 mode could touch production if gates changed. That invocation did not run and was
 not bypassed. The safe alternative passed: Bash syntax plus the standalone
 read-only approval checker returning78/NO-GO. No production execution is claimed.
+
+## MySQL/Percona engine discovery — 2026-10-27
+
+The operator reports mysql.service/Percona and client8.4.8-8. This is **not proof
+of SELECT VERSION() or @@version_comment on sulbprod**. Production server version,
+SQL mode, collations, FK settings, schema, triggers and migration repository still
+require the dedicated-reader preflight. Manifest remains **NO-GO**.
+
+### Actual local MySQL8.4 evidence
+
+No Docker/Podman runtime or installed WSL is available locally. Instead Oracle's
+official archived mysql-8.4.8-winx64.zip was downloaded to the ignored QA storage
+folder; mysqld.exe has a valid Oracle America Authenticode signature. ZIP SHA256:
+`53685bb61a1efc5ecc1b35c1b6bd0d30ba799f4943a1ef2c34df464f5a774c7f`.
+The server was initialized in a new unique owned QA datadir, bound only to127.0.0.1:
+3339 with X protocol disabled. No service was installed. Original XAMPP3306/data
+and VPS were not touched. This proves MySQL Community8.4.8 on Windows, not Percona
+on Linux and not production equivalence. lower_case_table_names differs by OS and
+is explicitly left for Linux qualification.
+
+Executed MySQL8.4.8 checks (separate runs, overlapping tests are not additive):
+
+| Scope | Actual result |
+|---|---|
+| Full001–014 QA schema order |1/1 PASS,16 assertions|
+| Full chain plus Dry Run/Backfill/rollback/restart/FIFO and LOT=GL60 |1/1 PASS,17 assertions|
+| Enforced tenant FK1452, CHECK3819, restrict_fk_on_non_standard_key=ON, no DDL inside financial transaction |1/1 PASS,9 assertions|
+| Dedicated-reader metadata/roles, including mandatory/nested roles, no business-row output |11/11 checks PASS;11 metadata result sets|
+| Real L3 purchase race plus distinct processing orders competing for one cost source |2/2 PASS,15 assertions; performance_schema.data_lock_waits evidence|
+| Mixed processing cost post/void, Support audit rollback and schema restart |3/3 PASS,29 assertions|
+| Additional identity/late GL rollback/mixed shipment return run |3 tests passed, one initial mixed-recipe setup error from unreleased prior PDO; the failed setup is not PASS. Strict offline DDL guard retained; unreachable PDO cycles collected; mixed processing rerun passed above|
+| Unused schema rollback plus payroll branch isolation and late Voucher GL failure |4/4 PASS,19 assertions|
+| Logical backup using this exact MySQL8.4 client and separate restore |1/1 PASS,135 assertions; source retains later synthetic transaction|
+| Same-company transfer/purchase and other-company independence |2/2 PASS,35 assertions; real MySQL lock graph, no deadlock|
+
+### Proven engine differences repaired
+
+* The metadata gate previously rejected non-MariaDB servers. It now reads actual
+  VERSION()/version_comment, handles MySQL NONE current-role semantics, checks
+  available/enabled/mandatory roles and retains strict SELECT/SHOW VIEW-only scope.
+  No role or write privilege is allowed to qualify a reader.
+* tx_isolation is unavailable on MySQL8.4. The two affected operational root owners
+  now read only the available SESSION isolation variables and preserve the existing
+  next-transaction READ COMMITTED policy and cleanup. Preflight uses the same
+  narrow SHOW SESSION VARIABLES query, with no new permission requirement.
+* MySQL CHECK_CONSTRAINTS has no TABLE_NAME column; metadata joins the constraint
+  repository to TABLE_CONSTRAINTS. Generated-expression hashing excludes empty
+  expressions; FK rules and restrictive FK settings are recorded without changing
+  them. CHECK bodies and trigger bodies are never exported, only hashes.
+* MySQL does not support CREATE OR REPLACE TRIGGER. QA-only migration adaptation
+  preserves every trigger body; MySQL DROP/CREATE is permitted only in the exact
+  disposable owned datadir, outside transactions and with no other DB clients.
+  There is no production activation or relaxed constraint. Integer display widths
+  are normalized only for integer COLUMN_TYPE comparison, retaining signedness,
+  decimal precision and all uniqueness checks.
+* A real identity INSERT failed with MySQL3995 because BINARY REGEXP is incompatible
+  with ICU regex. The ascii_bin column remains case-sensitive without binary
+  casting. Existing checks still reject lowercase, spaces, newlines and tabs,
+  duplicates and cross-company reassignment. The LOT preparation SQL template uses
+  explicit utf8mb4_bin instead; it remains a reviewed template, not an executor.
+* MySQL lock proof uses performance_schema.data_lock_waits; MariaDB keeps its
+  original InnoDB metadata proof. No timing-only substitute is accepted.
+
+Reference syntax/behavior: [MySQL8.4 CREATE TRIGGER](https://dev.mysql.com/doc/refman/8.4/en/create-trigger.html),
+[FK restrictions](https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html),
+[CHECK metadata](https://dev.mysql.com/doc/refman/8.4/en/information-schema-check-constraints-table.html).
+
+### MariaDB preservation and Percona qualification
+
+After normal ownership-verified MySQL QA shutdown, the preserved MariaDB10.4.32 QA
+datadir was restarted on3339. New metadata/reader check: **10/10 PASS**,10 result
+sets. Affected full-chain/FK/CHECK/DDL, mixed processing and case-sensitive identity
+regression: **4/4 PASS,53 assertions**. Earlier accepted MariaDB results remain
+accepted within their original scope; no broad repeat is claimed.
+
+An isolated GitHub workflow is prepared for official percona/percona-server8.4.8-8
+image manifest digest `sha256:eaa4cf955f8a01a43faa6ef656bf8fb69a17c17c278a3b0514212291ca0448b1`.
+Actions are pinned to commit hashes; token permissions are contents:read and checkout
+does not persist credentials. It uses a new ephemeral datadir, loopback-only3339,
+strict nonstandard-FK rejection, synthetic fixtures and client binaries from that
+same server image. No production credentials/data or deployment steps are used.
+**Percona CI is pending until its actual run result is recorded; preparing the
+workflow is not a test PASS.**
+
+Still required: actual production server/schema metadata, completed Percona/Linux
+evidence, approved representative historical data, production-equivalent Staging,
+approved production migration executor/write fence/backup-restore qualification
+and remaining comprehensive security sign-off. A passing upstream MySQL run never
+substitutes for these gates. No Manifest GO, VPS change, deployment or production
+migration was performed.

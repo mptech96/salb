@@ -30,7 +30,7 @@ final class ShipmentCostReadIsolation
         if (!$foreignKey) throw new \RuntimeException('COST_READ_PARENT_FK_REQUIRED');
         $engines = $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('shipment_costs','shipments') AND ENGINE='InnoDB'")->fetchColumn();
         if ((int) $engines !== 2) throw new \RuntimeException('COST_READ_INNODB_REQUIRED');
-        $default = str_replace('-', ' ', (string) $pdo->query('SELECT @@session.tx_isolation')->fetchColumn());
+        $default = \App\Support\DatabaseIsolation::current($pdo);
         if (!in_array($default, ['READ UNCOMMITTED', 'READ COMMITTED', 'REPEATABLE READ', 'SERIALIZABLE'], true)) {
             throw new \RuntimeException('COST_READ_ISOLATION_UNKNOWN');
         }

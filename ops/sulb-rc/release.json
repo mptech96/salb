@@ -20,6 +20,14 @@
     "historical_mixed_branch_payroll_requires_review": true
   },
   "schema_chain_backfill_qa_passed": true,
+  "engine_qualification": {
+    "production_server_version_verified": false,
+    "reported_production_client": "8.4.8-8 Percona (client only; not server evidence)",
+    "mysql_8_4_8_windows": "isolated scoped SQL/schema/backfill/rollback/concurrency tests passed",
+    "mariadb_10_4_32": "affected dialect regression passed",
+    "percona_8_4_8_8_linux": "pending isolated GitHub QA",
+    "production_engine_approved": false
+  },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
   "staging_blocked_inputs": ["actual VPS runtime/schema/migration evidence", "approved representative anonymized history"],
   "minimum_php": "8.3.0",

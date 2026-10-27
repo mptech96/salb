@@ -20,9 +20,12 @@ final class BaseAdapterRace
             do{
                 foreach($workers as $i=>$worker)if(preg_match('/QA_THREAD ([0-9]+)/',$worker->getOutput(),$m))$threads[$i]=(int)$m[1];
                 if(count($threads)===2){
-                    $statement=$observer->prepare('SELECT req.trx_mysql_thread_id id FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX req ON req.trx_id=w.requesting_trx_id JOIN information_schema.INNODB_TRX held ON held.trx_id=w.blocking_trx_id WHERE req.trx_mysql_thread_id IN (?,?) AND held.trx_mysql_thread_id=?');
+                    $maria=str_contains(strtolower((string)$observer->query('SELECT VERSION()')->fetchColumn()),'mariadb');
+                    $statement=$observer->prepare($maria
+                        ?'SELECT req.trx_mysql_thread_id id FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX req ON req.trx_id=w.requesting_trx_id JOIN information_schema.INNODB_TRX held ON held.trx_id=w.blocking_trx_id WHERE req.trx_mysql_thread_id IN (?,?) AND held.trx_mysql_thread_id=?'
+                        :'SELECT req.PROCESSLIST_ID id FROM performance_schema.data_lock_waits w JOIN performance_schema.threads req ON req.THREAD_ID=w.REQUESTING_THREAD_ID JOIN performance_schema.threads held ON held.THREAD_ID=w.BLOCKING_THREAD_ID WHERE req.PROCESSLIST_ID IN (?,?) AND held.PROCESSLIST_ID=?');
                     $statement->execute([...array_values($threads),$holderId]);$waiting=$statement->fetchAll(\PDO::FETCH_OBJ);$statement->closeCursor();
-                    if(count(array_unique(array_column($waiting,'id')))===2){$evidence='INNODB_LOCK_WAITS';break;}
+                    if(count(array_unique(array_column($waiting,'id')))===2){$evidence=$maria?'INNODB_LOCK_WAITS':'PERFORMANCE_SCHEMA_DATA_LOCK_WAITS';break;}
                     // MariaDB may omit live waits from information_schema. Accept only
                     // CURRENT monitor blocks proving both exact threads/table and holder.
                     $monitor=$observer->query('SHOW ENGINE INNODB STATUS')->fetch(\PDO::FETCH_ASSOC)['Status'];

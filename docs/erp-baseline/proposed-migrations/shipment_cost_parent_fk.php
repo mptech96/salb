@@ -5,7 +5,7 @@ return new class extends \Illuminate\Database\Migrations\Migration {
     {
         if (!class_exists(\Tests\Support\UomStageAProof::class)) throw new \RuntimeException('Isolated FK migration only');
         \Tests\Support\UomStageAProof::guard();
-        if (!str_starts_with(\Illuminate\Support\Facades\DB::selectOne('SELECT VERSION() v')->v, '10.4.32-MariaDB')) throw new \RuntimeException('Target engine proof required');
+        \Tests\Support\QaEngineSchema::assertSupported();
     }
     public function up(): void
     {

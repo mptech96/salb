@@ -44,6 +44,16 @@ final class ReleaseCandidateReadinessTest extends \Tests\TestCase
         if(proc_close($p)!==0)throw new \RuntimeException('QA_CLIENT_FAILED: '.$err);
         return $out;
     }
+    public function test_engine_fk_check_constraints_and_ddl_transaction_guard_remain_enforced():void
+    {
+        $this->install();self::assertSame(1,(int)DB::selectOne('SELECT @@session.foreign_key_checks v')->v);
+        if(!str_contains(strtolower(DB::selectOne('SELECT VERSION() v')->v),'mariadb'))self::assertSame(1,(int)DB::selectOne('SELECT @@global.restrict_fk_on_non_standard_key v')->v);
+        try{DB::table('uom_item_modes')->insert(['company_id'=>2,'item_id'=>1,'mode'=>'LEGACY_ONLY']);self::fail('Cross-company parent accepted');}catch(\Illuminate\Database\QueryException $e){self::assertSame(1452,(int)$e->errorInfo[1]);}
+        try{DB::table('uom_units')->insert(['id'=>99,'code'=>'QA-BAD','name_ar'=>'QA bad','dimension'=>'COUNT','kind'=>'STANDARD','standard_factor'=>null]);self::fail('CHECK silently ignored');}catch(\Illuminate\Database\QueryException $e){self::assertContains((int)$e->errorInfo[1],[3819,4025]);}
+        self::assertSame(0,DB::table('uom_units')->count());DB::beginTransaction();
+        try{try{\Tests\Support\QaEngineSchema::trigger('CREATE OR REPLACE TRIGGER qa_never_created BEFORE INSERT ON uom_units FOR EACH ROW SET NEW.name_ar=NEW.name_ar');self::fail('DDL implicitly committed a financial root');}catch(\RuntimeException $e){self::assertSame('QA_OFFLINE_DDL_REQUIRED',$e->getMessage());}self::assertSame(1,DB::transactionLevel());self::assertTrue(DB::connection()->getPdo()->inTransaction());}finally{DB::rollBack();}
+        self::assertSame(0,(int)DB::selectOne("SELECT COUNT(*) n FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='qa_never_created'")->n);
+    }
     public function test_fourteen_migrations_then_dry_run_backfill_rollback_restart_and_fifo_gl_reconcile():void
     {
         $this->install();config(['inventory_value.enabled'=>false,'uom.operational_enabled'=>true,'shipment_allocation.enabled'=>false,'shipment_cost_read.enabled'=>false]);
@@ -67,8 +77,11 @@ final class ReleaseCandidateReadinessTest extends \Tests\TestCase
         self::assertMatchesRegularExpression('/^sulb_ship_test_[a-f0-9]{16}$/D',$source);
         DB::unprepared('CREATE TABLE qa_release_transactions(id INT PRIMARY KEY, amount DECIMAL(18,3) NOT NULL) ENGINE=InnoDB');
         DB::table('qa_release_transactions')->insert(['id'=>1,'amount'=>'180.001']);
-        $dumpClient=PHP_OS_FAMILY==='Windows'?'D:/xampp/mysql/bin/mysqldump.exe':'mariadb-dump';
-        $sqlClient=PHP_OS_FAMILY==='Windows'?'D:/xampp/mysql/bin/mysql.exe':'mariadb';
+        $mysql=!str_contains(strtolower(DB::selectOne('SELECT VERSION() v')->v),'mariadb');
+        if(PHP_OS_FAMILY==='Windows'){
+            $clientDir=$mysql?(getenv('SULB_QA_MYSQL_BIN')?:throw new \RuntimeException('Owned MySQL QA client directory required')):'D:/xampp/mysql/bin';
+            $dumpClient=$clientDir.'/mysqldump.exe';$sqlClient=$clientDir.'/mysql.exe';
+        }else{$dumpClient=$mysql?'mysqldump':'mariadb-dump';$sqlClient=$mysql?'mysql':'mariadb';}
         $dump=$this->process([$dumpClient,'--no-defaults','--host=127.0.0.1','--port=3339','--user=root','--single-transaction','--routines','--triggers','--events','--hex-blob','--skip-comments','--skip-dump-date',$source]);
         self::assertStringContainsString('CREATE TABLE',$dump);self::assertStringContainsString('uom_process_cost_source_',$dump);
         DB::table('qa_release_transactions')->insert(['id'=>2,'amount'=>'0.001']);

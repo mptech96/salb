@@ -5,15 +5,17 @@ return new class extends \Illuminate\Database\Migrations\Migration {
     {
         if(!class_exists(\Tests\Support\UomStageAProof::class))throw new \RuntimeException('Isolated identity migration only');
         \Tests\Support\UomStageAProof::guard();
-        if(!str_starts_with(\Illuminate\Support\Facades\DB::selectOne('SELECT VERSION() v')->v,'10.4.32-MariaDB'))throw new \RuntimeException('Target engine proof required');
+        \Tests\Support\QaEngineSchema::assertSupported();
     }
     public function up(): void
     {
         $this->guard();
         if(\Illuminate\Support\Facades\Schema::hasColumn('shipment_items','allocation_line_ref'))throw new \RuntimeException('Identity column already exists; inspect schema, do not overwrite');
         \Illuminate\Support\Facades\DB::statement('ALTER TABLE shipment_items ADD allocation_line_ref VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NULL, ADD UNIQUE KEY uq_shipment_allocation_ref(company_id,shipment_id,allocation_line_ref)');
+        // ascii_bin on the declared column preserves case-sensitive matching;
+        // casting to binary is rejected by MySQL8's ICU regex implementation.
         \Illuminate\Support\Facades\DB::unprepared("CREATE TRIGGER sli_insert BEFORE INSERT ON shipment_items FOR EACH ROW BEGIN
-          IF NEW.allocation_line_ref IS NULL OR NOT (BINARY NEW.allocation_line_ref REGEXP '^BL:[A-Z0-9][A-Z0-9._/-]{0,119}$') OR BINARY NEW.allocation_line_ref REGEXP '[^A-Z0-9:._/-]' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='SLI_NEW_REFERENCE_REQUIRED'; END IF;
+          IF NEW.allocation_line_ref IS NULL OR NOT (NEW.allocation_line_ref REGEXP '^BL:[A-Z0-9][A-Z0-9._/-]{0,119}$') OR NEW.allocation_line_ref REGEXP '[^A-Z0-9:._/-]' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='SLI_NEW_REFERENCE_REQUIRED'; END IF;
           IF NOT EXISTS(SELECT 1 FROM shipments WHERE id=NEW.shipment_id AND company_id=NEW.company_id) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='SLI_COMPANY_MISMATCH'; END IF;
         END");
         \Illuminate\Support\Facades\DB::unprepared("CREATE TRIGGER sli_update BEFORE UPDATE ON shipment_items FOR EACH ROW BEGIN

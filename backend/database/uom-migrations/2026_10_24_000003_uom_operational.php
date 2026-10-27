@@ -10,7 +10,7 @@ return new class extends Migration {
     {
         if (!config('uom.schema_install_approved') || !class_exists(\Tests\Support\UomStageAProof::class)) throw new RuntimeException('Isolated UOM schema approval required');
         \Tests\Support\UomStageAProof::guard();
-        if (!str_starts_with(DB::selectOne('SELECT VERSION() v')->v, '10.4.32')) throw new RuntimeException('MariaDB 10.4.32 required');
+        \Tests\Support\QaEngineSchema::assertSupported();
         if (!Schema::hasTable('uom_item_modes') || Schema::hasTable('uom_operational_schema')) throw new RuntimeException('UOM schema order/rerun refused');
         $tables=['purchase_invoice_lines','sales_invoice_lines','inventory_lots','inventory_lot_movements','stock_movements','commercial_return_lines','sales_line_lot_sources','commercial_return_lot_sources','inventory_operation_lines','inventory_operation_lot_links'];
         foreach($tables as $table) {

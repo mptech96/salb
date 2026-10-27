@@ -2,8 +2,9 @@
 -- No credentials, row values, business records, trigger bodies or environment settings are emitted.
 START TRANSACTION READ ONLY;
 SELECT VERSION() AS database_version, @@version_comment AS distribution,
-       @@sql_mode AS sql_mode, @@tx_isolation AS transaction_isolation,
+       @@sql_mode AS sql_mode,
        @@lower_case_table_names AS lower_case_table_names;
+SHOW SESSION VARIABLES WHERE Variable_name IN ('transaction_isolation','tx_isolation');
 SELECT TABLE_NAME, ENGINE, TABLE_COLLATION FROM information_schema.TABLES
  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;
 SELECT TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION,COLUMN_TYPE,IS_NULLABLE,EXTRA

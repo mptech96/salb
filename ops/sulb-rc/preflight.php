@@ -12,13 +12,8 @@ try{
     $password=rtrim($line,"\r\n");unset($line);
     try{$db=new PDO('mysql:host=localhost;dbname=sulbprod;charset=utf8mb4','sulb_metadata_ro',$password,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false,PDO::ATTR_TIMEOUT=>10]);}finally{unset($password);}
     $authorization=verifyReleaseMetadataReader($db);
-    $sql=preg_replace('/^--[^\r\n]*$/m','',file_get_contents(__DIR__.'/../../backend/scripts/release_schema_baseline_readonly.sql'));
-    $sets=[];foreach(explode(';',$sql)as$statement){$statement=trim($statement);if($statement==='')continue;if(!preg_match('/^(SELECT\s|START TRANSACTION READ ONLY$|ROLLBACK$)/i',$statement))throw new RuntimeException('UNEXPECTED_SQL');$rows=$db->query($statement);if(str_starts_with(strtoupper($statement),'SELECT'))$sets[]=$rows->fetchAll(PDO::FETCH_ASSOC);}
-    foreach([
-        'SELECT TABLE_NAME,CONSTRAINT_NAME,SHA2(CHECK_CLAUSE,256) clause_sha256 FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() ORDER BY TABLE_NAME,CONSTRAINT_NAME',
-        'SELECT TABLE_NAME,CONSTRAINT_NAME,UPDATE_RULE,DELETE_RULE FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() ORDER BY TABLE_NAME,CONSTRAINT_NAME',
-        'SELECT TABLE_NAME,COLUMN_NAME,SHA2(GENERATION_EXPRESSION,256) expression_sha256 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND GENERATION_EXPRESSION IS NOT NULL ORDER BY TABLE_NAME,COLUMN_NAME'
-    ]as$statement)$sets[]=$db->query($statement)->fetchAll(PDO::FETCH_ASSOC);
+    $sets=[];foreach(releaseMetadataQueries($db)as$statement){$rows=$db->query($statement);if(str_starts_with(strtoupper($statement),'SELECT')||str_starts_with($statement,'SHOW SESSION VARIABLES'))$sets[]=$rows->fetchAll(PDO::FETCH_ASSOC);}
+    foreach(releaseExtendedMetadataQueries($db)as$statement)$sets[]=$db->query($statement)->fetchAll(PDO::FETCH_ASSOC);
     $hasMigrations=$db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='migrations'")->fetchColumn();
     $migrations=$hasMigrations?$db->query('SELECT migration,batch FROM migrations ORDER BY migration')->fetchAll(PDO::FETCH_ASSOC):null;
     $release=json_decode(file_get_contents(__DIR__.'/release.json'),true,512,JSON_THROW_ON_ERROR);

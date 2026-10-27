@@ -26,7 +26,7 @@ final class InventoryTransferTransactionOwner
         if(DB::table('inventory_operations')->useWritePdo()->where('company_id',$company)->where('id',$operation)->value('operation_type')!=='TRANSFER')throw new \RuntimeException('TRANSFER_SOURCE_REQUIRED');
         $default=null;
         if(in_array($c->getDriverName(),['mysql','mariadb'],true)){
-            $default=str_replace('-',' ',(string)$pdo->query('SELECT @@session.tx_isolation')->fetchColumn());
+            $default=\App\Support\DatabaseIsolation::current($pdo);
             if(!in_array($default,['READ UNCOMMITTED','READ COMMITTED','REPEATABLE READ','SERIALIZABLE'],true))throw new \RuntimeException('TRANSFER_ISOLATION_UNKNOWN');
             $pdo->exec('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
         }

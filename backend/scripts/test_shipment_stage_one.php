@@ -1,7 +1,8 @@
 <?php
 // Explicit memory-only acceptance entry point; works around Windows is_readable bootstrap detection.
 require __DIR__.'/../vendor/autoload.php';
-$maria=($argv[1]??'')==='--mariadb';
+$mysql84=($argv[1]??'')==='--mysql84';
+$maria=$mysql84||($argv[1]??'')==='--mariadb';
 $admin=null;$owned=null;
 if($maria){
     $directory=getenv('SULB_SHIPMENT_TEST_DIR');
@@ -9,6 +10,7 @@ if($maria){
     $admin=new PDO('mysql:host=127.0.0.1;port=3339;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
     $actual=$admin->query('SELECT @@datadir')->fetchColumn();
     if(rtrim(str_replace('\\','/',$actual),'/')!==rtrim(str_replace('\\','/',$directory),'/'))throw new RuntimeException('Not the owned disposable server');
+    if($mysql84){$version=(string)$admin->query('SELECT VERSION()')->fetchColumn();if(stripos($version,'MariaDB')!==false||!preg_match('/^8\.4\./',$version))throw new RuntimeException('MySQL/Percona8.4 QA server required');}
     $owned='sulb_ship_test_'.bin2hex(random_bytes(8));
     $admin->exec('CREATE DATABASE `'.$owned.'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
     // PHPUnit fatal errors may bypass finally. Drop only this invocation's owned DB.

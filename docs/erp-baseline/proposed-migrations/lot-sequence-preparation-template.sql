@@ -11,10 +11,10 @@ SELECT :company_id,0,'INVENTORY_LOT',:namespace_year,
  GREATEST(1,
   (SELECT COUNT(*)+1 FROM inventory_lots WHERE company_id=:count_company AND YEAR(received_at)=:received_year),
   COALESCE((SELECT MAX(CAST(SUBSTRING(lot_number,10) AS UNSIGNED))+1 FROM inventory_lots
-   WHERE company_id=:lot_company AND BINARY lot_number REGEXP CONCAT('^LOT-',:lot_year,'-[0-9]{6,18}$')),1),
+   WHERE company_id=:lot_company AND lot_number COLLATE utf8mb4_bin REGEXP CONCAT('^LOT-',:lot_year,'-[0-9]{6,18}$')),1),
   COALESCE((SELECT MAX(CAST(SUBSTRING(l.lot_number,10) AS UNSIGNED))+1
    FROM opening_inventory_lines l JOIN opening_balance_batches b ON b.id=l.batch_id AND b.company_id=l.company_id
-   WHERE l.company_id=:opening_company AND BINARY l.lot_number REGEXP CONCAT('^LOT-',:opening_year,'-[0-9]{6,18}$')),1)),
+   WHERE l.company_id=:opening_company AND l.lot_number COLLATE utf8mb4_bin REGEXP CONCAT('^LOT-',:opening_year,'-[0-9]{6,18}$')),1)),
  CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
 ON DUPLICATE KEY UPDATE
  next_number=GREATEST(next_number,VALUES(next_number));

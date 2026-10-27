@@ -1,17 +1,42 @@
 <?php
-/** Standalone MariaDB metadata collector: no application/config bootstrap. */
+/** Standalone metadata collector: no application/config bootstrap. */
+function releaseMetadataServer(PDO $db):array
+{
+    $row=$db->query('SELECT VERSION() version, @@version_comment distribution')->fetch(PDO::FETCH_ASSOC);
+    $maria=str_contains(strtolower($row['version']), 'mariadb');
+    if(!$maria&&!preg_match('/^8\.4\./D',$row['version']))throw new RuntimeException('UNSUPPORTED_METADATA_SERVER');
+    return $row+['family'=>$maria?'MariaDB':(stripos($row['distribution'],'percona')!==false?'Percona':'MySQL'),'mariadb'=>$maria];
+}
+function releaseMetadataQueries(PDO $db):array
+{
+    $server=releaseMetadataServer($db);$sql=file_get_contents(__DIR__.'/release_schema_baseline_readonly.sql');
+    if(!$server['mariadb'])$sql=str_replace('@@tx_isolation','@@session.transaction_isolation',$sql);
+    $sql=preg_replace('/^--[^\r\n]*$/m','',$sql);$queries=[];
+    foreach(explode(';',$sql)as$query){$query=trim($query);if($query==='')continue;if(!preg_match('/^(SELECT\s|START TRANSACTION READ ONLY$|ROLLBACK$)/i',$query)&&$query!=="SHOW SESSION VARIABLES WHERE Variable_name IN ('transaction_isolation','tx_isolation')")throw new RuntimeException('UNEXPECTED_SQL');$queries[]=$query;}
+    return $queries;
+}
+function releaseExtendedMetadataQueries(PDO $db):array
+{
+    $server=releaseMetadataServer($db);
+    $queries=[
+        "SELECT tc.TABLE_NAME,cc.CONSTRAINT_NAME,SHA2(cc.CHECK_CLAUSE,256) clause_sha256 FROM information_schema.CHECK_CONSTRAINTS cc JOIN information_schema.TABLE_CONSTRAINTS tc ON tc.CONSTRAINT_SCHEMA=cc.CONSTRAINT_SCHEMA AND tc.CONSTRAINT_NAME=cc.CONSTRAINT_NAME AND tc.CONSTRAINT_TYPE='CHECK' WHERE cc.CONSTRAINT_SCHEMA=DATABASE() ORDER BY tc.TABLE_NAME,cc.CONSTRAINT_NAME",
+        'SELECT TABLE_NAME,CONSTRAINT_NAME,UPDATE_RULE,DELETE_RULE FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() ORDER BY TABLE_NAME,CONSTRAINT_NAME',
+        "SELECT TABLE_NAME,COLUMN_NAME,SHA2(GENERATION_EXPRESSION,256) expression_sha256 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND GENERATION_EXPRESSION IS NOT NULL AND GENERATION_EXPRESSION<>'' ORDER BY TABLE_NAME,COLUMN_NAME"
+    ];
+    if(!$server['mariadb'])$queries[]='SELECT @@global.restrict_fk_on_non_standard_key restrict_fk_on_non_standard_key, @@global.sql_require_primary_key sql_require_primary_key, @@global.log_bin log_bin, @@global.log_bin_trust_function_creators log_bin_trust_function_creators';
+    return $queries;
+}
 function verifyReleaseMetadataReader(PDO $db): array
 {
-    if (!str_contains(strtolower((string)$db->query('SELECT VERSION()')->fetchColumn()), 'mariadb')) {
-        throw new RuntimeException('MARIADB_REQUIRED');
-    }
+    $server=releaseMetadataServer($db);
     $identity = (string)$db->query('SELECT CURRENT_USER()')->fetchColumn();
     if (explode('@', $identity, 2)[0] !== 'sulb_metadata_ro') throw new RuntimeException('DEDICATED_READER_REQUIRED');
-    if ($db->query('SELECT CURRENT_ROLE()')->fetchColumn() !== null
+    if (!in_array($db->query('SELECT CURRENT_ROLE()')->fetchColumn(),[null,'NONE'],true)
         || (int)$db->query('SELECT COUNT(*) FROM information_schema.APPLICABLE_ROLES')->fetchColumn() !== 0
         || (int)$db->query('SELECT COUNT(*) FROM information_schema.ENABLED_ROLES WHERE ROLE_NAME IS NOT NULL')->fetchColumn() !== 0) {
         throw new RuntimeException('ROLES_NOT_ALLOWED');
     }
+    if(!$server['mariadb']&&trim((string)$db->query('SELECT @@global.mandatory_roles')->fetchColumn())!=='')throw new RuntimeException('MANDATORY_ROLES_NOT_ALLOWED');
     $grantee = $db->query("SELECT CONCAT(QUOTE(SUBSTRING_INDEX(CURRENT_USER(),'@',1)),'@',QUOTE(SUBSTRING_INDEX(CURRENT_USER(),'@',-1)))")->fetchColumn();
     foreach (['USER_PRIVILEGES', 'SCHEMA_PRIVILEGES', 'TABLE_PRIVILEGES', 'COLUMN_PRIVILEGES'] as $table) {
         $statement = $db->prepare("SELECT * FROM information_schema.$table WHERE GRANTEE=?");
@@ -42,7 +67,7 @@ function verifyReleaseMetadataReader(PDO $db): array
         $count++;
     }
     if (!$count) throw new RuntimeException('NO_GRANT_EVIDENCE');
-    return ['dedicated_reader'=>true, 'roles_applicable'=>0, 'roles_enabled'=>0,
+    return ['dedicated_reader'=>true, 'server'=>$server, 'roles_applicable'=>0, 'roles_enabled'=>0,
         'structured_privileges_verified'=>true, 'grant_statements_verified'=>$count,
         'trigger_visibility_complete'=>false];
 }
@@ -65,15 +90,10 @@ try {
             [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false, PDO::ATTR_TIMEOUT=>10]);
     } finally { unset($password); }
     $gate = verifyReleaseMetadataReader($db);
-    $sql = file_get_contents(__DIR__.'/release_schema_baseline_readonly.sql');
-    $sql = preg_replace('/^--[^\r\n]*$/m', '', $sql);
     $sets = [];
-    foreach (explode(';', $sql) as $statement) {
-        $statement = trim($statement);
-        if ($statement === '') continue;
-        if (!preg_match('/^(SELECT\s|START TRANSACTION READ ONLY$|ROLLBACK$)/i', $statement)) throw new RuntimeException('UNEXPECTED_SQL');
+    foreach (releaseMetadataQueries($db) as $statement) {
         $result = $db->query($statement);
-        if (str_starts_with(strtoupper($statement), 'SELECT')) $sets[] = $result->fetchAll(PDO::FETCH_ASSOC);
+        if (str_starts_with(strtoupper($statement), 'SELECT')||str_starts_with($statement,'SHOW SESSION VARIABLES')) $sets[] = $result->fetchAll(PDO::FETCH_ASSOC);
     }
     echo json_encode(['mode'=>'METADATA_ONLY', 'writes_performed'=>false, 'authorization'=>$gate,
         'result_sets'=>$sets], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR).PHP_EOL;

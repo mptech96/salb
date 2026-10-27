@@ -64,6 +64,11 @@ class ReleaseTransferLockAcceptanceTest extends \Tests\TestCase
     {
         $this->exerciseTransferCompetition(2, 3);
     }
+    private function engineWait(int $thread):array
+    {
+        if(str_contains(strtolower(DB::selectOne('SELECT VERSION() v')->v),'mariadb'))return DB::select('SELECT l.lock_table,l.lock_index,l.lock_data,r.trx_query FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX r ON r.trx_id=w.requesting_trx_id JOIN information_schema.INNODB_LOCKS l ON l.lock_id=w.blocking_lock_id WHERE r.trx_mysql_thread_id=?',[$thread]);
+        return DB::select("SELECT CONCAT('`',l.OBJECT_SCHEMA,'`.`',l.OBJECT_NAME,'`') lock_table,l.INDEX_NAME lock_index,l.LOCK_DATA lock_data,r.PROCESSLIST_INFO trx_query FROM performance_schema.data_lock_waits w JOIN performance_schema.threads r ON r.THREAD_ID=w.REQUESTING_THREAD_ID JOIN performance_schema.data_locks l ON l.ENGINE_LOCK_ID=w.BLOCKING_ENGINE_LOCK_ID AND l.ENGINE=w.ENGINE WHERE r.PROCESSLIST_ID=?",[$thread]);
+    }
 
     private function exerciseTransferCompetition(int $company, int $item): void
     {
@@ -84,7 +89,7 @@ class ReleaseTransferLockAcceptanceTest extends \Tests\TestCase
                 $wait = [];
                 $end = microtime(true) + 4;
                 do {
-                    $wait = DB::select('SELECT l.lock_table,l.lock_index,l.lock_data FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX r ON r.trx_id=w.requesting_trx_id JOIN information_schema.INNODB_LOCKS l ON l.lock_id=w.blocking_lock_id WHERE r.trx_mysql_thread_id=?', [(int) $match[1]]);
+                    $wait = $this->engineWait((int)$match[1]);
                     if (!$wait) usleep(10000);
                 } while (!$wait && microtime(true) < $end);
                 self::assertNotEmpty($wait, 'Must observe a real server wait, not only process timing');
@@ -97,7 +102,7 @@ class ReleaseTransferLockAcceptanceTest extends \Tests\TestCase
                 $wait = [];
                 $end = microtime(true) + 2;
                 do {
-                    $wait = DB::select('SELECT l.lock_table,l.lock_index,l.lock_data,r.trx_query FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX r ON r.trx_id=w.requesting_trx_id JOIN information_schema.INNODB_LOCKS l ON l.lock_id=w.blocking_lock_id WHERE r.trx_mysql_thread_id=?', [(int) $match[1]]);
+                    $wait = $this->engineWait((int)$match[1]);
                     if (!$wait) usleep(10000);
                 } while (!$wait && $b->isRunning() && microtime(true) < $end);
                 fwrite(STDOUT, 'RELEASE_CROSS_COMPANY_WAIT '.json_encode($wait)."\n");
