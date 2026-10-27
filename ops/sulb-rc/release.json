@@ -295,13 +295,21 @@
     },
     "show_view_required_for_current_base_table_snapshot": false,
     "read_privilege_gate_tests_passed": 33,
-    "minimum_select_only_percona_test_pending": true,
+    "minimum_select_only_percona_test_pending": false,
     "last_operator_readiness": {
       "source_commit": "0888346c8143aa83a3587f1613a646a49293ba02",
       "history_status": "BLOCKED",
       "reason": "HISTORY_SCHEMA_WIDE_READ_REQUIRED",
       "row_extraction_authorized": false,
       "actual_missing_privilege_not_identified_by_old_code": true
+    },
+    "minimum_select_only_percona_test": {
+      "result": "PASS",
+      "tested_commit": "f288d76c2438047425d3872cc62abf3b58946841",
+      "run": "https://github.com/mptech96/salb/actions/runs/40573565128",
+      "read_privilege_checks": 33,
+      "synthetic_snapshot_restore_checks": 31,
+      "production_privileges_changed": false
     }
   }
 }
