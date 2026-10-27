@@ -344,6 +344,18 @@
     "source_min_available_memory_bytes": 1073741824,
     "historical_data_tested": false,
     "production_executor_qualified": false,
-    "pipeline_entry": "python3 ops/sulb-rc/execute-history-plan.py <approved-readiness-sha256>"
+    "pipeline_entry": "python3 ops/sulb-rc/execute-history-plan.py <approved-readiness-sha256>",
+    "synthetic_qualification": {
+      "commit": "f4db98ce3dc6bfd878798f9d50b7f7ac01a6c98b",
+      "ci_run": 40590696956,
+      "engine": "Percona Server 8.4.8-8",
+      "result": "PASS",
+      "snapshot_restore_checks": 31,
+      "populated_history_checks": 8,
+      "policy_checks": 15,
+      "pipeline_pressure_tests": 5,
+      "production_data_used": false,
+      "actual_history_validation": false
+    }
   }
 }
