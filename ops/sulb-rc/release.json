@@ -21,20 +21,37 @@
   },
   "schema_chain_backfill_qa_passed": true,
   "engine_qualification": {
-    "production_server_version_verified": false,
+    "production_server_version_verified": true,
     "reported_production_client": "8.4.8-8 Percona (client only; not server evidence)",
     "mysql_8_4_8_windows": "isolated scoped SQL/schema/backfill/rollback/concurrency tests passed",
     "mariadb_10_4_32": "affected dialect regression passed",
     "percona_8_4_8_8_linux": "PASS: 31 tests, 427 assertions and 11 dedicated-reader checks on isolated Linux QA",
     "percona_qa_tested_commit": "9e4de7be2722bb622108a4db0e90712172788d03",
     "percona_qa_run": "https://github.com/mptech96/salb/actions/runs/40430204531",
-    "production_engine_approved": false
+    "production_engine_approved": false,
+    "actual_production_server": "8.4.8-8 Percona Server; operator-supplied PDO metadata"
   },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
-  "staging_blocked_inputs": ["actual VPS runtime/schema/migration evidence", "approved representative anonymized history"],
+  "staging_blocked_inputs": [
+    "complete administrator-visible schema/trigger definitions and column collations",
+    "approved representative anonymized relational history",
+    "active site FPM and production-equivalent runtime evidence"
+  ],
   "minimum_php": "8.3.0",
   "minimum_node": "20.9.0",
-  "required_php_extensions": ["bcmath", "pdo_mysql", "mbstring", "openssl", "fileinfo", "xml", "ctype", "tokenizer", "filter", "session", "dom"],
+  "required_php_extensions": [
+    "bcmath",
+    "pdo_mysql",
+    "mbstring",
+    "openssl",
+    "fileinfo",
+    "xml",
+    "ctype",
+    "tokenizer",
+    "filter",
+    "session",
+    "dom"
+  ],
   "paths": {
     "checkout": "/home/sulb-release",
     "backend": "/home/mgye-api-sulb/htdocs/api.sulb.mgye.tech",
@@ -42,5 +59,6 @@
     "service": "sulb-frontend.service",
     "database": "sulbprod"
   },
-  "rollback_policy": "Never restore a pre-release database over live customer transactions. Code rollback only after demonstrated schema compatibility; otherwise keep write fence and perform reviewed forward repair."
+  "rollback_policy": "Never restore a pre-release database over live customer transactions. Code rollback only after demonstrated schema compatibility; otherwise keep write fence and perform reviewed forward repair.",
+  "received_production_schema_sha256": "550ce437236b4b8f10df2d438eb179ae9335ee298147b84a5a185bf5f796ee9b"
 }

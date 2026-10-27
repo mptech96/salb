@@ -1603,3 +1603,69 @@ Tested source commit: d244fbe3a895ee610c81c2eb603ecc634981d812.
 Previously qualified ERP suites were intentionally skipped; their prior results remain
 within their tested scope. No VPS access, production migration or deployment occurred.
 Production metadata review and existing staging/history gates remain open: **NO-GO**.
+
+### Actual VPS metadata review — 2026-10-27
+Evidence supplied by operator: metadata.tar.gz, staging checkout 36bc0ad2465d7701b6c767bd96b7c57b1b7bf17b.
+Actual SERVER (not client inference): Percona 8.4.8-8, Linux case-sensitive table names,
+REPEATABLE-READ, strict SQL mode, restrict_fk_on_non_standard_key=1. PHP CLI 8.4.22
+and required extensions verified. Schema SHA256:
+550ce437236b4b8f10df2d438eb179ae9335ee298147b84a5a185bf5f796ee9b.
+111 InnoDB tables,1919 columns,567 index entries,51 FK action rules,40 migration rows.
+
+Offline comparison to the schema actually used by accepted Percona QA:
+110/110 baseline tables,1886 column type/nullability definitions,561 index entries,
+51 named FK definitions AND their delete/update rules match (integer display width
+normalized only; signedness and decimal precision remain significant). No baseline
+mismatch detected. Additional production objects: road_waybills (26 columns,6 index
+entries), company_settings header_image_path/footer_image_path/print_header_texts/
+print_footer_texts/print_options/watermark_path and official_documents.print_metadata.
+These correspond to the already recorded branding/central-print migrations 026/027.
+All40 ordinary migration filenames are already recorded; ordinary artisan migrate
+alone cannot install the14 separate UOM migrations. Additional objects must be kept.
+Offline comparator passed actual-evidence comparison plus4 injected negative cases:
+missing column, signedness change, altered index uniqueness and wrong FK target.
+This is5 focused checks, not another ERP regression run.
+
+MIGRATION_BLOCKERS: all14 remain production_approved=false. 003..014 explicitly
+require the isolated UomStageAProof guard (testing/loopback3339/owned schema). LOT
+value balances and shipment-parent FK proposals are likewise QA-only. They cannot
+be executed on production by merely setting a flag; do not remove/bypass guards.
+The reviewed production executor remains unfinished pending complete schema/history
+qualification. Ordering remains001..009, the four declared L3/value/FK dependencies
+before010, then010..014. MySQL implicit DDL commit and populated-evidence rollback
+restrictions remain. Metadata cannot prove duplicate/orphan sequences, cross-company
+history, valid receipt/GL sources or safe legacy-value backfill. Never invent costs.
+
+TRIGGER_VISIBILITY:0 visible is UNKNOWN, not0 existing. This blocks approval because
+existing trigger bodies/order can interact with financial and inventory writes and
+new UOM triggers. Smallest safe check: EXISTING CloudPanel administrator executes
+ops/sulb-rc/admin-schema-gap-readonly.sql (SELECT only) and returns result sets.
+Do NOT grant TRIGGER to sulbmetadata; it also authorizes trigger creation/removal.
+Column-level charset/collation was omitted from original metadata; the same query
+collects it, especially currencies.currency_code for foundation FK compatibility.
+Defaults, generated/check definitions and full trigger semantics still require a
+private schema-only export for a faithful rehearsal; hashes alone cannot recreate
+unknown trigger bodies. FPM8.3 and8.4 binaries both exist; active site FPM unproven.
+
+STAGING_RESULT: BLOCKED, not PASS. Existing31/427 Percona synthetic results remain
+valid in scope. No approved representative anonymized historical dataset is available.
+Required single handoff: operator-approved PRIVATE staging input bundle containing
+schema-only DDL including triggers/routines/events/checks/defaults/collations and a
+representative anonymized relational history (all identifiers consistently remapped;
+remove names/contact/identity/notes/secrets; retain approved exact quantities, units,
+cost/FX/GL links and sequence relationships). Do not upload raw customer dumps or.env.
+Return administrator gap-query results in that handoff. Restore only into a new
+isolated Percona8.4 schema, no external services/queues/mail, then rehearse the14+
+dependencies, dry-run exceptions, failure/restart/concurrency, LOT=GL reconciliation,
+private backup restore into ANOTHER schema, mobile/PDF and authorization UAT.
+No current customer database may be used as the test target or overwritten on rollback.
+
+SECURITY_APPROVAL: pending final sign-off. Account gate actually verified sulbmetadata,
+no applicable/enabled roles,2 allowed grants. Prior security tests retained. New
+comparator opens files only and never connects to DB or executes input SQL; supplied
+archive contains only preflight.json/runtime.txt. Private raw metadata and negative
+fixtures remain ignored locally, not in GitHub. No VPS access or production writes.
+RELEASE_GO_OR_NO_GO: NO-GO. Receipt of real metadata closes server-version uncertainty,
+not the approved migration executor, full trigger/schema/history, active FPM, staging,
+write-fence or production backup/rollback approval gates. Existing deploy script
+remains gated; there is no authorized deployment command yet.

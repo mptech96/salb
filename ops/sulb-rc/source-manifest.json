@@ -596,6 +596,10 @@
     "path": "backend/scripts/batch_two_void_cost_probe.php"
   },
   {
+    "sha256": "f48ef4c7b1f0b568726f2009b5adbfe033e9ba073edcae66793f81068105747e",
+    "path": "backend/scripts/compare_release_metadata.php"
+  },
+  {
     "sha256": "6e1e69281ce4eb95874597cc55b41cfc6a0daf2cecb6e1c58db34b53dccdbccc",
     "path": "backend/scripts/cost_protocol_probe.php"
   },
