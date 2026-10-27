@@ -1877,3 +1877,50 @@ separate authorized staging host (address + verified public SSH fingerprint, no 
 or private keys in chat). Actual private111-table execution/history/restore/security UAT/
 production executor remain open. Production dump/row extraction still not authorized.
 Release remains NO-GO; report/manifest updated only with actual evidence.
+
+### Requested no-migration deployment assessment — 2026-10-27
+Operator requests CURRENT candidate-vs-live Backend/Frontend comparison and assessment
+of a possible schema-compatible subset. Prior capture contains347 raw hash differences
+(292 backend/55 frontend within its selected source manifest), but is older evidence,
+includes QA/new files and lacks live normalized hashes. Do NOT label these347 functional
+changes or current live state. No VPS connection performed by Codex.
+
+Added live-code-diff-readonly.php: current tracked runtime app/config/routes/resources/
+package source paths compared to fixed live roots; hashes only, exact/line-endings-only/
+content-different/candidate-only classifications, live-only source inventory. No Laravel,
+DB,env/cache/vendor/storage/uploads/backup/private/public-data reads. No file contents
+exported; private code-diff.json0600/root-only directory0700 outside htdocs. Static assets,
+QA and generated trees excluded explicitly; this is not an authorization to rsync all.
+Realpath boundary checks and symlink refusal;16MiB source cap/20k file cap. Source files
+and live app are not modified. New14 filter/fingerprint tests PASS; PHP lint PASS.
+Actual current report still requires operator execution; no fabricated diff review.
+
+No production runtime subset is approved yet. Preparation/audit tools can be updated in
+/home/sulb-release without deploying either app. Legacy-compatible fixes are CANDIDATES
+only until exact live source baseline and dependency closure are established. Do not
+copy whole modified controllers/pages based on a few apparently independent lines.
+Deferred: all14 UOM migrations and4 LOT/L3 dependencies; BASE item/unit/snapshot/processing/
+shipment/capitalization/header-cost paths and enabling flags; LOT sequence/historical
+value backfill. Legacy recipe mixing requires qualified LOT value ledger. New permission
+checks journals.post/reverse, fixed_assets.manage,workers.manage,payroll.manage are linked
+to seed migrations013/014; existence/authorized role assignments are NOT proven by schema
+metadata, so no claim that replacing controllers preserves current access.
+Known guards (ItemController meta/create, OperationalDocument/TransactionOwner,
+InventoryLotValue sqlValue etc.) are useful but not equivalent to whole-release
+compatibility. Frontend items imports NewBaseItem/ItemUnitManager; UI/backend API/contracts
+must travel as a reviewed pair, not a blind frontend-only replacement.
+
+Next action ONLY: operator runs file comparison and returns the fingerprint JSON (no code
+contents,credentials or customer rows). Unknown live-only modifications block replacement
+until resolved; hashes can be matched to known repository source without exposing live
+contents. Then prepare exact allowed-path/patch dependency set and run targeted legacy-
+schema authentication/branch/company/rollback/report/PDF/mobile tests. If no independent
+subset can be proved, defer runtime deployment to the single comprehensive release.
+
+Comprehensive release remains pinned GitHub -> separate Percona staging -> all14+L3,
+approved historical dry-run/Backfill/FIFO/LOT=GL/concurrency/rollback/authorization UAT ->
+verified private backup restored into ANOTHER schema and new source transactions retained
+-> approved exact production executor/write fence -> one Backend+Frontend deployment.
+No migration down or old DB restore over post-cutover customer transactions. Existing
+execution gate remains NO-GO; production paths/services/DB untouched. A final deploy
+command is not certified until an exact artifact and its evidence gates are approved.

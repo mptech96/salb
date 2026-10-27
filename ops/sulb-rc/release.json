@@ -113,5 +113,13 @@
     "all_migration_hashes_verified": true,
     "database_connections": 0,
     "schema_capture_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f"
+  },
+  "no_migration_release": {
+    "deployment_authorized": false,
+    "current_live_diff_received": false,
+    "runtime_subset_approved": false,
+    "reason": "Full RC includes UOM/LOT/L3 runtime and permission seed dependencies; current live-only customizations/normalized diff not yet known",
+    "audit_tool": "ops/sulb-rc/live-code-diff-readonly.php",
+    "local_filter_fingerprint_checks_passed": 14
   }
 }
