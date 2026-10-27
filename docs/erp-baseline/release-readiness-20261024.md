@@ -2271,3 +2271,7 @@ controller/device remains a concrete blocker under current no-policy/service-cha
 No automatic root controller enabling or policy workaround; do not demand additional probes
 for checks already evidenced. No native Schema-only launch script is certified until this
 host-specific gate passes; production full release remains NO-GO regardless of native gate.
+
+### Final exact socket namespace gate — 2026-10-27
+Operator d3ab1a13 evidence accepts memory/CPU/PIDs/I/O/swap limits, child attachment and observed I/O throttle; no existing cgroups modified. Reused without rerunning cgroup.
+New targeted resolver queries loaded AppArmor for bounded exact observed/canonical socket names plus .lock, requiring explicit allow and no deny even in complain. Production name reuse is child-mount-only: existing namespace mask runs before bind, target must be absent, fresh private Unix socket/lock are created, and host datadir/parent/socket device+inode and production process label remain unchanged. No profile/service change, mysqld or DB connection. Five new local unit tests PASS; actual Linux private socket proof pending. No schema/ERP suite repeated. NATIVE_STAGING_GO, if returned, authorizes isolation feasibility only; production remains NO-GO, no migration/deployment approval.

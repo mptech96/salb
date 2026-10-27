@@ -120,3 +120,21 @@ def cgroup_check(work):
                 evidence['cleanup_failure']=exception_evidence('cleanup_owned_cgroup',exc);error=error or 'OWNED_CGROUP_CLEANUP_FAILED'
     if error: raise CheckBlocked(error,evidence)
     return evidence
+
+
+def exact_socket_plan(label,data,sockets,token,query=access_query):
+    name=re.sub(r' \((enforce|complain|kill)\)$','',label)
+    if name=='unconfined':raise CheckBlocked('UNCONFINED_PROFILE_REQUIRES_REVIEW')
+    candidates=list(dict.fromkeys(sockets+['/run/mysqld/mysqld.sock','/run/mysqld/mysql.sock']))
+    evidence={'source':'loaded_kernel_policy','plans':[]}
+    for logical in dict.fromkeys([data,'/var/lib/mysql']):
+        for sock in candidates:
+            if not sock.startswith('/') or os.path.dirname(sock) not in {os.path.dirname(s) for s in sockets}|{'/run/mysqld'}:continue
+            rows=[policy_row(name,logical+'/sulb-shipment-'+token+'/ibdata1',['read','write','create','open','lock'],query),
+                  policy_row(name,sock,['read','write','create','open'],query),
+                  policy_row(name,sock+'.lock',['read','write','create','open','lock'],query)]
+            evidence['plans'].append({'logical_datadir':logical,'socket_path':sock,'queries':rows})
+            if all(r['strictly_allowed'] for r in rows):
+                evidence.update(selected_logical_datadir=logical,selected_socket_path=sock)
+                return evidence
+    raise CheckBlocked('APPARMOR_NO_PROVEN_EXACT_SOCKET_PLAN',evidence)
