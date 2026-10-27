@@ -1,0 +1,56 @@
+name: SULB migration-free account and report patch
+on:
+  push:
+    branches: [codex/sulb-schema-compatible-rc-20261027]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compatibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.4'
+          extensions: bcmath, pdo_mysql, pdo_sqlite, mbstring, dom, xml, fileinfo, zip
+          coverage: none
+          tools: composer:v2
+      - name: Start isolated synthetic Percona QA only
+        shell: bash
+        run: |
+          set -euo pipefail
+          directory="/var/lib/mysql/sulb-shipment-$(openssl rand -hex 16)"
+          echo "SULB_COMPAT_QA_DIR=$directory" >> "$GITHUB_ENV"
+          docker run -d --name compat-qa -p 127.0.0.1:3339:3306 \
+            -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_ROOT_HOST=% \
+            percona/percona-server@sha256:eaa4cf955f8a01a43faa6ef656bf8fb69a17c17c278a3b0514212291ca0448b1 \
+            --datadir="$directory" --mysqlx=0 --innodb-buffer-pool-size=128M
+          for attempt in $(seq 1 90); do
+            if docker exec compat-qa mysqladmin --no-defaults --host=127.0.0.1 --user=root --silent ping; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Install locked QA dependencies without application scripts
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins
+      - name: Validate legacy accounts, company isolation, rollback and report failure privacy
+        working-directory: backend
+        run: php scripts/test_no_migration_compat.php
+      - name: Install locked frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Render account parent selector
+        working-directory: frontend
+        run: node --test tests/account-parent.compat.test.cjs
+      - name: Build actual partial frontend
+        working-directory: frontend
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build -- --webpack
+      - name: Stop only owned QA container
+        if: always()
+        run: docker rm -f compat-qa
