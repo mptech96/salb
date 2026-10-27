@@ -1,0 +1,107 @@
+name: SULB Percona 8.4 isolated QA (NO-GO)
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/sulb-complete-rc-20261027]
+    paths:
+      - '.github/workflows/sulb-percona84-qa.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-engine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      APP_ENV: testing
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.4'
+          extensions: bcmath, pdo_mysql, pdo_sqlite, mbstring, dom, xml, fileinfo, zip
+          coverage: none
+          tools: composer:v2
+      - name: Start owned synthetic Percona server, never production
+        shell: bash
+        run: |
+          set -euo pipefail
+          qa_dir="/var/lib/mysql/sulb-shipment-$(openssl rand -hex 16)"
+          echo "SULB_SHIPMENT_TEST_DIR=$qa_dir" >> "$GITHUB_ENV"
+          echo "APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')" >> "$GITHUB_ENV"
+          docker run -d --name sulb-percona-qa -p 127.0.0.1:3339:3306 \
+            -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_ROOT_HOST=% \
+            percona/percona-server@sha256:eaa4cf955f8a01a43faa6ef656bf8fb69a17c17c278a3b0514212291ca0448b1 \
+            --datadir="$qa_dir" --mysqlx=0 --innodb-buffer-pool-size=128M \
+            --restrict-fk-on-non-standard-key=ON
+          ready=0
+          for attempt in $(seq 1 90); do
+            if docker exec sulb-percona-qa mysqladmin --no-defaults --host=127.0.0.1 --user=root --silent ping; then ready=1; break; fi
+            sleep 2
+          done
+          test "$ready" = 1
+      - name: Install only candidate QA dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      - name: Use client tools from this exact QA server image
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/sulb-qa-bin"
+          cat > "$RUNNER_TEMP/sulb-qa-bin/mysql" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          args=()
+          for arg in "$@"; do
+            if [ "$arg" = --port=3339 ]; then arg=--port=3306; fi
+            args+=("$arg")
+          done
+          exec docker exec -i sulb-percona-qa "$(basename "$0")" "${args[@]}"
+          SH
+          cp "$RUNNER_TEMP/sulb-qa-bin/mysql" "$RUNNER_TEMP/sulb-qa-bin/mysqldump"
+          chmod 700 "$RUNNER_TEMP/sulb-qa-bin/mysql" "$RUNNER_TEMP/sulb-qa-bin/mysqldump"
+          echo "$RUNNER_TEMP/sulb-qa-bin" >> "$GITHUB_PATH"
+      - name: Verify metadata account roles and server version through PDO
+        working-directory: backend
+        run: php scripts/qa_metadata_engine_acceptance.php
+      - name: Rehearse full schema, Backfill, exact FIFO GL and backup restore
+        working-directory: backend
+        run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ReleaseCandidateReadinessTest.php
+      - name: Mixed UOM processing, rollback, idempotency and actual lock waits
+        working-directory: backend
+        env:
+          SULB_TEST_FILTER: test_extra_cost_mixed_recipe_posts|test_extra_cost_missing_source_and_late_gl_failure|test_extra_cost_two_distinct_orders|test_extra_cost_http_support_requires|test_extra_cost_schema_restart
+        run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/BaseProcessingTest.php
+      - name: Mixed L3 shipments, history and full reversal
+        working-directory: backend
+        env:
+          SULB_TEST_FILTER: test_mixed_paid_purchase_real_l3_concurrency|test_mixed_purchase_l3_receipt_capitalization_fifo_return|test_mixed_paid_l3_purchase_void_race|test_untouched_legacy_capitalized_receipts
+        run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ShipmentBaseCycleTest.php
+      - name: Identity constraints, case-sensitive references and unused schema rollback
+        working-directory: backend
+        env:
+          SULB_TEST_FILTER: test_database_enforces_new_refs_unique_scope_and_immutable_evidence|test_unused_additive_schema_can_be_removed_without_touching_legacy_rows
+        run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ShipmentLineIdentityTest.php
+      - name: Critical security and financial failure atomicity
+        working-directory: backend
+        run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ReleaseSecurityClosureTest.php
+      - name: Transfer isolation and independent-company concurrency
+        working-directory: backend
+        run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ReleaseTransferLockAcceptanceTest.php
+      - name: Preserve synthetic QA proof only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: percona84-qa-evidence
+          path: |
+            backend/storage/framework/testing/metadata-engine-acceptance-Percona.json
+            backend/storage/framework/testing/rc-backup-restore-proof.json
+          if-no-files-found: warn
+      - name: Stop only the owned ephemeral container
+        if: always()
+        run: docker stop sulb-percona-qa
