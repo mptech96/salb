@@ -13,7 +13,13 @@ def child(work,data,sockets,logical,sock):
     probe=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
     try:
         probe.bind(sock)
-        with open(sock+'.lock','x') as lock:lock.write('OWNED_NAMESPACE_PROBE')
+        fd=os.open(sock+'.lock',os.O_RDWR|os.O_CREAT|os.O_EXCL,0o600)
+        try:
+            os.write(fd,(str(os.getpid())+'\n').encode());os.fsync(fd)
+            os.lseek(fd,0,os.SEEK_SET)
+            m.require(os.read(fd,32)==(str(os.getpid())+'\n').encode(),'PRIVATE_PID_FILE_READ_FAILED')
+        finally:os.close(fd)
+        os.unlink(sock+'.lock')
         m.require(stat.S_ISSOCK(os.stat(sock).st_mode),'PRIVATE_SOCKET_BIND_FAILED')
         print(json.dumps({'private_socket_bind':True,'private_lock_create':True,'production_socket_hidden_before_bind':True,'socket_path':sock}))
     finally:probe.close()

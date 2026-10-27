@@ -3,7 +3,7 @@ import errno, json, os, pathlib, re, shutil, subprocess, time, uuid
 
 class CheckBlocked(Exception):
     def __init__(self,code,evidence=None): super().__init__(code); self.code=code; self.evidence=evidence or {}
-PERMS={'read':4,'write':2,'create':16,'open':64,'lock':0x8000}
+PERMS={'read':4,'write':2,'create':16,'open':64,'lock':0x8000,'delete':32}
 def parse_access_reply(reply):
     fields={}
     for line in reply.decode('ascii').splitlines():
@@ -122,6 +122,8 @@ def cgroup_check(work):
     return evidence
 
 
+# Percona-Server-8.4.8-8 Unix_socket::create_lockfile uses O_EXCL PID file,
+# read/write/fsync/close/unlink; no flock/fcntl(F_SETLK)/lockf.
 def exact_socket_plan(label,data,sockets,token,query=access_query):
     name=re.sub(r' \((enforce|complain|kill)\)$','',label)
     if name=='unconfined':raise CheckBlocked('UNCONFINED_PROFILE_REQUIRES_REVIEW')
@@ -132,7 +134,7 @@ def exact_socket_plan(label,data,sockets,token,query=access_query):
             if not sock.startswith('/') or os.path.dirname(sock) not in {os.path.dirname(s) for s in sockets}|{'/run/mysqld'}:continue
             rows=[policy_row(name,logical+'/sulb-shipment-'+token+'/ibdata1',['read','write','create','open','lock'],query),
                   policy_row(name,sock,['read','write','create','open'],query),
-                  policy_row(name,sock+'.lock',['read','write','create','open','lock'],query)]
+                  policy_row(name,sock+'.lock',['read','write','create','open','delete'],query)]
             evidence['plans'].append({'logical_datadir':logical,'socket_path':sock,'queries':rows})
             if all(r['strictly_allowed'] for r in rows):
                 evidence.update(selected_logical_datadir=logical,selected_socket_path=sock)
