@@ -1837,3 +1837,43 @@ migration executor. Production backup account/executor and actual restore/write-
 approval remain open. Existing deployment script remains locked. Actual111-table execution,
 approved history Backfill/FIFO/LOT=GL/concurrency/rollback, security signoff and production
 executor approval are remaining GO gates. Manifest remains NO-GO.
+
+### Docker-unavailable production host; separate staging handoff — 2026-10-27
+Operator reports DOCKER_UNAVAILABLE,PHP8.4.22. Rehearsal did not run: BLOCKED by runtime
+prerequisite, NOT a proven migration defect. Do not repeat schema/accounts/engine/static
+checks. No Docker installation, host service modification or native instance launch.
+
+Prepared staging-runtime-readonly.php: reads PHP/QA extension presence, sanitized Composer
+version with plugins/scripts/network disabled, unshare executable availability and memory/
+filesystem free space. No DB/schema/env dumps or installers.5 local resource-boundary tests
+PASS; PHP lint/local Windows inventory PASS. Actual VPS Composer/resources await operator
+read-only execution. Local metrics are not claimed as VPS metrics.
+
+Chosen execution target: SEPARATE operator-controlled Linux staging, existing Docker,
+PHP8.4+QA extensions,Composer,unshare; preserve the tested pinned8.4.8-8 image/harness.
+The existing harness requires >=1.5GiB available RAM and >=2GiB free working space, caps
+container512MiB/1CPU/256PID and uses no published ports/host database mounts. Native tarball
+execution is possible per official Percona8.4 binary-tarball installation documentation,
+but would additionally require matching architecture/glibc/dependencies, private datadir/
+socket/log/pid/tmp paths, --no-defaults/skip-networking, least-privilege OS identity,
+namespace/limits and lifecycle tests. It is NOT approved or started on production, and
+would share production resources. No systemd/unit/installed mysql.service changes.
+
+Private handoff procedure (not executed): operator supplies staging hostname/IP and verifies
+its SSH host-key fingerprint out-of-band. On staging create root-only0700 directory matching
+/home/mgye-api-sulb/sulb-private-schema-88b4a61422be64ba8a53bdee, copy ONLY schema-private.json
+through direct private SSH/SFTP (StrictHostKeyChecking=yes,ForwardAgent=no,no forwarded
+ports). Redirect transfer into a new0600 temporary file; verify SHA256
+901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f before final rename, refuse an
+existing destination. No raw DDL in command arguments/stdout/chat/GitHub/public storage.
+Obtain SOURCE CODE from the pinned RC through GitHub on staging; no production.env,
+credentials,uploads,storage,vendor or row dumps. Create staging-only parent directories;
+run the already tested schema-only harness on staging with the transferred pinned file.
+Never repoint it to production or enable Docker there to bypass a prerequisite.
+
+No target staging host/access/fingerprint has been supplied, so no concrete SSH destination
+is invented and no transfer/rehearsal is claimed. Smallest external action: provide a
+separate authorized staging host (address + verified public SSH fingerprint, no passwords
+or private keys in chat). Actual private111-table execution/history/restore/security UAT/
+production executor remain open. Production dump/row extraction still not authorized.
+Release remains NO-GO; report/manifest updated only with actual evidence.

@@ -90,7 +90,10 @@
         "ci_run": "https://github.com/mptech96/salb/actions/runs/40441611002",
         "actual_private_vps_schema_passed": false
       }
-    }
+    },
+    "production_attempt_status": "BLOCKED_DOCKER_UNAVAILABLE; no migration failure established",
+    "execution_target": "Separate operator-controlled Linux staging host; no Docker install or native instance start on production authorized",
+    "runtime_preflight": "read-only Composer version/QA extensions/memory/disk; no DB or schema access; 5 local boundary checks passed"
   },
   "production_schema_objects": {
     "operator_verification": "PASS",
