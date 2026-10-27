@@ -14,7 +14,7 @@ $dir=dirname(__DIR__,2).'/backend/storage/framework/testing/history-contract-'.b
 $yes=false;try{historyPrivateJson($dir.'/proof.json',['x'=>false]);}catch(RuntimeException $e){$yes=true;}$assert($yes);$assert(json_decode(file_get_contents($dir.'/proof.json'),true)['x']===true);
 $yes=false;try{historyRestore(new class extends PDO{public function __construct(){}},'sulbprod','/home/mysql','unused','unused',[]);}catch(RuntimeException $e){$yes=$e->getMessage()==='HISTORY_OWNED_RESTORE_DATABASE_REQUIRED';}$assert($yes);
 $gate=$dir.'/gate-fixture';mkdir($gate.'/ops/sulb-rc',0700,true);mkdir($gate.'/backend/scripts',0700,true);
-foreach(['history-capture.php','history-archive.php']as$name)copy(__DIR__.'/'.$name,$gate.'/ops/sulb-rc/'.$name);
+foreach(['history-capture.php','history-archive.php','history-read-budget.php']as$name)copy(__DIR__.'/'.$name,$gate.'/ops/sulb-rc/'.$name);
 copy(__DIR__.'/../../backend/scripts/release_metadata_collect.php',$gate.'/backend/scripts/release_metadata_collect.php');
 file_put_contents($gate.'/ops/sulb-rc/release.json','{"history_capture":{"production_extraction_authorized":false}}');
 $proc=proc_open([PHP_BINARY,$gate.'/ops/sulb-rc/history-capture.php','--capture-approved','unused'],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);fclose($pipes[0]);$out=stream_get_contents($pipes[1]);fclose($pipes[1]);$err=stream_get_contents($pipes[2]);fclose($pipes[2]);$exit=proc_close($proc);$data=json_decode($out,true,512,JSON_THROW_ON_ERROR);$assert($exit===78&&$data['reason']==='HISTORY_EXTRACTION_NOT_AUTHORIZED'&&$err==='');

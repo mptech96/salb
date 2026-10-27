@@ -1,7 +1,8 @@
 """History readiness now; row capture is blocked until separate release approval."""
-import contextlib, importlib.util, io, json, os, pathlib, re, shutil, subprocess, sys, time, uuid
+import contextlib, hashlib, importlib.util, io, json, os, pathlib, re, shutil, subprocess, sys, time, uuid
 from native_isolation_checks import CheckBlocked, exact_socket_plan, exception_evidence
 from native_rehearsal_resources import OwnedGroup
+from history_pressure import SourcePressureGuard,host_pressure
 spec=importlib.util.spec_from_file_location('base',pathlib.Path(__file__).with_name('rehearse-native-schema.py'))
 b=importlib.util.module_from_spec(spec);spec.loader.exec_module(b)
 BASE=pathlib.Path('/home/mgye-api-sulb')
@@ -22,8 +23,31 @@ def collector(mode,work,group):
     try:
         cmd=group.wrap(['php','-d','memory_limit=128M','-d','display_errors=0','-d','log_errors=0',str(pathlib.Path(__file__).with_name('history-capture.php')),mode,str(work)])
         with open(work/'collector-private.log','ab') as error:
-            p=subprocess.run(cmd,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=error,env=b.clean_env(work),timeout=3900 if mode=='--capture-approved' else 180)
-        result=json.loads(p.stdout)
+            if mode!='--capture-approved':
+                p=subprocess.run(cmd,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=error,env=b.clean_env(work),timeout=180)
+                output=p.stdout
+            else:
+                guard=SourcePressureGuard();guard.observe(host_pressure())
+                for _ in range(3):time.sleep(1);guard.observe(host_pressure())
+                if guard.peak>70.0:raise CheckBlocked('HISTORY_SOURCE_BASELINE_BUSY')
+                proc=subprocess.Popen(cmd,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=error,env=b.clean_env(work))
+                start=time.monotonic();completed=False
+                try:
+                    while proc.poll() is None:
+                        time.sleep(1);guard.observe(host_pressure())
+                        if time.monotonic()-start>3900:raise CheckBlocked('HISTORY_CAPTURE_WALLTIME_LIMIT')
+                        if __import__('shutil').disk_usage(work).free<2147483648:raise CheckBlocked('HISTORY_CAPTURE_DISK_PRESSURE')
+                    output=proc.stdout.read();p=proc;completed=proc.returncode==0
+                except BaseException:
+                    if proc.poll() is None:
+                        proc.terminate()
+                        try:proc.wait(timeout=10)
+                        except subprocess.TimeoutExpired:proc.kill();proc.wait(timeout=10)
+                    raise
+                finally:
+                    proof=guard.proof();proof['source_load_qualified_for_this_run']=completed and guard.samples>=3;proof['readiness_sha256']=hashlib.sha256((work/'readiness-private.json').read_bytes()).hexdigest();(work/'load-proof-private.json').write_text(json.dumps(proof));(work/'load-proof-private.json').chmod(0o600)
+        result=json.loads(output)
+        if mode=='--capture-approved':result['source_load_observation']=proof
         if not isinstance(result,dict):raise CheckBlocked('HISTORY_COLLECTOR_RESULT_INVALID')
         if p.returncode:result['history_status']='BLOCKED'
         return result
@@ -61,11 +85,11 @@ def restore_child(work):
         ctx={'mode':'NATIVE_HISTORY_RESTORE','production_connected':False,'datadir':data,'socket':s['socket'],'socket_identity':b.identity(s['socket']),'server_pid':server.pid,'host_net':s['host_net'],'host_pid':s['host_pid'],'private_net':os.readlink('/proc/self/ns/net'),'private_pid':os.readlink('/proc/self/ns/pid'),'masking_complete':True,'limits_enforced':True}
         (work/'native-context.json').write_text(json.dumps(ctx));(work/'native-context.json').chmod(0o600)
         result['stage']='AUTHENTICATED_PRIVATE_RESTORE'
-        cmd=['php','-d','memory_limit=128M','-d','display_errors=0','-d','log_errors=0',str(work/'source/ops/sulb-rc/run-private-history-restore.php'),s['socket'],data,str(work/'snapshot.enc'),str(work/'snapshot.key'),str(work/'manifest-private.json'),str(work/'native-context.json'),str(work/'history-result.json')]
-        try:b.private_command(cmd,work/'restore-private.log',3600,b.clean_env(work))
+        cmd=['php','-d','memory_limit=512M','-d','display_errors=0','-d','log_errors=0',str(work/'source/ops/sulb-rc/run-private-history-restore.php'),s['socket'],data,str(work/'snapshot.enc'),str(work/'snapshot.key'),str(work/'manifest-private.json'),str(work/'native-context.json'),str(work/'history-result.json')]
+        try:b.private_command(cmd,work/'restore-private.log',7200,b.clean_env(work))
         except CheckBlocked:
             if not (work/'history-result.json').is_file():raise
-        result.update(json.loads((work/'history-result.json').read_text()));result['stage']='COMPLETE' if result['snapshot_restore_rehearsal']=='PASS' else 'RESTORE_VALIDATION'
+        result.update(json.loads((work/'history-result.json').read_text()));result['stage']='COMPLETE' if result.get('historical_status',result['snapshot_restore_rehearsal'])=='PASS' else 'HISTORICAL_VALIDATION'
     except Exception as e:
         result.update(snapshot_restore_rehearsal='BLOCKED',reason=e.code if isinstance(e,CheckBlocked) else 'HISTORY_NATIVE_RESTORE_FAILED',failure=exception_evidence(result['stage'],e))
     finally:
@@ -76,7 +100,7 @@ def restore_child(work):
                 except subprocess.TimeoutExpired:server.kill();server.wait(timeout=10);result.update(snapshot_restore_rehearsal='BLOCKED',reason='HISTORY_SERVER_FORCED_STOP')
             result['owned_server_stopped']=server.poll() is not None
         (work/'child-summary.json').write_text(json.dumps(result,indent=2));(work/'child-summary.json').chmod(0o600)
-    return 0 if result['snapshot_restore_rehearsal']=='PASS' else 78
+    return 0 if result.get('historical_status',result['snapshot_restore_rehearsal'])=='PASS' else 78
 
 def main(argv):
     result={'history_status':'BLOCKED','production_rows_extraction_authorized':False,'release_decision':'NO-GO'};group=None;work=None;before=None;identities={}
@@ -107,19 +131,27 @@ def main(argv):
             files={'snapshot.enc':original/'snapshot.enc','manifest-private.json':original/'manifest-private.json','snapshot.key':key}
             for name,path in files.items():
                 if path.is_symlink() or not path.is_file() or path.stat().st_uid!=0 or path.stat().st_mode&0o077:raise CheckBlocked('HISTORY_PRIVATE_BUNDLE_FILES_REQUIRED')
-                shutil.copyfile(path,work/name);(work/name).chmod(0o600)
+                # Immutable authenticated bundles share the private filesystem; no unbounded bulk copy.
+                os.link(path,work/name,follow_symlinks=False)
             b.checked_capture(b.CAPTURE) # Pin existing proven baseline, never re-extract Schema.
             before=b.m.process_state();data,sockets,_=b.m.production_paths(before[0]);identities={p:b.identity(p) for p in [data,'/var/lib','/run']+sockets}
             if data!='/home/mysql':raise CheckBlocked('HISTORY_PROVEN_MAPPING_CHANGED')
             token=uuid.uuid4().hex;plan=exact_socket_plan(before[1],data,sockets,token)
+            if int(next(x.split()[1] for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:')))*1024<3221225472:raise CheckBlocked('HISTORY_RESTORE_MEMORY_HEADROOM')
+            (group.path/'memory.max').write_text('805306368')
+            if (group.path/'memory.max').read_text().strip()!='805306368':raise CheckBlocked('HISTORY_RESTORE_MEMORY_LIMIT_NOT_ENFORCED')
+            group.controls['memory.max']='805306368'
             source=b.archive_source(pathlib.Path(__file__).resolve().parents[2],work,group)
+            for name in ['composer-home','composer-cache']:(work/name).mkdir(mode=0o700)
+            env=b.clean_env(work);env.update(COMPOSER_ALLOW_SUPERUSER='1',COMPOSER_HOME=str(work/'composer-home'),COMPOSER_CACHE_DIR=str(work/'composer-cache'),COMPOSER_MAX_PARALLEL_HTTP='2',COMPOSER_MAX_PARALLEL_PROCESSES='1')
+            b.private_command(group.wrap(['composer','--working-dir='+str(source/'backend'),'install','--no-interaction','--prefer-dist','--no-progress','--no-scripts','--no-plugins']),work/'dependencies-private.log',1800,env)
             launch={'data':data,'sockets':sockets,'logical':plan['selected_logical_datadir'],'socket':plan['selected_socket_path'],'token':token,'label':before[1],'host_net':os.readlink('/proc/self/ns/net'),'host_pid':os.readlink('/proc/self/ns/pid'),'cgroup_name':group.path.name}
             (work/'launch.json').write_text(json.dumps(launch));(work/'launch.json').chmod(0o600)
-            try:b.private_command(group.wrap(['unshare','--mount','--net','--pid','--fork',sys.executable,str(source/'ops/sulb-rc/history-stage.py'),'--restore-child',str(work)]),work/'namespace-private.log',4800,b.clean_env(work))
+            try:b.private_command(group.wrap(['unshare','--mount','--net','--pid','--fork',sys.executable,str(source/'ops/sulb-rc/history-stage.py'),'--restore-child',str(work)]),work/'namespace-private.log',9000,b.clean_env(work))
             except CheckBlocked:
                 if not (work/'child-summary.json').is_file():raise
             result.update(json.loads((work/'child-summary.json').read_text()))
-            result['history_status']=result['snapshot_restore_rehearsal']
+            result['history_status']=result.get('historical_status',result['snapshot_restore_rehearsal'])
     except Exception as e:result.update(history_status='BLOCKED',reason=e.code if isinstance(e,CheckBlocked) else 'HISTORY_STAGE_FAILED',failure=exception_evidence('HISTORY_STAGE',e))
     finally:
         if group is not None:

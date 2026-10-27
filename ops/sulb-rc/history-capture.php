@@ -37,12 +37,16 @@ function historyRequiredSchemaReadPrivileges(PDO $db):array {
     }
     return $evidence;
 }
-function historyPolicyAllowsCapture(array $release):bool{return ($release['history_capture']['production_extraction_authorized']??false)===true;}
+function historyPolicyAllowsCapture(array $release):bool{return ($release['history_capture']['production_extraction_authorized']??false)===true&&(!isset($release['history_plan'])||historyFreshPlanApproval($release));}
+function historyFreshPlanApproval(array $release):bool {
+    $p=$release['history_plan']??[];$at=$p['execution_approved_unix']??null;
+    return ($p['execution_authorized']??false)===true&&is_int($at)&&$at<=time()&&time()-$at<=3600;
+}
 function historyApprovedReceipt(array $release,string $work,string $file):array {
     $expected=$release['history_capture']['approved_readiness_sha256']??null;
     if(!is_string($expected)||!preg_match('/^[a-f0-9]{64}$/D',$expected)||!is_file($file)||is_link($file)||!hash_equals($expected,hash_file('sha256',$file)))throw new RuntimeException('HISTORY_APPROVED_READINESS_REQUIRED');
     $r=json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);
-    if(($r['private_work_directory']??null)!==$work||!is_int($r['created_unix']??null)||time()-$r['created_unix']>86400||$r['created_unix']>time())throw new RuntimeException('HISTORY_APPROVED_READINESS_EXPIRED_OR_MOVED');
+    if(($r['private_work_directory']??null)!==$work||!is_int($r['created_unix']??null)||(time()-$r['created_unix']>86400&&!historyFreshPlanApproval($release))||$r['created_unix']>time())throw new RuntimeException('HISTORY_APPROVED_READINESS_EXPIRED_OR_MOVED');
     return $r;
 }
 function historyPrivateDirectory(string $work):void {
@@ -78,20 +82,28 @@ function historyCaptureCli(array $argv):int {
         if(!extension_loaded('sodium')||!extension_loaded('pdo_mysql'))throw new RuntimeException('HISTORY_REQUIRED_EXTENSION_MISSING');
         $available=0;if(preg_match('/^MemAvailable:\s+(\d+) kB/m',file_get_contents('/proc/meminfo'),$m))$available=(int)$m[1]*1024;
         if($mode==='--capture-approved')$approvedReceipt=historyApprovedReceipt($release,$work,$work.'/readiness-private.json');
-        $db=historyHiddenReader();$ready=historyCaptureReadiness($db,(int)disk_free_space($work),$available);$ready['private_work_directory']=$work;
+        $db=historyHiddenReader();
+        if($mode==='--check-readiness')$ready=historyCaptureReadiness($db,(int)disk_free_space($work),$available);
+        else{
+            verifyReleaseMetadataReader($db);historyRequiredSchemaReadPrivileges($db);
+            if($db->query('SELECT @@server_uuid')->fetchColumn()!==$approvedReceipt['server_uuid'])throw new RuntimeException('HISTORY_SOURCE_IDENTITY_CHANGED');
+            $budget=historyBudget($approvedReceipt['budget']['estimated_source_bytes'],(int)disk_free_space($work),$available);
+            $ready=$approvedReceipt;$ready['budget']['max_archive_bytes']=min($budget['max_archive_bytes'],$approvedReceipt['budget']['max_archive_bytes']);
+        }
+        $ready['private_work_directory']=$work;
         if($mode==='--check-readiness'){
             $file=$work.'/readiness-private.json';if(file_exists($file))throw new RuntimeException('HISTORY_NEW_READINESS_REQUIRED');
             historyPrivateJson($file,$ready);
             echo json_encode(['history_readiness'=>'PASS','private_work_directory'=>$work,'readiness_sha256'=>hash_file('sha256',$file),'table_count'=>$ready['table_count'],'authorization'=>$ready['authorization'],'budget'=>$ready['budget'],'source_load_qualified'=>false,'production_rows_read'=>false,'snapshot_created'=>false,'production_extraction_authorized'=>false,'release_decision'=>'NO-GO'],JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR).PHP_EOL;return 0;
         }
         $receiptFile=$work.'/readiness-private.json';$receipt=$approvedReceipt;
-        if(time()-$receipt['created_unix']>86400||$receipt['created_unix']>time()||$receipt['server_uuid']!==$ready['server_uuid']||$receipt['inventory_sha256']!==$ready['inventory_sha256'])throw new RuntimeException('HISTORY_READINESS_EXPIRED_OR_CHANGED');
+        // Receipt age/approval checked before authentication; identity checked against the live source.
         $tty=fopen('/dev/tty','r+');fwrite($tty,"Separate production-row approval required. Type APPROVED_HISTORY_CAPTURE: ");$confirmation=trim(fgets($tty));fclose($tty);if($confirmation!=='APPROVED_HISTORY_CAPTURE')throw new RuntimeException('HISTORY_EXTRACTION_NOT_AUTHORIZED');
         $keyRoot='/home/mgye-api-sulb/sulb-history-keys';if(!is_dir($keyRoot))mkdir($keyRoot,0700);
         if(is_link($keyRoot)||realpath($keyRoot)!==$keyRoot||fileowner($keyRoot)!==0||(fileperms($keyRoot)&0077)!==0)throw new RuntimeException('HISTORY_PRIVATE_KEY_DIRECTORY_REQUIRED');
         $keyfile=$keyRoot.'/'.substr(basename($work),strlen('sulb-history-ready-')).'.key';$key=sodium_crypto_secretstream_xchacha20poly1305_keygen();$f=fopen($keyfile,'xb');historyWriteAll($f,$key);fflush($f);fsync($f);fclose($f);chmod($keyfile,0600);
         $db->exec('SET SESSION max_execution_time=600000');
-        $manifest=historyCapture($db,$work.'/snapshot.enc',$key,$ready['budget']['max_archive_bytes']);historyVerify($work.'/snapshot.enc',$key,$manifest);
+        $manifest=historyCapture($db,$work.'/snapshot.enc',$key,$ready['budget']['max_archive_bytes'],null,['inventory_sha256'=>$receipt['inventory_sha256'],'readiness_sha256'=>$release['history_capture']['approved_readiness_sha256']]);historyVerify($work.'/snapshot.enc',$key,$manifest);
         historyPrivateJson($work.'/manifest-private.json',$manifest);sodium_memzero($key);
         echo json_encode(['history_capture'=>'PASS','snapshot_sha256'=>$manifest['file_sha256'],'private_work_directory'=>$work,'consistent_snapshot'=>true,'archive_integrity_verified'=>true,'encrypted'=>true,'restored'=>false,'release_decision'=>'NO-GO'],JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR).PHP_EOL;return 0;
     }catch(Throwable $e){$allowed=['DEDICATED_READER_REQUIRED','ROLES_NOT_ALLOWED','MANDATORY_ROLES_NOT_ALLOWED','GRANT_OPTION_NOT_ALLOWED','PRIVILEGE_OUTSIDE_READ_SCOPE','UNVERIFIED_GRANT','UNVERIFIED_GRANT_SCOPE','NO_GRANT_EVIDENCE','UNSUPPORTED_METADATA_SERVER'];$code=preg_match('/^HISTORY_[A-Z0-9_]+$/D',$e->getMessage())||in_array($e->getMessage(),$allowed,true)?$e->getMessage():'HISTORY_READINESS_OR_CAPTURE_FAILED';$result=['history_status'=>'BLOCKED','reason'=>$code,'sqlstate'=>$e instanceof PDOException?(string)($e->errorInfo[0]??''):null,'mysql_code'=>$e instanceof PDOException?(int)($e->errorInfo[1]??0):null,'release_decision'=>'NO-GO'];

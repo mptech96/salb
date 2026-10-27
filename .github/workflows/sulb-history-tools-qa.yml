@@ -6,6 +6,8 @@ on:
       - '.github/workflows/sulb-history-tools-qa.yml'
       - 'ops/sulb-rc/history-*.php'
       - 'ops/sulb-rc/history-stage.py'
+      - 'ops/sulb-rc/history_pressure.py'
+      - 'ops/sulb-rc/execute-history-plan.py'
       - 'ops/sulb-rc/run-private-history-restore.php'
       - 'ops/sulb-rc/test-history-*'
   workflow_dispatch:
@@ -14,7 +16,7 @@ permissions:
 jobs:
   history-tools:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -22,10 +24,13 @@ jobs:
       - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
         with:
           php-version: '8.4'
-          extensions: pdo_mysql, sodium
+          extensions: pdo_mysql, sodium, bcmath, mbstring, dom, xml, fileinfo, zip
+          tools: composer:v2
           coverage: none
       - name: New history contracts, no DB connections
         run: |
+          php ops/sulb-rc/test-history-experiment-policy.php
+          python3 ops/sulb-rc/test-history-plan.py
           php ops/sulb-rc/test-history-read-privileges.php
           php ops/sulb-rc/test-history-contract.php
           python3 ops/sulb-rc/test-history-stage.py
@@ -47,6 +52,11 @@ jobs:
           test "$ready" = 1
       - name: New snapshot and two restores, synthetic rows only
         run: php ops/sulb-rc/test-history-archive-qa.php
+      - name: Install candidate dependencies for NEW populated-history adapter only
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins
+      - name: New populated legacy history, ordered upgrade, backfill and FIFO GL
+        run: php -d memory_limit=512M ops/sulb-rc/test-history-data-qa.php
       - name: Stop only the owned synthetic container
         if: always()
         run: docker rm -f sulb-history-qa >/dev/null 2>&1 || true

@@ -1,5 +1,6 @@
 <?php
 /** Streaming encrypted history archive. No credentials, CLI or production writes. */
+require_once __DIR__.'/history-read-budget.php';
 function historyId(string $s):string {if(!preg_match('/^[A-Za-z0-9_]+$/D',$s))throw new RuntimeException('HISTORY_IDENTIFIER_INVALID');return '`'.$s.'`';}
 function historyDdlShape(string $s):string{return preg_replace('/(\n\) ENGINE=InnoDB(?: [A-Z_]+=[A-Za-z0-9_]+)*) AUTO_INCREMENT=\d+\b/','$1',str_replace("\r\n","\n",$s));}
 function historyPrivateJson(string $path,array $value):void {
@@ -66,31 +67,42 @@ function historyRecords(string $file,string $key):Generator {
         }
     }finally{fclose($f);}
 }
-function historyCapture(PDO $source,string $file,string $key,int $maxBytes=1073741824,?callable $afterSnapshot=null):array {
+function historyCapture(PDO $source,string $file,string $key,int $maxBytes=1073741824,?callable $afterSnapshot=null,array $policy=[]):array {
     if(strlen($key)!==32||is_file($file))throw new RuntimeException('HISTORY_NEW_ARCHIVE_REQUIRED');
     $source->setAttribute(PDO::ATTR_STRINGIFY_FETCHES,true);$source->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY,false);
     $source->exec("SET SESSION time_zone='+00:00'");$source->exec('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
-    $initial=historyInventory($source);$shape=historyInventoryHash($initial);$f=fopen($file,'xb');if(!$f)throw new RuntimeException('HISTORY_NEW_ARCHIVE_REQUIRED');chmod($file,0600);
-    [$state,$header]=sodium_crypto_secretstream_xchacha20poly1305_init_push($key);$counts=[];$started=microtime(true);
+    $initial=historyInventory($source);$shape=historyInventoryHash($initial);
+    if(isset($policy['inventory_sha256'])&&!hash_equals($policy['inventory_sha256'],$shape))throw new RuntimeException('HISTORY_READINESS_INVENTORY_CHANGED');
+    $pageRows=$policy['page_rows']??128;$rate=$policy['read_bytes_per_second']??524288;
+    foreach($initial as$name=>$table)historyReadPage($name,$table,null,$pageRows);
+    $source->exec('SET SESSION max_execution_time=30000');
+    $f=fopen($file,'xb');if(!$f)throw new RuntimeException('HISTORY_NEW_ARCHIVE_REQUIRED');chmod($file,0600);
+    [$state,$header]=sodium_crypto_secretstream_xchacha20poly1305_init_push($key);$counts=[];$started=microtime(true);$bytesRead=0;$pages=0;
     try{
         historyWriteAll($f,"SULBHST1".$header);
         $source->exec('START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY');
         if($afterSnapshot)$afterSnapshot();
         foreach($initial as$name=>$table){
             historyFrameWrite($f,$state,['kind'=>'table','name'=>$name,'definition'=>$table]);$stats=historyStatsInit();
-            $sql='SELECT '.historySelectColumns($table['columns']).' FROM '.historyId($name);
-            $q=$source->query($sql);
-            while(($row=$q->fetch(PDO::FETCH_NUM))!==false){$values=historyRow($row);historyStatsAdd($stats,$values);historyFrameWrite($f,$state,['kind'=>'row','values'=>$values]);
-                if(ftell($f)>$maxBytes)throw new RuntimeException('HISTORY_ARCHIVE_SIZE_LIMIT');
-                if(microtime(true)-$started>3600)throw new RuntimeException('HISTORY_SNAPSHOT_TIME_LIMIT');
-                if(($stats['rows']%1024)===0&&disk_free_space(dirname($file))<2147483648)throw new RuntimeException('HISTORY_DISK_RESERVE_REQUIRED');
-            }$q->closeCursor();$counts[$name]=historyStatsFinish($stats);historyFrameWrite($f,$state,['kind'=>'table_end','name'=>$name,'stats'=>$counts[$name]]);
+            $last=null;$keys=historyReadKeys($table);$names=array_column($table['columns'],'COLUMN_NAME');$effectivePage=$pageRows;
+            foreach($table['columns']as$column)if(preg_match('/blob|text|json/i',$column['DATA_TYPE']))$effectivePage=1;
+            do{
+                [$sql,$params]=historyReadPage($name,$table,$last,$effectivePage);$q=$source->prepare($sql);$q->execute($params);$received=0;$pages++;
+                while(($row=$q->fetch(PDO::FETCH_NUM))!==false){$received++;$values=historyRow($row);historyStatsAdd($stats,$values);historyFrameWrite($f,$state,['kind'=>'row','values'=>$values]);
+                    foreach($row as$v)$bytesRead+=strlen((string)$v);historySourceThrottle($started,$bytesRead,$rate);
+                    if($keys){$last=[];foreach($keys as$key)$last[$key]=$row[array_search($key,$names,true)];}
+                    if(ftell($f)>$maxBytes)throw new RuntimeException('HISTORY_ARCHIVE_SIZE_LIMIT');
+                    if(microtime(true)-$started>3600)throw new RuntimeException('HISTORY_SNAPSHOT_TIME_LIMIT');
+                    if(($stats['rows']%128)===0&&disk_free_space(dirname($file))<2147483648)throw new RuntimeException('HISTORY_DISK_RESERVE_REQUIRED');
+                }$q->closeCursor();
+            }while($keys&&$received===$effectivePage);
+            $counts[$name]=historyStatsFinish($stats);historyFrameWrite($f,$state,['kind'=>'table_end','name'=>$name,'stats'=>$counts[$name]]);
         }
         if(historyInventoryHash(historyInventory($source))!==$shape)throw new RuntimeException('HISTORY_DDL_CHANGED_DURING_SNAPSHOT');
         $source->exec('ROLLBACK');historyFrameWrite($f,$state,['kind'=>'end','tables'=>count($counts),'inventory_sha256'=>$shape],true);
         if(!fflush($f)||!fsync($f))throw new RuntimeException('HISTORY_FILE_SYNC_FAILED');
     }catch(Throwable $e){if(isset($q))try{$q->closeCursor();}catch(Throwable $unused){}try{$source->exec('ROLLBACK');}catch(Throwable $unused){}throw $e;}finally{fclose($f);$source->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY,true);}
-    $result=['format'=>'SULBHST1','file_sha256'=>hash_file('sha256',$file),'bytes'=>filesize($file),'inventory_sha256'=>$shape,'tables'=>$counts,'consistent_snapshot'=>true];
+    $result=['format'=>'SULBHST1','file_sha256'=>hash_file('sha256',$file),'bytes'=>filesize($file),'inventory_sha256'=>$shape,'tables'=>$counts,'consistent_snapshot'=>true,'read_policy'=>['page_rows'=>$pageRows,'read_bytes_per_second'=>$rate,'query_timeout_ms'=>30000,'pages'=>$pages,'source_bytes'=>$bytesRead],'readiness_sha256'=>$policy['readiness_sha256']??null];
     $result['manifest_mac']=sodium_bin2hex(sodium_crypto_generichash(json_encode($result,JSON_THROW_ON_ERROR),sodium_crypto_generichash('manifest-key',$key,32),32));
     return $result;
 }
@@ -109,7 +121,7 @@ function historyVerify(string $file,string $key,array $manifest):void {
     if(!$end||count($seen)!==count($manifest['tables']))throw new RuntimeException('HISTORY_ARCHIVE_TRUNCATED');
 }
 function historyRestore(PDO $target,string $owned,string $expectedDatadir,string $file,string $key,array $manifest):array {
-    if(!preg_match('/^sulb_hist_restore_[a-f0-9]{16}$/D',$owned)||$owned==='sulbprod')throw new RuntimeException('HISTORY_OWNED_RESTORE_DATABASE_REQUIRED');
+    if(!preg_match('/^sulb_(?:hist_restore|ship_test)_[a-f0-9]{16}$/D',$owned)||$owned==='sulbprod')throw new RuntimeException('HISTORY_OWNED_RESTORE_DATABASE_REQUIRED');
     $target->setAttribute(PDO::ATTR_STRINGIFY_FETCHES,true);$target->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY,false);
     try{
     $actual=$target->query('SELECT DATABASE() db,@@datadir datadir,VERSION() version')->fetch(PDO::FETCH_ASSOC);
