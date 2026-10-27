@@ -60,5 +60,15 @@
     "database": "sulbprod"
   },
   "rollback_policy": "Never restore a pre-release database over live customer transactions. Code rollback only after demonstrated schema compatibility; otherwise keep write fence and perform reviewed forward repair.",
-  "received_production_schema_sha256": "550ce437236b4b8f10df2d438eb179ae9335ee298147b84a5a185bf5f796ee9b"
+  "received_production_schema_sha256": "550ce437236b4b8f10df2d438eb179ae9335ee298147b84a5a185bf5f796ee9b",
+  "staging_preparation": {
+    "schema_capture": "read-only standalone tool prepared; requires separate operator approval and existing directly privileged administrator",
+    "local_contract_checks_passed": 9,
+    "live_schema_capture_tested": false,
+    "privacy_policy_columns": 1919,
+    "privacy_policy_approved": false,
+    "production_row_export_enabled": false,
+    "safe_alternative": "operator-controlled isolated private staging enclave; no raw data transfer",
+    "actual_history_staging_tested": false
+  }
 }

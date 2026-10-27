@@ -1669,3 +1669,39 @@ RELEASE_GO_OR_NO_GO: NO-GO. Receipt of real metadata closes server-version uncer
 not the approved migration executor, full trigger/schema/history, active FPM, staging,
 write-fence or production backup/rollback approval gates. Existing deploy script
 remains gated; there is no authorized deployment command yet.
+
+### Final staging preparation tools — 2026-10-27
+Added ops/sulb-rc/staging-prepare.php and its local contract test.
+--plan never connects. --policy-template reads only previously supplied metadata:
+1919 explicit UNREVIEWED column policies generated in ignored local testing storage.
+No classification is inferred from names. No row exporter/importer exists or is enabled.
+--execute-schema-only requires independent approval typed through /dev/tty, existing
+administrator username and hidden password, direct global visibility evidence and
+no active roles. It executes only fixed SELECT metadata / SHOW CREATE / SHOW GRANTS;
+never emits grants or passwords. Private schema JSON includes definitions for tables,
+views,triggers,procedures,functions,events and must remain private: DDL can contain
+sensitive literals/definers. No CREATE/ALTER/GRANT/LOCK/SET/data SELECT is issued.
+No new privileges for sulbmetadata and no root login assumption.
+
+New tests:9/9 LOCAL CONTRACT CHECKS PASS using fake metadata reader, plus --plan PASS,
+unknown/data-export mode rejected, full1919-column template generated with export=false.
+These are NOT live Percona capture or production/history staging passes. Existing engine
+results remain unchanged. Full capture integration and actual history rehearsal remain
+pending approved access/input. The9 checks cover policy completeness, invalid/duplicate
+metadata, schema-only capture contract, grant non-disclosure and role/visibility denial.
+
+Reliable anonymization cannot be certified from schema names/types: immutable receipt
+payloads/hashes, JSON/audit/free-text references may embed identities and business keys.
+An automated name substitution could leak PII or break source evidence/GL relationships.
+Therefore production-row extraction is intentionally STOPPED, not considered complete.
+Safe alternative: approved operator-managed isolated staging enclave, no public endpoints,
+no production credentials, outbound mail/queue/integrations disabled, no raw transfer to
+GitHub/chat. A privacy reviewer must approve per-column transformations and consistent
+identifier mapping before any portable dataset. Exact approved quantities/FX/GL values
+and relational closure must survive; any unverifiable field blocks export.
+
+Next independent approval is schema-only capture with existing administrator; no row
+extraction/deploy/migration implied. Actual representative-history staging still requires
+its own approved input. Fourteen migrations/backfill/LOT=GL/concurrency/restore are NOT
+rerun or claimed passed on unavailable history. Comprehensive final security approval
+and production migration executor remain open; no gates weakened. Manifest stays NO-GO.
