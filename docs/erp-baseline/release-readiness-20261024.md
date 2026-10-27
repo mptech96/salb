@@ -1591,3 +1591,15 @@ schema/flags/FPM evidence, approved representative anonymized history, full
 production-equivalent staging/UAT, approved production executor, write fence,
 backup/rollback rehearsal and comprehensive security sign-off. All production
 approval fields remain false and the decision remains **NO-GO**.
+
+### sulbmetadata reader qualification — 2026-10-27
+Preflight and standalone collector now authenticate only as the CloudPanel-approved
+`sulbmetadata` account. Privilege, grant-option, cross-schema, routine and inherited/
+mandatory-role rejection is unchanged. Password input remains hidden on /dev/tty.
+Actual isolated Percona Server 8.4.8-8 verification: **11/11 PASS**, 11 metadata result
+sets; synthetic business sentinel was not exported and collector performed no writes.
+Evidence: https://github.com/mptech96/salb/actions/runs/40433563016
+Tested source commit: d244fbe3a895ee610c81c2eb603ecc634981d812.
+Previously qualified ERP suites were intentionally skipped; their prior results remain
+within their tested scope. No VPS access, production migration or deployment occurred.
+Production metadata review and existing staging/history gates remain open: **NO-GO**.
