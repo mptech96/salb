@@ -63,13 +63,14 @@
   "received_production_schema_sha256": "550ce437236b4b8f10df2d438eb179ae9335ee298147b84a5a185bf5f796ee9b",
   "staging_preparation": {
     "schema_capture": "read-only standalone tool prepared; requires separate operator approval and existing directly privileged administrator",
-    "local_contract_checks_passed": 15,
+    "local_contract_checks_passed": 17,
     "live_schema_capture_tested": false,
     "privacy_policy_columns": 1919,
     "privacy_policy_approved": false,
     "production_row_export_enabled": false,
     "safe_alternative": "operator-controlled isolated private staging enclave; no raw data transfer",
     "actual_history_staging_tested": false,
-    "cloudpanel_master_auth": "official clpctl db:show:master-credentials captured in memory; fail closed; never evaluated or printed"
+    "cloudpanel_master_auth": "official clpctl db:show:master-credentials captured in memory; fail closed; never evaluated or printed",
+    "operator_reported_schema_capture_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f"
   }
 }

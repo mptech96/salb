@@ -1722,3 +1722,21 @@ contains object counts/hash/false row-export flag only; no DDL, grants or creden
 Local15/15 contract checks PASS (six new credential parser cases, synthetic passwords),
 PHP lint PASS. Not a live CloudPanel CLI or engine integration result. No VPS connection
 or production extraction was performed by Codex. Deployment remains NO-GO.
+
+### Operator schema capture received; zero-object verification — 2026-10-27
+Operator reports111 TABLE definitions and capture SHA256
+901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f;
+private DDL remains on VPS, not received by Codex or stored in GitHub.
+Previous summary omitted absent kind keys rather than reporting explicit zeros.
+Added verify-private-schema.php: checks operator-pinned file hash, valid nonempty
+CREATE definition for every captured object, obtains CloudPanel credentials in memory,
+reuses strict direct global administrative visibility check, compares six explicit
+counts against independent SHOW FULL TABLES/TRIGGERS/PROCEDURE STATUS/FUNCTION STATUS/
+EVENTS metadata. No SHOW CREATE recapture or business reads; no DDL/grants printed.
+A mismatch stops without accepting absence as zero. Metadata SHOW results may contain
+sensitive definitions in process memory only, never emitted or persisted.
+Local17/17 contract checks PASS including explicit zero keys and incomplete DDL denial.
+Live VPS count verification not yet received; no zero-object conclusion claimed.
+Actual complete DDL compatibility cannot be inferred from a hash/count alone. Previous
+structural comparison remains valid; QA-only migration executor, exact collations/
+CHECK/DDL history rehearsal and approved anonymized staging remain pending. NO-GO.

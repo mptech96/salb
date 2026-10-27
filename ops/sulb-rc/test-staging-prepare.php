@@ -25,4 +25,8 @@ foreach([$fixture('admin_role'),$fixture('NONE','GRANT SELECT ON sulbprod.* TO a
 $secret='synthetic-qa-password!$()';
 foreach(["Host: 127.0.0.1\nUser Name: admin\nPassword: $secret\nPort: 3306", "| Host | localhost |\n| User Name | admin |\n| Password | $secret |\n| Port | 3306 |"]as$output){$credentials=cloudPanelMasterCredentials($output);$assert($credentials['password']===$secret&&$credentials['user']==='admin');}
 foreach(["Connect Command: mysql -uroot -psecret", "Host: remote.example\nUser: admin\nPassword: qa\nPort: 3306", "Host: localhost\nUser: sulbprod\nPassword: qa\nPort: 3306", "Host: localhost\nUser: admin\nPassword: qa\nPort: 3306\nPort: 3307"]as$output){try{cloudPanelMasterCredentials($output);throw new LogicException('ACCEPTED');}catch(RuntimeException $e){$assert(true);}}
+require __DIR__.'/verify-private-schema.php';
+$j=['mode'=>'PRIVATE_SCHEMA_ONLY','business_rows_exported'=>false,'definitions'=>[['kind'=>'TABLE','name'=>'qa','ddl'=>[['Create Table'=>'CREATE TABLE qa(id INT)']]]]];
+$counts=privateSchemaCounts($j);$assert($counts['TABLE']===1&&$counts['TRIGGER']===0&&count($counts)===6);
+$j['definitions'][0]['ddl']=[];try{privateSchemaCounts($j);throw new LogicException('ACCEPTED');}catch(RuntimeException $e){$assert($e->getMessage()==='MISSING_CREATE_DEFINITION');}
 echo "PASS $checks local contract checks; fake reader only, not a live engine integration test\n";

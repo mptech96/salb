@@ -37,9 +37,7 @@ function cloudPanelMasterCredentials(string $output):array {
        ||in_array(strtolower($fields['user']),['sulbprod','sulbmetadata','sulb_metadata_ro'],true))throw new RuntimeException('MASTER_OUTPUT_UNVERIFIED');
     return $fields;
 }
-function schemaCapture(callable $read):array {
-    $quote=fn($s)=>'`'.str_replace('`','``',$s).'`';$out=['mode'=>'PRIVATE_SCHEMA_ONLY','business_rows_exported'=>false,'automatic_import_authorized'=>false,'definitions'=>[]];
-    $out['server']=$read('SELECT VERSION() AS version, @@version_comment AS distribution');
+function schemaAdminVisibility(callable $read):void {
     // Reject inherited roles rather than infer complete visibility from partial lists.
     $roles=$read('SELECT CURRENT_ROLE() AS role_name');
     if(!in_array($roles[0]['role_name']??null,[null,'NONE'],true))throw new RuntimeException('DIRECT_ADMIN_VISIBILITY_REQUIRED');
@@ -47,6 +45,11 @@ function schemaCapture(callable $read):array {
     foreach($grants as$row){$g=(string)array_values($row)[0];if(preg_match('/^GRANT (.*?) ON \*\.\* TO /',$g,$m))$global=array_merge($global,explode(', ',$m[1]));}
     if(!in_array('ALL PRIVILEGES',$global,true)&&array_diff(['SELECT','SHOW VIEW','TRIGGER','EVENT'],$global))throw new RuntimeException('COMPLETE_ADMIN_VISIBILITY_UNPROVEN');
     // Grant statements may contain authentication material; never include them.
+}
+function schemaCapture(callable $read):array {
+    $quote=fn($s)=>'`'.str_replace('`','``',$s).'`';$out=['mode'=>'PRIVATE_SCHEMA_ONLY','business_rows_exported'=>false,'automatic_import_authorized'=>false,'definitions'=>[]];
+    $out['server']=$read('SELECT VERSION() AS version, @@version_comment AS distribution');
+    schemaAdminVisibility($read);
     foreach($read("SELECT TABLE_NAME,TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA='sulbprod' ORDER BY TABLE_NAME")as$r){
         $kind=$r['TABLE_TYPE']==='VIEW'?'VIEW':'TABLE';$out['definitions'][]=['kind'=>$kind,'name'=>$r['TABLE_NAME'],'ddl'=>$read('SHOW CREATE '.$kind.' `sulbprod`.'.$quote($r['TABLE_NAME']))];
     }
