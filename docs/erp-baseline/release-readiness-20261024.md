@@ -1782,3 +1782,58 @@ NEXT ACTION ONLY: run offline contract against existing private schema with its 
 hash; return safe JSON only. Then execute prepared test on isolated Percona staging
 with approved input, not on sulbprod. Production-compatible migration executor, history
 Backfill/FIFO/LOT=GL/concurrency/failure/restore and security UAT remain NO-GO gates.
+
+### Network-isolated Percona schema-only staging harness — 2026-10-27
+Operator actual private static prerequisites PASS on5445f5f,14 migration source hashes
+verified,0 DB connections. This closes static prerequisites only, not execution/history.
+Added rehearse-private-schema.sh and run-private-socket-rehearsal.php, with a focused
+synthetic-only CI workflow. No production DDL/rows/credentials are sent to GitHub.
+Actual full harness PASS on Percona Server8.4.8-8:
+https://github.com/mptech96/salb/actions/runs/40441611002
+Tested source5710f4673a79157bc357b40ebace419d7964be8d.
+14 UOM migrations +4 declared LOT/L3 dependencies applied on the synthetic empty schema.
+Owned database removed and owned ephemeral container removed. This does NOT certify
+execution on the private111-table capture yet. No previous ERP suites rerun.
+
+Isolation: pinned official Percona image digest, Docker --network none/no port bindings,
+--skip-networking and mysqlx disabled, only fresh private Unix-socket directory mounted.
+Server datadir is new random sulb-shipment32hex on container tmpfs, no production mounts.
+512MB memory/1CPU/256PID limits. Fails if Docker/unshare/PHP8.4/Composer unavailable,
+free memory<1.5GiB or free disk<2GiB. Never installs/starts Docker or host DB services.
+PHP also runs in a new empty network namespace, verifies namespace identity/no nonlo
+routes, DSN unix_socket only, datadir/server/empty-instance checks before creating DB.
+Database name is generated sulb_ship_test16hex internally; caller cannot supply sulbprod.
+No application credentials, CloudPanel auth or metadata collection. Fresh private source
+archive rejects.env/cache; env-i, private Composer home/cache, no plugins/scripts, no live
+vendor/storage. No source index ownership mutation (git --no-optional-locks status).
+Private logs may contain DDL and are NEVER printed by operational wrapper; only safe JSON.
+Container removed on exit; failure never produces a public PASS summary. Private source/
+logs remain outside htdocs under root0700 for authorized local diagnosis only.
+
+Initial harness CI attempts STOPPED, not PASS: a proc-route line-count guard rejected
+network namespace readiness. Corrected using actual namespace identity plus trimmed
+route semantics, preserving isolation. Initialization readiness now requires final PID1
+mysqld, not the transient initialization server. Generic errors sanitized to allowlisted
+codes/SQLSTATE numbers, never SQL text. Bash syntax/PHP lint passed. Final actual full
+CI above passed all steps. No VPS contact by Codex.
+
+RESTORE PLAN: schema-only runner creates only disposable DB and removes its container;
+keep pinned input JSON unchanged for replay. No destructive migration down/live DB restore.
+After private schema run PASS, separately approve an operator-controlled private history
+staging enclave with outbound integrations disabled. Prefer in-enclave approved relational
+history rather than exporting raw customer rows; no anonymizer has been certified. Preserve
+exact approved source IDs/relations, quantities/UOM/FIFO order,FX/cost/GL and immutable
+receipts. Any PII in immutable payloads/hashes requires a reviewed transformation or blocks
+portable export. Next historical rehearsal must dry-run exceptions, apply/backfill under
+controlled failure/restart/concurrency, reconcile LOT/GL and restore a verified backup into
+ANOTHER new staging DB. Confirm newer source transactions remain intact. Return aggregate
+counts/reconciliation only. No production row extraction authorized by schema-only approval.
+
+SECURITY: new path reviewed for production credential/env leakage, TCP fallback, DB naming,
+namespace/datadir ownership, private logging, source preservation, bounded resource use.
+All these harness gates passed the synthetic integration. Comprehensive release signoff
+still requires staged authorization/security UAT and review/qualification of a production
+migration executor. Production backup account/executor and actual restore/write-fence
+approval remain open. Existing deployment script remains locked. Actual111-table execution,
+approved history Backfill/FIFO/LOT=GL/concurrency/rollback, security signoff and production
+executor approval are remaining GO gates. Manifest remains NO-GO.

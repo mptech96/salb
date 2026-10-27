@@ -77,7 +77,19 @@
       "synthetic_mysql84_tests": 1,
       "synthetic_mysql84_assertions": 229,
       "actual_private_schema_rehearsal_passed": false,
-      "history_passed": false
+      "history_passed": false,
+      "percona_networkless_harness": {
+        "result": "PASS synthetic schema-only",
+        "server_version": "8.4.8-8",
+        "migration_count": 14,
+        "lot_l3_dependency_count": 4,
+        "docker_network": "none",
+        "php_network_namespace_isolated": true,
+        "transport": "owned Unix socket",
+        "tested_commit": "5710f4673a79157bc357b40ebace419d7964be8d",
+        "ci_run": "https://github.com/mptech96/salb/actions/runs/40441611002",
+        "actual_private_vps_schema_passed": false
+      }
     }
   },
   "production_schema_objects": {
@@ -91,5 +103,12 @@
     "zero_counts_explicitly_verified": true,
     "schema_capture_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f",
     "full_compatibility_approved": false
+  },
+  "operator_static_prerequisites": {
+    "result": "PASS",
+    "migration_count": 14,
+    "all_migration_hashes_verified": true,
+    "database_connections": 0,
+    "schema_capture_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f"
   }
 }
