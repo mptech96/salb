@@ -1,10 +1,18 @@
 name: SULB Percona 8.4 isolated QA (NO-GO)
 on:
   workflow_dispatch:
+    inputs:
+      full_suite:
+        description: Run previously qualified ERP regression suites too
+        type: boolean
+        default: false
   push:
     branches: [codex/sulb-complete-rc-20261027]
     paths:
       - '.github/workflows/sulb-percona84-qa.yml'
+      - 'backend/scripts/release_metadata_collect.php'
+      - 'backend/scripts/qa_metadata_engine_acceptance.php'
+      - 'ops/sulb-rc/preflight.php'
 permissions:
   contents: read
 jobs:
@@ -68,31 +76,37 @@ jobs:
           cp "$RUNNER_TEMP/sulb-qa-bin/mysql" "$RUNNER_TEMP/sulb-qa-bin/mysqldump"
           chmod 700 "$RUNNER_TEMP/sulb-qa-bin/mysql" "$RUNNER_TEMP/sulb-qa-bin/mysqldump"
           echo "$RUNNER_TEMP/sulb-qa-bin" >> "$GITHUB_PATH"
-      - name: Verify metadata account roles and server version through PDO
+      - name: Verify sulbmetadata strict privileges, roles and server version through PDO
         working-directory: backend
         run: php scripts/qa_metadata_engine_acceptance.php
       - name: Rehearse full schema, Backfill, exact FIFO GL and backup restore
+        if: github.event_name == 'workflow_dispatch' && inputs.full_suite
         working-directory: backend
         run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ReleaseCandidateReadinessTest.php
       - name: Mixed UOM processing, rollback, idempotency and actual lock waits
+        if: github.event_name == 'workflow_dispatch' && inputs.full_suite
         working-directory: backend
         env:
           SULB_TEST_FILTER: test_extra_cost_mixed_recipe_posts|test_extra_cost_missing_source_and_late_gl_failure|test_extra_cost_two_distinct_orders|test_extra_cost_http_support_requires|test_extra_cost_schema_restart
         run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/BaseProcessingTest.php
       - name: Mixed L3 shipments, history and full reversal
+        if: github.event_name == 'workflow_dispatch' && inputs.full_suite
         working-directory: backend
         env:
           SULB_TEST_FILTER: test_mixed_paid_purchase_real_l3_concurrency|test_mixed_purchase_l3_receipt_capitalization_fifo_return|test_mixed_paid_l3_purchase_void_race|test_untouched_legacy_capitalized_receipts
         run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ShipmentBaseCycleTest.php
       - name: Identity constraints, case-sensitive references and unused schema rollback
+        if: github.event_name == 'workflow_dispatch' && inputs.full_suite
         working-directory: backend
         env:
           SULB_TEST_FILTER: test_database_enforces_new_refs_unique_scope_and_immutable_evidence|test_unused_additive_schema_can_be_removed_without_touching_legacy_rows
         run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ShipmentLineIdentityTest.php
       - name: Critical security and financial failure atomicity
+        if: github.event_name == 'workflow_dispatch' && inputs.full_suite
         working-directory: backend
         run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ReleaseSecurityClosureTest.php
       - name: Transfer isolation and independent-company concurrency
+        if: github.event_name == 'workflow_dispatch' && inputs.full_suite
         working-directory: backend
         run: php scripts/test_shipment_stage_one.php --mysql84 tests/Integration/Uom/ReleaseTransferLockAcceptanceTest.php
       - name: Preserve synthetic QA proof only

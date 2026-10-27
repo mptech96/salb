@@ -677,7 +677,7 @@
   },
   {
     "path": "backend/scripts/qa_metadata_engine_acceptance.php",
-    "sha256": "7f41dbb29e64073a39774e81c5035bf9719067aa5471dd82f59d11dcd43fa246"
+    "sha256": "07994b189be05c2bd4fb7a7ab81b2419135f47d62577bbcb742343e097184c1e"
   },
   {
     "sha256": "b96ff3a26a59c92736055567c3d955c2626c01233eb4c867f3fa65ece438738b",
@@ -688,7 +688,7 @@
     "path": "backend/scripts/qa_uom_browser_seed.php"
   },
   {
-    "sha256": "ca071bab160325f4022b081a536d9e2f8e1e8d51b2ae2ca834d1b9bf1017f309",
+    "sha256": "685aa43fd4670c2e893b013b9c9b816e8c12bfa07b8c7b06c95b0ec498ae9e79",
     "path": "backend/scripts/release_metadata_collect.php"
   },
   {

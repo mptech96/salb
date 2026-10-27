@@ -30,7 +30,7 @@ function verifyReleaseMetadataReader(PDO $db): array
 {
     $server=releaseMetadataServer($db);
     $identity = (string)$db->query('SELECT CURRENT_USER()')->fetchColumn();
-    if (explode('@', $identity, 2)[0] !== 'sulb_metadata_ro') throw new RuntimeException('DEDICATED_READER_REQUIRED');
+    if (explode('@', $identity, 2)[0] !== 'sulbmetadata') throw new RuntimeException('DEDICATED_READER_REQUIRED');
     if (!in_array($db->query('SELECT CURRENT_ROLE()')->fetchColumn(),[null,'NONE'],true)
         || (int)$db->query('SELECT COUNT(*) FROM information_schema.APPLICABLE_ROLES')->fetchColumn() !== 0
         || (int)$db->query('SELECT COUNT(*) FROM information_schema.ENABLED_ROLES WHERE ROLE_NAME IS NOT NULL')->fetchColumn() !== 0) {
@@ -78,7 +78,7 @@ try {
     if (PHP_SAPI !== 'cli' || ($argv[1] ?? '') !== '--metadata-only') throw new RuntimeException('CLI_MODE_REQUIRED');
     $tty = @fopen('/dev/tty', 'r+');
     if (!$tty) throw new RuntimeException('INTERACTIVE_TTY_REQUIRED');
-    fwrite($tty, 'Password for dedicated reader sulb_metadata_ro (never application account): ');
+    fwrite($tty, 'Password for dedicated reader sulbmetadata (never application account): ');
     exec('stty -echo < /dev/tty', $unused, $status);
     if ($status !== 0) throw new RuntimeException('HIDDEN_INPUT_UNAVAILABLE');
     try { $line = fgets($tty); }
@@ -86,7 +86,7 @@ try {
     if ($line === false) throw new RuntimeException('PASSWORD_INPUT_REQUIRED');
     $password = rtrim($line, "\r\n"); unset($line);
     try {
-        $db = new PDO('mysql:host=localhost;dbname=sulbprod;charset=utf8mb4', 'sulb_metadata_ro', $password,
+        $db = new PDO('mysql:host=localhost;dbname=sulbprod;charset=utf8mb4', 'sulbmetadata', $password,
             [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false, PDO::ATTR_TIMEOUT=>10]);
     } finally { unset($password); }
     $gate = verifyReleaseMetadataReader($db);

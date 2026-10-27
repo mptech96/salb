@@ -5,12 +5,12 @@ ini_set('display_errors','0');
 try{
     if(PHP_SAPI!=='cli')throw new RuntimeException('CLI_REQUIRED');
     $tty=@fopen('/dev/tty','r+');if(!$tty)throw new RuntimeException('TTY_REQUIRED');
-    fwrite($tty,'Password for dedicated sulb_metadata_ro only: ');
+    fwrite($tty,'Password for dedicated sulbmetadata only: ');
     exec('stty -echo < /dev/tty',$unused,$status);if($status!==0)throw new RuntimeException('HIDDEN_INPUT_REQUIRED');
     try{$line=fgets($tty);}finally{exec('stty echo < /dev/tty');fwrite($tty,"\n");fclose($tty);}
     if($line===false)throw new RuntimeException('PASSWORD_INPUT_REQUIRED');
     $password=rtrim($line,"\r\n");unset($line);
-    try{$db=new PDO('mysql:host=localhost;dbname=sulbprod;charset=utf8mb4','sulb_metadata_ro',$password,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false,PDO::ATTR_TIMEOUT=>10]);}finally{unset($password);}
+    try{$db=new PDO('mysql:host=localhost;dbname=sulbprod;charset=utf8mb4','sulbmetadata',$password,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false,PDO::ATTR_TIMEOUT=>10]);}finally{unset($password);}
     $authorization=verifyReleaseMetadataReader($db);
     $sets=[];foreach(releaseMetadataQueries($db)as$statement){$rows=$db->query($statement);if(str_starts_with(strtoupper($statement),'SELECT')||str_starts_with($statement,'SHOW SESSION VARIABLES'))$sets[]=$rows->fetchAll(PDO::FETCH_ASSOC);}
     foreach(releaseExtendedMetadataQueries($db)as$statement)$sets[]=$db->query($statement)->fetchAll(PDO::FETCH_ASSOC);
