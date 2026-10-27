@@ -274,15 +274,19 @@
     "format": "SULBHST1 / libsodium secretstream XChaCha20-Poly1305",
     "key_location": "separate root-private directory; never password/key in argv/env/GitHub",
     "windows_mysql84_synthetic_checks_passed": 31,
-    "offline_contract_checks_passed": 22,
+    "offline_contract_checks_passed": 26,
     "python_orchestration_tests_passed": 8,
-    "percona_synthetic_ci_passed": false,
+    "percona_synthetic_ci_passed": true,
     "vps_history_readiness_passed": false,
     "production_history_validated": false,
     "production_backup_restore_rehearsed": false,
     "production_source_load_qualified": false,
     "source_timeout_limits_are_session_only": true,
     "production_server_cgroup_changed": false,
-    "restore_policy": "two fresh owned databases on offline native Percona; never overwrite sulbprod or newer transactions"
+    "restore_policy": "two fresh owned databases on offline native Percona; never overwrite sulbprod or newer transactions",
+    "approved_readiness_sha256": null,
+    "percona_ci_tested_commit": "1c702f7c3c77e327d4ab16b024ab24f8362aba04",
+    "percona_ci_run": "https://github.com/mptech96/salb/actions/runs/40569774943",
+    "percona_synthetic_checks_passed": 31
   }
 }
