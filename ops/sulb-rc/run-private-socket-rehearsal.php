@@ -36,4 +36,9 @@ try {
       'owned_database_removed'=>true,'production_connected'=>false,'historical_validation_passed'=>false,
       'release_decision'=>'NO-GO'];
     if(file_put_contents($proof,json_encode($result,JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR),LOCK_EX)===false)throw new RuntimeException('PROOF_WRITE_FAILED');
-}catch(Throwable $e){fwrite(STDERR,"STOP: isolated schema rehearsal failed. Private log only; no deployment approval.\n");exit(1);}
+}catch(Throwable $e){
+    $allowed=['OWNED_SOCKET_REQUIRED','PRIVATE_NETWORK_NAMESPACE_REQUIRED','OFFLINE_PERCONA_REQUIRED','EMPTY_INSTANCE_REQUIRED','OWNED_NAME_REQUIRED','NO_ENV_OR_CONFIG_CACHE_ALLOWED','SCHEMA_REHEARSAL_FAILED','PROOF_WRITE_FAILED'];
+    $reason=in_array($e->getMessage(),$allowed,true)?$e->getMessage():'RUNTIME_FAILURE';
+    if($e instanceof PDOException)$reason='PDO_FAILURE_'.preg_replace('/[^0-9A-Z]/','',(string)($e->errorInfo[0]??'')).'_'.(int)($e->errorInfo[1]??0);
+    fwrite(STDERR,"STOP_CODE=$reason; isolated rehearsal failed; no DDL or credential diagnostics emitted.\n");exit(1);
+}

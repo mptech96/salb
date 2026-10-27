@@ -50,7 +50,8 @@ created=1
 docker start "$container" >"$work/start.log" 2>&1
 ready=0
 for attempt in $(seq 1 90); do
-  if docker exec "$container" mysqladmin --no-defaults --socket=/qa-socket/mysql.sock --user=root --silent ping >"$work/readiness.log" 2>&1; then ready=1; break; fi
+  if docker exec "$container" sh -c 'test "$(cat /proc/1/comm)" = mysqld' >"$work/readiness.log" 2>&1 \
+    && docker exec "$container" mysqladmin --no-defaults --socket=/qa-socket/mysql.sock --user=root --silent ping >>"$work/readiness.log" 2>&1; then ready=1; break; fi
   sleep 2
 done
 [ "$ready" = 1 ] || fail
