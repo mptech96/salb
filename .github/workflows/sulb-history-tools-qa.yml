@@ -1,0 +1,51 @@
+name: SULB encrypted history tools QA (synthetic only)
+on:
+  push:
+    branches: [codex/sulb-complete-rc-20261027]
+    paths:
+      - '.github/workflows/sulb-history-tools-qa.yml'
+      - 'ops/sulb-rc/history-*.php'
+      - 'ops/sulb-rc/history-stage.py'
+      - 'ops/sulb-rc/run-private-history-restore.php'
+      - 'ops/sulb-rc/test-history-*'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  history-tools:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, sodium
+          coverage: none
+      - name: New history contracts, no DB connections
+        run: |
+          php ops/sulb-rc/test-history-contract.php
+          python3 ops/sulb-rc/test-history-stage.py
+      - name: Start owned synthetic Percona 8.4 only
+        shell: bash
+        run: |
+          set -euo pipefail
+          data="/var/lib/mysql/sulb-shipment-$(openssl rand -hex 16)"
+          echo "SULB_HISTORY_QA_DATADIR=$data" >> "$GITHUB_ENV"
+          docker run -d --name sulb-history-qa --memory 512m --cpus 1 --pids-limit 128 \
+            -p 127.0.0.1:3339:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_ROOT_HOST=% \
+            percona/percona-server@sha256:eaa4cf955f8a01a43faa6ef656bf8fb69a17c17c278a3b0514212291ca0448b1 \
+            --datadir="$data" --mysqlx=0 --innodb-buffer-pool-size=64M --performance-schema=OFF
+          ready=0
+          for attempt in $(seq 1 90); do
+            if docker exec sulb-history-qa mysqladmin --no-defaults --host=127.0.0.1 --user=root --silent ping >/dev/null 2>&1; then ready=1; break; fi
+            sleep 2
+          done
+          test "$ready" = 1
+      - name: New snapshot and two restores, synthetic rows only
+        run: php ops/sulb-rc/test-history-archive-qa.php
+      - name: Stop only the owned synthetic container
+        if: always()
+        run: docker rm -f sulb-history-qa >/dev/null 2>&1 || true

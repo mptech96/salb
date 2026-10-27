@@ -33,10 +33,10 @@
   },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
   "staging_blocked_inputs": [
-    "actual execution of the approved private schema in isolated native Percona; not yet run",
-    "approved representative anonymized relational history",
-    "private backup/restore rehearsal and production executor qualification",
-    "active site FPM and production-equivalent runtime evidence"
+    "independently approved representative production-history snapshot kept only in a private local VPS enclave",
+    "historical Backfill/FIFO/LOT=GL validation with explicit unresolved exceptions",
+    "verified consistent backup and isolated restore preserving newer production transactions",
+    "qualified ordered production migration executor, final security review and explicit deployment approval"
   ],
   "minimum_php": "8.3.0",
   "minimum_node": "20.9.0",
@@ -100,7 +100,7 @@
       "host_capacity_verified": true,
       "kernel_isolation_verified": true,
       "mac_policy_verified": true,
-      "native_server_started": false,
+      "native_server_started": true,
       "production_service_changes_authorized": false,
       "probe": "native-staging-feasibility.sh; no DB access or mysqld invocation",
       "observed_memory_available_kib": 13983888,
@@ -158,7 +158,7 @@
         "authorized_scope": "owned isolated Percona schema-only; no production connections or business rows",
         "python_contract_tests_passed": 19,
         "php_contract_checks_passed": 16,
-        "actual_vps_execution_passed": false,
+        "actual_vps_execution_passed": true,
         "memory_max_bytes": 268435456,
         "cpu_quota": "25000 100000",
         "pids_max": 32,
@@ -167,15 +167,19 @@
         "schema_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f",
         "execution_authorized": true,
         "last_operator_result": {
-          "source_commit": "7fb00be66af12d0d298b065cf281db1d65c92cb4",
-          "schema_only_rehearsal": "BLOCKED",
-          "stop_code": "OWNED_SOCKET_REQUIRED",
-          "migration_checkpoint": "NOT_RECORDED",
+          "source_commit": "dcd26450875432caa9135c5f4c78a20da613f595",
+          "schema_only_rehearsal": "PASS",
+          "stage": "COMPLETE",
+          "server_version": "8.4.8-8",
+          "uom_migrations_applied": 14,
+          "lot_l3_dependencies_applied": 4,
           "production_connected": false,
+          "business_rows_imported": false,
+          "owned_database_removed": true,
           "owned_server_stopped": true,
           "host_production_identities_unchanged": true,
-          "oom": 0,
-          "oom_kill": 0
+          "historical_validation_passed": false,
+          "release_decision": "NO-GO"
         },
         "argv_fix": {
           "cause": "native-context is argv[6], incorrectly read from argv[7]; /home/mysql rejected as legacy Docker datadir before PDO",
@@ -187,9 +191,10 @@
           "python_php_boundary_tests_passed": 3,
           "php_guard_checks_passed": 12,
           "old_index_mutation_rejected": true,
-          "actual_vps_retry_passed": false
+          "actual_vps_retry_passed": true
         }
-      }
+      },
+      "owned_server_running": false
     }
   },
   "production_schema_objects": {
@@ -245,5 +250,39 @@
     "bash_syntax_passed": true,
     "approval_gate_exit_78_confirmed": true,
     "actual_backup_restore_tested_on_private_history": false
+  },
+  "operator_schema_execution": {
+    "source_commit": "dcd26450875432caa9135c5f4c78a20da613f595",
+    "schema_only_rehearsal": "PASS",
+    "stage": "COMPLETE",
+    "server_version": "8.4.8-8",
+    "uom_migrations_applied": 14,
+    "lot_l3_dependencies_applied": 4,
+    "production_connected": false,
+    "business_rows_imported": false,
+    "owned_database_removed": true,
+    "owned_server_stopped": true,
+    "host_production_identities_unchanged": true,
+    "historical_validation_passed": false,
+    "release_decision": "NO-GO"
+  },
+  "history_capture": {
+    "production_extraction_authorized": false,
+    "approved_scope": "development and synthetic local QA; metadata readiness only on VPS",
+    "readiness_command": "python3 ops/sulb-rc/history-stage.py --check-readiness",
+    "capture_command_requires_new_approval": true,
+    "format": "SULBHST1 / libsodium secretstream XChaCha20-Poly1305",
+    "key_location": "separate root-private directory; never password/key in argv/env/GitHub",
+    "windows_mysql84_synthetic_checks_passed": 31,
+    "offline_contract_checks_passed": 22,
+    "python_orchestration_tests_passed": 8,
+    "percona_synthetic_ci_passed": false,
+    "vps_history_readiness_passed": false,
+    "production_history_validated": false,
+    "production_backup_restore_rehearsed": false,
+    "production_source_load_qualified": false,
+    "source_timeout_limits_are_session_only": true,
+    "production_server_cgroup_changed": false,
+    "restore_policy": "two fresh owned databases on offline native Percona; never overwrite sulbprod or newer transactions"
   }
 }
