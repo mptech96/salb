@@ -1550,3 +1550,44 @@ approved production migration executor/write fence/backup-restore qualification
 and remaining comprehensive security sign-off. A passing upstream MySQL run never
 substitutes for these gates. No Manifest GO, VPS change, deployment or production
 migration was performed.
+
+### Final Percona Linux run — actual result
+
+The isolated run [40430204531](https://github.com/mptech96/salb/actions/runs/40430204531)
+completed **SUCCESS** on tested source commit
+`9e4de7be2722bb622108a4db0e90712172788d03`.
+Server metadata read through PDO reports **8.4.8-8**, distribution
+**Percona Server (GPL), Release8, Revision1c288264**. This is QA-server evidence,
+not the VPS server's version.
+
+| Percona Linux scope | Actual result |
+|---|---|
+| All14 migrations, restrictive FK/CHECK/DDL, Backfill/FIFO and separate backup restore |4/4 PASS,177 assertions|
+| Mixed processing/overhead, late failure rollback, source race, Support and restart |5/5 PASS,46 assertions|
+| Mixed L3 shipment/return/reversal, race and qualified historical receipts |4/4 PASS,53 assertions|
+| Case-sensitive identity constraints and unused schema rollback |2/2 PASS,15 assertions|
+| Manual journal and new critical privacy/branch/financial failure cases |14/14 PASS,101 assertions|
+| Transfer/company concurrency with actual server lock evidence |2/2 PASS,35 assertions|
+| Dedicated-reader authorization/metadata, including inherited and mandatory roles |11/11 checks PASS;11 metadata result sets; no business-row output|
+
+Total PHPUnit result: **31/31 PASS,427 assertions**. No skipped step was included.
+Percona backup proof retains53 trigger hashes and confirms later source transactions
+survive restore to a different QA schema; dump SHA256:
+`a2be574e6125052e56727b1b5250436ea9400fbf81681c28f1e883c2bdb9e3e5`.
+The first CI run40429789962 failed at QA reader authentication because Docker's
+observed client was its bridge IP, not127.0.0.1. Its subsequent suites were skipped
+and are not PASS. The QA-only fixture now binds its reader to the exact observed
+client address, never a wildcard; production reader remains unchanged. The
+successful rerun above verifies that correction. The owned container was stopped.
+
+Additional native MySQL8.4 report/inventory/actual PDF test: **1/1 PASS,12 assertions**.
+The pre-existing MariaDB PDF was preserved; engine-specific copies are retained in
+ignored local `engine-evidence/`. These files and downloaded MySQL binaries are not
+part of the GitHub release candidate.
+
+The MySQL/Percona dialect gap now has actual Linux vendor evidence. It does not
+close the remaining production gates: actual VPS VERSION()/version_comment and
+schema/flags/FPM evidence, approved representative anonymized history, full
+production-equivalent staging/UAT, approved production executor, write fence,
+backup/rollback rehearsal and comprehensive security sign-off. All production
+approval fields remain false and the decision remains **NO-GO**.

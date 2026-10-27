@@ -25,7 +25,9 @@
     "reported_production_client": "8.4.8-8 Percona (client only; not server evidence)",
     "mysql_8_4_8_windows": "isolated scoped SQL/schema/backfill/rollback/concurrency tests passed",
     "mariadb_10_4_32": "affected dialect regression passed",
-    "percona_8_4_8_8_linux": "pending isolated GitHub QA",
+    "percona_8_4_8_8_linux": "PASS: 31 tests, 427 assertions and 11 dedicated-reader checks on isolated Linux QA",
+    "percona_qa_tested_commit": "9e4de7be2722bb622108a4db0e90712172788d03",
+    "percona_qa_run": "https://github.com/mptech96/salb/actions/runs/40430204531",
     "production_engine_approved": false
   },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
