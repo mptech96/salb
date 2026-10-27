@@ -92,8 +92,17 @@
       }
     },
     "production_attempt_status": "BLOCKED_DOCKER_UNAVAILABLE; no migration failure established",
-    "execution_target": "Separate operator-controlled Linux staging host; no Docker install or native instance start on production authorized",
-    "runtime_preflight": "read-only Composer version/QA extensions/memory/disk; no DB or schema access; 5 local boundary checks passed"
+    "execution_target": "Same VPS independent native Percona process UNDER REVIEW; no Docker or second VPS required by policy. No native start authorized before isolation/resource review.",
+    "runtime_preflight": "read-only Composer version/QA extensions/memory/disk; no DB or schema access; 5 local boundary checks passed",
+    "native_feasibility": {
+      "architecturally_possible": true,
+      "host_capacity_verified": false,
+      "kernel_isolation_verified": false,
+      "mac_policy_verified": false,
+      "native_server_started": false,
+      "production_service_changes_authorized": false,
+      "probe": "native-staging-feasibility.sh; no DB access or mysqld invocation"
+    }
   },
   "production_schema_objects": {
     "operator_verification": "PASS",
@@ -129,6 +138,7 @@
       "compatible_without_migration": 30,
       "migration_dependent": 92,
       "unresolved": 45
-    }
+    },
+    "user_cancelled": true
   }
 }

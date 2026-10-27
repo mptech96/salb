@@ -1989,3 +1989,72 @@ reports/mobile/PDF; rehearse verified backup restore into ANOTHER staging databa
 preserving newer source transactions; review security and exact production migration
 executor/write fence; only then approve one pinned Backend+Frontend+migration deployment.
 No anonymous-history exporter or production executor has been silently certified.
+
+### FULL RELEASE ONLY; native same-VPS isolation assessment — 2026-10-27
+User explicitly cancels partial deployment. Preserve its evidence/branch, but perform no
+further partial release work. No second VPS purchase or Docker-on-production prerequisite.
+
+Native independent mysqld on same OS is architecturally supported by MySQL8.4 documentation:
+https://dev.mysql.com/doc/refman/8.4/en/multiple-servers.html
+Use separate data/socket/pid/error/tmp/secure-file paths, --no-defaults FIRST, networking
+and mysqlx off, owned fresh datadir/schema names, separate least-privilege OS identity,
+mount/PID/network isolation for test server AND PHP, bounded memory/CPU/PIDs/IO. No reuse
+of production datadir/config/socket/account, no modifications to mysql.service, no host
+service replacement. Namespace/cgroup/MAC/resource feasibility must be established before
+launch. Same-host isolation cannot eliminate all shared CPU/IO/kernel impact; do not claim
+otherwise. A temporary schema inside the running production instance is weaker isolation
+(global server state/DDL/resource coupling) and is not the proposed test target.
+
+Added native-staging-feasibility.sh: read-only memory/disk/CPU/cgroup/controller/tool/MAC
+presence and an ephemeral unshare child /bin/true capability test. No mysqld execution,
+DB connection, mounts/cgroup changes, install, service change or schema reads. Bash syntax
+PASS. No live probe result received; host capacity and enforceable isolation UNKNOWN.
+If namespaces/cgroups denied, insufficient headroom, or MAC forbids owned paths and would
+require forbidden policy changes, STOP native staging. Do not weaken policy or bypass it.
+Composer previously observed in runtime metadata; tool availability only is checked here.
+No successful ERP/Percona/metadata/static comparison tests rerun.
+
+Reviewed order for the currently catalogued QA chain:001 foundation ->002 contracts ->003
+operational ->004 commercial ->005 opening ->006 adjustments ->007 shipment ->008 recipes
+->009 commands -> stock_movements_company_source_index.php -> shipment_cost_parent_fk.php
+-> shipment_cost_allocation_receipts.php -> inventory_lot_value_balances.php ->010 BASE
+capitalization ->011 header costs ->012 processing costs ->013 journal permissions ->014
+resource write permissions. This is the tested dependency order, NOT approval to run these
+files in production. Several require Tests/Support UomStageAProof, owned3339 schema/datadir;
+all14 are outside ordinary automatic Laravel migrations, and catalog/executor NOT_APPROVED.
+Permission registration does not approve assigning every role; plan existing-user grants
+explicitly before enforcement. Other experimental driver/loan/historical-accounting
+proposals are not implicitly approved by the14+4 chain; qualify or keep unreachable.
+
+SELECT-only history screening can identify duplicate company/lot numbers and vouchers,
+orphan/cross-company shipment-cost/LOT/movement links, invalid quantity states, unbalanced
+POSTED journals, missing/reversed/mismatched source GL, stock-vs-movement discrepancies,
+ambiguous/missing numbering and immutable receipt references. Counts/exceptions only may
+leave server. They cannot manufacture original unit cost, infer unknown receipt valuation,
+prove full backfill readiness from aggregates, or guarantee a stable write-free snapshot.
+Unknown sources/partial issues without authoritative value remain explicit blockers.
+Do not call the QA-only HistoricalLotBackfill::apply on production or remove its guard.
+
+Complete deployment plan: verify native staging isolation/headroom; schema-only actual
+capture rehearsal (still not executed); approve private representative history and restore
+only into the independent instance; run historical exceptions/restart/concurrency/FIFO/LOT=GL
+and security acceptance there. Capture a consistent InnoDB backup using matching Percona8.4
+client with hidden approved credentials, plus private code/env/storage/uploads/assets and
+version manifest; verify hashes AND restore into another isolated DB. During rehearsal add
+a synthetic newer source transaction after snapshot and prove source retained it. Before
+production DDL approve a write fence covering web,API,workers,imports/schedulers/integrations,
+then final backup/delta. No claim that artisan down alone fences background writers.
+
+Failure: DDL may commit implicitly. Stop on first failure, retain fence, record completed
+steps/schema fingerprints, no blind migrate:fresh/down/retry or automatic down rollback.
+Use tested idempotent forward repair or offline restore only if there have been NO accepted
+new writes since snapshot. If newer transactions exist, preserve them; restore into ANOTHER
+DB and reconcile/replay via reviewed procedure, never overwrite live with old snapshot.
+After reopening, prefer compatible code rollback or reviewed forward repair. A completed
+staging restore is not proof of the future production write fence.
+
+Existing one-shot deployment script remains approval-gated; it is NOT a qualified final
+executor for QA-only14+4. Do not advertise it as ready or enable GO from static checks.
+Production executor/manifest/native harness/history/restore/security signoff remain pending.
+No production change performed. Decision NO-GO; practical next action ONLY host isolation/
+resource probe, not purchase, extraction, migration or deployment.
