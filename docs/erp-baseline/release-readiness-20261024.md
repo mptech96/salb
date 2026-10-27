@@ -2144,3 +2144,71 @@ GO or business history extraction. Actual server startup/least-privilege capabil
 schema migration execution remain a subsequent explicitly reviewed action. Current full
 manifest remains NO-GO and no native Percona instance has been launched. If any gate blocks,
 repair/approval must address that specific isolation constraint; no purchase or Docker demand.
+
+### Resume comprehensive release; actual mapping defect fixed — 2026-10-27
+Operator combined proof stopped at DATADIR_MAPPING_REQUIRES_REVIEW BEFORE any mysqld/DB/
+policy/service change. Actual cause: production_paths required canonical ibdata1 directory
+start with /var/lib/. That is a deployment-location assumption, not proof of a wrong DB
+path. Actual VPS datadir is NOT supplied and NOT guessed in this change.
+
+Replaced that assumption with metadata-only identity validation: ibdata1 AND mysql.ibd
+must both be OPEN by the existing service PID, named files must retain the same device+
+inode as those FD references, canonical roots must agree; working-directory observation
+recorded separately. Broad OS/site/source/htdocs roots still refused. Standard/custom and
+symlink-resolved data locations can pass only with those anchors. Missing/ambiguous/deleted
+anchors or changed identity STOP. Evidence now returns resolved root/cwd without file bytes.
+Socket discovery now selects only LISTENING Unix socket inodes owned by that process,
+checks actual filesystem socket type and collapses nested private masks. Removed arbitrary
+/run-or-/tmp-only socket restriction; a proven socket beside a proven custom datadir is
+valid. Journal/client-connected sockets are not mistaken for DB listeners. Abstract sockets
+remain blocked. No AppArmor mode/policy/cgroup controls were weakened.
+
+New17/17 focused Python mapping regressions PASS: standard/home/srv custom paths, broad/site/
+htdocs rejection, missing/ambiguous/deleted anchor refusal, alias resolution, private mask
+collapse, broad socket parent rejection, actual listener-vs-connected/foreign filtering,
+abstract socket refusal and FD identity-change rejection. Real Linux host isolation result
+is still PENDING; no native server started. Existing successful industrial QA not rerun.
+
+Local state inspected without reset/clean/deletion: original wave2 checkout90 modified and
+242 untracked entries at inspection, comprehensive RC clean before this work, partial branch
+preserved but NOT progressed/deployed. All349 current source-manifest paths in original and
+comprehensive RC agree after line-ending normalization. Live local ports3000/8000 and original
+3306 observed; no DB connection to3306. Source Axios fallback matches Laravel localhost8000,
+no frontend.env override file observed;10 new API controller methods exist and route/permission
+source wiring checked. This is static linkage, NOT fresh authenticated runtime PASS. Backend
+.env is NOT an owned QA DB, so the running app was NOT used for write/DB tests. No secrets
+printed and no original XAMPP data accessed. Frontend instructions read, no frontend code
+changed; accepted prior UI/API/authorization tests retained in their exact tested scope.
+
+One-shot deploy script hardening (still disabled): approved migration list captured in parent
+shell so failure cannot be swallowed by process substitution; rejects unqualified/non8.4
+mysqldump instead of preferring MariaDB client; existing approved private client config must
+name user, no fabricated sulb_backup_ro override. --no-tablespaces and GTID-purgedOFF avoid
+unnecessary global privilege/restore side effects; database argument without --databases
+avoids CREATE DATABASE/USE sulbprod in the base backup, allowing restore into an owned schema.
+Qualified/cross-schema routines/triggers must still be reviewed during actual restore.
+Bash syntax PASS; synthetic shell check proves list-command exit78 prevents subsequent work
+and matching8.4 client versions pass/MariaDB is rejected. Actual check-approval exits78.
+No --execute invocation, SQL dump, Composer install, service change or deploy was performed.
+
+Production executor is NOT magically ready:001..009 ->4 accepted dependencies ->010..014
+remains the exact schedule. Several scripts still require QA-only Tests/Support guards and
+are excluded from ordinary Laravel migration path; --no-dev deployment excludes those test
+classes. Do not remove/forge QA guards or just set schema_install_approved=true on production.
+A dedicated reviewed production installation context plus step journal/postconditions and
+interruption handling must replace this dependency before certification. This turn preserves
+the safety guards and exposes that blocker in Manifest, rather than publishing an unsafe
+"ready" claim. Financial SQL/business accounting was not changed without new evidence.
+
+Complete gates still open: actual combined VPS namespace/AppArmor/cgroup proof after mapping
+fix; approved native startup with nonproduction instance/limits; execution on private111-table
+schema; approved representative history/dry-run exceptions/Backfill FIFO LOT=GL; consistent
+backup restored into ANOTHER isolated schema with newer source transactions retained; final
+security and qualified production executor/write fence. Received production metadata had
+log_bin=0, so do NOT assume binlog PITR/replay is available. After accepting newer writes an
+old dump must never overwrite live; preserve those writes and use compatible code rollback/
+reviewed forward repair or separately qualified reconciliation. DDL may commit implicitly.
+
+Full release ONLY. Native mapping proof is the one next operator action; it starts no DB.
+No new VPS/Docker/partial deployment required. Manifest stays NO-GO with all production
+approval fields false. Tools/report changes only are prepared for the same GitHub RC branch.

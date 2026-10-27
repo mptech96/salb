@@ -1,7 +1,9 @@
 """No mysqld/DB access. Only owned temporary mounts, cgroup and 4MiB I/O probe."""
 import ctypes, json, os, pathlib, re, shutil, subprocess, sys, tempfile, time, uuid
 
-class Blocked(Exception): pass
+class Blocked(Exception):
+    def __init__(self, code, evidence=None):
+        super().__init__(code); self.evidence=evidence
 def require(ok, code):
     if not ok: raise Blocked(code)
 def run(args, **kw):
@@ -12,29 +14,60 @@ def process_state():
     require(pid>1,'MYSQL_SERVICE_PID_UNAVAILABLE')
     label=pathlib.Path(f'/proc/{pid}/attr/current').read_text().strip()
     return pid,label
+def verified_datadir(links, cwd, resolve=os.path.realpath):
+    roots={resolve(os.path.dirname(x)) for x in links if x.endswith('/ibdata1')}
+    require(len(roots)==1,'PRODUCTION_DATADIR_NOT_PROVEN_FROM_OPEN_FILES')
+    data=roots.pop(); cwd=resolve(cwd)
+    evidence={'resolved_data_root':data,'process_cwd':cwd,
+              'open_system_dictionary_same_root':any(x.endswith('/mysql.ibd') and resolve(os.path.dirname(x))==data for x in links)}
+    # Location is deployment-specific (e.g. CloudPanel); identity, not a /var/lib
+    # prefix, must prove it. Never allow a broad OS/application/working root.
+    forbidden={'/','/home','/var','/var/lib','/usr','/etc','/opt','/srv','/run','/tmp','/proc','/sys','/dev',
+               '/home/mgye-api-sulb','/home/mgye-sulb','/home/sulb-release'}
+    if not data.startswith('/') or data in forbidden or '/htdocs/' in data or data.endswith('/htdocs'):
+        raise Blocked('DATADIR_MAPPING_REQUIRES_REVIEW',evidence)
+    if not evidence['open_system_dictionary_same_root']:
+        raise Blocked('DATADIR_SECOND_ENGINE_ANCHOR_UNAVAILABLE',evidence)
+    # cwd is additional observed evidence, not assumed to be a datadir.
+    evidence['cwd_matches_data_root']=cwd==data
+    return data,evidence
+def private_mount_targets(data,sockets):
+    targets=[data]+sorted({os.path.dirname(s) for s in sockets})
+    targets=sorted(set(t for t in targets if not any(t.startswith(other+'/') for other in targets if other!=t)))
+    require(all(t not in ['/','/var','/var/lib','/home','/usr','/etc','/proc','/sys','/dev'] for t in targets),'BROAD_MOUNT_TARGET_REFUSED')
+    return targets
+def owned_listening_socket_paths(text,inodes):
+    paths=[]
+    for line in text.splitlines()[1:]:
+        parts=line.split(maxsplit=7)
+        if len(parts)==8 and parts[6] in inodes and int(parts[3],16)&0x10000:
+            require(parts[7].startswith('/'),'ABSTRACT_PRODUCTION_SOCKET_REQUIRES_REVIEW')
+            paths.append(parts[7])
+    return paths
 def production_paths(pid):
-    links=[]; inodes=set()
+    links=[]; inodes=set(); anchors={}
     for fd in pathlib.Path(f'/proc/{pid}/fd').iterdir():
         try: link=os.readlink(fd)
         except OSError: continue
         links.append(link)
+        if link.endswith(('/ibdata1','/mysql.ibd')):
+            fs=os.stat(fd); named=os.stat(link)
+            require((fs.st_dev,fs.st_ino)==(named.st_dev,named.st_ino),'ENGINE_ANCHOR_IDENTITY_CHANGED')
+            anchors[link]=True
         m=re.fullmatch(r'socket:\[(\d+)\]',link)
         if m: inodes.add(m[1])
-    roots={os.path.realpath(os.path.dirname(x)) for x in links if x.endswith('/ibdata1')}
-    require(len(roots)==1,'PRODUCTION_DATADIR_NOT_PROVEN_FROM_OPEN_FILES')
-    data=roots.pop()
-    require(data.startswith('/var/lib/') and data not in ['/var/lib','/var/lib/'], 'DATADIR_MAPPING_REQUIRES_REVIEW')
+    data,evidence=verified_datadir(list(anchors),os.readlink(f'/proc/{pid}/cwd'))
     sockets=[]
-    for line in pathlib.Path('/proc/net/unix').read_text().splitlines()[1:]:
-        parts=line.split(maxsplit=7)
-        if len(parts)==8 and parts[6] in inodes:
-            p=parts[7]
-            require(p.startswith('/'),'ABSTRACT_PRODUCTION_SOCKET_REQUIRES_REVIEW')
-            p=os.path.realpath(p)
-            require(p.startswith('/run/') or p.startswith('/tmp/'),'SOCKET_MAPPING_REQUIRES_REVIEW')
-            sockets.append(p)
+    for raw in owned_listening_socket_paths(pathlib.Path('/proc/net/unix').read_text(),inodes):
+        p=os.path.realpath(raw)
+        # An actual owned filesystem socket may live alongside a custom datadir.
+        import stat
+        require(stat.S_ISSOCK(os.stat(p).st_mode),'SOCKET_IDENTITY_NOT_PROVEN')
+        sockets.append(p)
     require(bool(sockets),'PRODUCTION_SOCKET_NOT_PROVEN')
-    return data,sorted(set(sockets))
+    private_mount_targets(data,sockets)
+    evidence['owned_filesystem_sockets']=sorted(set(sockets))
+    return data,sorted(set(sockets)),evidence
 def kernel_policy(label,data,sockets,token):
     name=re.sub(r' \((enforce|complain|kill)\)$','',label)
     require(name!='unconfined','UNCONFINED_PROFILE_REQUIRES_REVIEW')
@@ -57,9 +90,7 @@ def namespace_child(work,data,sockets):
     work=pathlib.Path(work)
     run(['mount','--make-rprivate','/'])
     # Mask actual production data and all filesystem socket parents in CHILD ONLY.
-    targets=[data]+sorted({os.path.dirname(s) for s in sockets})
-    targets=[t for t in targets if not any(t.startswith(other+'/') for other in targets if other!=t)]
-    require(all(t not in ['/','/var','/var/lib'] for t in targets),'BROAD_MOUNT_TARGET_REFUSED')
+    targets=private_mount_targets(data,sockets)
     for i,target in enumerate(targets):
         own=work/f'mask-{i}'; own.mkdir(mode=0o700)
         run(['mount','--bind',str(own),target])
@@ -105,7 +136,7 @@ def main():
     result={'decision':'BLOCKED','mysqld_started':False,'database_connections':0,'production_policy_service_changed':False,'release_decision':'NO-GO'}
     try:
         require(sys.platform=='linux' and os.geteuid()==0,'LINUX_ROOT_REQUIRED')
-        before=process_state(); data,sockets=production_paths(before[0])
+        before=process_state(); data,sockets,evidence=production_paths(before[0]);result['mapping_evidence']=evidence
         data_identity=(os.stat(data).st_dev,os.stat(data).st_ino)
         with tempfile.TemporaryDirectory(prefix='sulb-isolation-',dir='/home/mgye-api-sulb') as temp:
             work=pathlib.Path(temp); os.chmod(work,0o700)
@@ -124,7 +155,9 @@ def main():
             require(process_state()==before,'PRODUCTION_PROCESS_LABEL_CHANGED')
             result['blockers']=failures
             if not failures: result['decision']='NATIVE_STAGING_GO'
-    except Exception as e: result['blockers']=[str(e) if isinstance(e,Blocked) else 'ISOLATION_PROOF_INCOMPLETE']
+    except Exception as e:
+        result['blockers']=[str(e) if isinstance(e,Blocked) else 'ISOLATION_PROOF_INCOMPLETE']
+        if isinstance(e,Blocked) and e.evidence: result['mapping_evidence']=e.evidence
     print(json.dumps(result,indent=2));return 0 if result['decision']=='NATIVE_STAGING_GO' else 78
 if __name__=='__main__':
     if len(sys.argv)>1 and sys.argv[1]=='--namespace-child': namespace_child(sys.argv[2],sys.argv[3],json.loads(sys.argv[4]))

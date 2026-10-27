@@ -14,6 +14,10 @@ fi
 # This candidate ALWAYS stops here. Only a separately reviewed approval commit
 # with all evidence, exact production baseline and migration executor may proceed.
 php "$tools/check-approval.php"
+# Capture the approved list in the parent shell: process-substitution failures
+# must not turn into an empty successful migration loop.
+approved_migrations=$(php "$tools/check-approval.php" --migrations)
+test -n "$approved_migrations"
 test "$(pwd -P)" = /home/sulb-release
 test "$(git rev-parse HEAD)" = "${SULB_APPROVED_COMMIT:?Pinned approved commit required}"
 test -z "$(git status --porcelain)"
@@ -22,13 +26,19 @@ test -z "$(git status --porcelain)"
 test -s "$SULB_WRITE_FENCE_RECEIPT"
 test "$(stat -c %a "$SULB_BACKUP_CNF")" = 600
 test "$(stat -c %u "$SULB_BACKUP_CNF")" = "$(id -u)"
+# Use the explicitly approved existing account in the private client file;
+# never assume that a new sulb_backup_ro account has been created.
+php -d display_errors=0 -d log_errors=0 -r '$c=@parse_ini_file($argv[1],true,INI_SCANNER_RAW);$u=$c["mysqldump"]["user"]??$c["client"]["user"]??null;if(!is_string($u)||trim($u)==="")exit(78);' "$SULB_BACKUP_CNF"
 backend=/home/mgye-api-sulb/htdocs/api.sulb.mgye.tech
 frontend=/home/mgye-sulb/htdocs/sulb.mgye.tech
 backup=$(mktemp -d /home/mgye-api-sulb/sulb-release-backup.XXXXXXXX)
 php "$tools/preflight.php" > "$backup/preflight.json"
 php -r '$m=json_decode(file_get_contents($argv[1]),true);if(($m["schema_matches_approved_baseline"]??false)!==true)exit(78);' "$backup/preflight.json"
-if command -v mariadb-dump >/dev/null; then dump=mariadb-dump; else dump=mysqldump; fi
-"$dump" --defaults-extra-file="$SULB_BACKUP_CNF" --user=sulb_backup_ro --single-transaction --routines --triggers --events --hex-blob --databases sulbprod > "$backup/database.sql"
+dump=mysqldump
+command -v "$dump" >/dev/null || { printf 'STOP: matching MySQL/Percona8.4 dump client required.\n' >&2; exit 78; }
+dump_version=$("$dump" --version)
+[[ "$dump_version" =~ Ver[[:space:]]8\.4\. ]] || { printf 'STOP: dump client is not qualified for Percona8.4.\n' >&2; exit 78; }
+"$dump" --defaults-extra-file="$SULB_BACKUP_CNF" --single-transaction --no-tablespaces --set-gtid-purged=OFF --routines --triggers --events --hex-blob sulbprod > "$backup/database.sql"
 test -s "$backup/database.sql"
 tar -czf "$backup/backend.tar.gz" -C "$backend" .
 tar -czf "$backup/frontend.tar.gz" -C "$frontend" .
@@ -42,7 +52,7 @@ rsync -a --exclude='.git/' --exclude='.env*' --exclude='.next*/' --exclude='node
 (cd "$backend" && composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader)
 while IFS= read -r migration; do
   (cd "$backend" && php artisan migrate --force --path="$migration")
-done < <(php "$tools/check-approval.php" --migrations)
+done <<< "$approved_migrations"
 (cd "$frontend" && npm ci && npm run build)
 systemctl restart sulb-frontend.service
 php "$backend/artisan" up

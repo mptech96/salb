@@ -107,7 +107,17 @@
       "observed_cpu_count": 4,
       "apparmor_review": "Pending actual process label and expanded policy; no policy changes or native process launch authorized by this inspection",
       "observed_apparmor_process_label": "/usr/sbin/mysqld (complain)",
-      "combined_gate": "close-native-isolation.py: loaded-kernel path query + temporary namespace masking + own cgroup limits/direct IO; actual VPS result pending"
+      "combined_gate": "close-native-isolation.py: loaded-kernel path query + temporary namespace masking + own cgroup limits/direct IO; actual VPS result pending",
+      "last_operator_blocker": "DATADIR_MAPPING_REQUIRES_REVIEW from hardcoded /var/lib prefix; actual VPS path not yet supplied or presumed",
+      "mapping_fix": {
+        "location_independent": true,
+        "requires_two_open_engine_file_anchors": true,
+        "requires_fd_named_inode_identity": true,
+        "only_owned_listening_sockets": true,
+        "broad_application_roots_rejected": true,
+        "focused_regression_tests_passed": 17,
+        "actual_vps_result_pending": true
+      }
     }
   },
   "production_schema_objects": {
@@ -146,5 +156,22 @@
       "unresolved": 45
     },
     "user_cancelled": true
+  },
+  "full_upgrade_schedule": {
+    "order": "001..009 -> stock_movements_company_source_index -> shipment_cost_parent_fk -> shipment_cost_allocation_receipts -> inventory_lot_value_balances ->010..014",
+    "qa_guards_preserved": true,
+    "production_executor_state": "BLOCKED_PENDING_QUALIFIED_PRODUCTION_CONTEXT_AND_HISTORY_RESTORE",
+    "destructive_down_allowed": false,
+    "automatic_live_database_restore_allowed": false
+  },
+  "deployment_script_hardening": {
+    "approved_list_failure_propagates": true,
+    "dump_client_must_be_mysql84": true,
+    "no_assumed_backup_username": true,
+    "backup_has_no_create_database_directive": true,
+    "backup_credentials_must_be_explicit_private_config": true,
+    "bash_syntax_passed": true,
+    "approval_gate_exit_78_confirmed": true,
+    "actual_backup_restore_tested_on_private_history": false
   }
 }

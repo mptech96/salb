@@ -17,3 +17,6 @@ Thumbs.db
 frontend.rar
 *.rar
 scrap-system-archives/
+
+# Local Python verification bytecode
+ops/sulb-rc/__pycache__/
