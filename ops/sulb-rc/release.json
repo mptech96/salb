@@ -105,7 +105,9 @@
       "observed_memory_available_kib": 13983888,
       "observed_home_free_kib": 188614428,
       "observed_cpu_count": 4,
-      "apparmor_review": "Pending actual process label and expanded policy; no policy changes or native process launch authorized by this inspection"
+      "apparmor_review": "Pending actual process label and expanded policy; no policy changes or native process launch authorized by this inspection",
+      "observed_apparmor_process_label": "/usr/sbin/mysqld (complain)",
+      "combined_gate": "close-native-isolation.py: loaded-kernel path query + temporary namespace masking + own cgroup limits/direct IO; actual VPS result pending"
     }
   },
   "production_schema_objects": {

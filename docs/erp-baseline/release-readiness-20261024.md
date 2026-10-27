@@ -2097,3 +2097,50 @@ will identify actual label/source candidates and relevant expanded rules for dec
 path mapping without touching production policy. Native instance approval remains FALSE.
 Comprehensive release,actual schema execution/history/backup-restore/security executor remain
 NO-GO pending their existing gates. No partial releases resumed.
+
+### Combined native isolation gate prepared — 2026-10-27
+Operator observes /usr/sbin/mysqld(complain),disk preprocessing PASS with deny/variables;
+effective permissions/source equality unproven. Complain does NOT disable explicit denies:
+https://www.apparmor.net/man/4.0/aa-complain/
+Do not change enforce/complain mode,load/reload/remove profile or rename executable.
+
+Added close-native-isolation.py, one bounded gate for all three pending proofs. No mysqld,
+DB connection,profile modification or service command other than MainPID read. Uses existing
+Python3/libapparmor only, no installer. Loaded label queried directly via documented
+AA file-path query API for intended new datadir/socket paths and required access masks.
+Disk source byte equality is NOT claimed/required for that runtime decision: loaded kernel
+permissions,including denies/variables,are authoritative at query time. This does not recover
+human-readable rules from kernel DFA. No stale on-disk allow inference. See AppArmor upstream
+libapparmor aa_query_file_path_len API/header. Query absence/error/deny means BLOCKED.
+
+Observed production data root derived from OPEN ibdata1 path (readlink only, no file bytes),
+actual mysqld filesystem sockets from owned FD inodes+/proc/net/unix. Unknown/custom/abstract
+mapping fails closed. Separate mount/net/PID namespace, private propagation first, bind only
+NEW owned empty backing folders over those paths, remount proc, verify private PID1/no routes,
+actual mounted inode identities, production data/socket absence in child and their original
+inode/socket presence on host afterwards. Namespace exits before cleanup; no host mounts or
+production datadir writes. Metadata-only marker is created inside private masked data path,
+never production. Original service PID/label must remain the same through all checks.
+
+Creates ONLY one new cgroup under an already-delegated root with existing memory/cpu/pids/io
+controllers. It NEVER enables parent controllers or changes existing limits/membership.
+Probe256MiB,swap0,CPU0.25core,32PIDs and device-specific1MiB/s I/O; exact kernel readback+
+owned child attachment verified. A4MiB O_DIRECT/fsync file in private workspace must be charged
+to that device in io.stat AND show bounded throttle delay. Overlay/unknown device,missing
+controllers/permissions/readback/accounting/throttle => BLOCKED. Only its own EMPTY cgroup
+removed; never move/kill production processes. No stress/OOM/PID-exhaustion test performed.
+These checks prove kernel control acceptance/child membership and direct IO behavior, not a
+production load benchmark or elimination of all shared-resource impact.
+
+Local Python syntax and5 mocked kernel-query/deny/error/guard unit tests PASS. No live Linux
+namespace/cgroup/AppArmor integration test was executed by Codex; do not call these gates PASS
+before operator runs it. No old QA/Percona/Schema/GitHub inventory rerun. Combined summary emits
+NATIVE_STAGING_GO only if ALL three pass, otherwise BLOCKED with concrete reason code(s).
+No profile/DDL/credentials/customer data exported. Temporary namespace/cgroup/workspace writes
+are intentional only within new owned test resources; this is NOT a strictly read-only probe.
+
+NATIVE_STAGING_GO authorizes proposing the bounded schema-only native harness, not production
+GO or business history extraction. Actual server startup/least-privilege capability drop and
+schema migration execution remain a subsequent explicitly reviewed action. Current full
+manifest remains NO-GO and no native Percona instance has been launched. If any gate blocks,
+repair/approval must address that specific isolation constraint; no purchase or Docker demand.
