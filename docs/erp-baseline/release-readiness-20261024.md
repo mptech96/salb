@@ -2212,3 +2212,62 @@ reviewed forward repair or separately qualified reconciliation. DDL may commit i
 Full release ONLY. Native mapping proof is the one next operator action; it starts no DB.
 No new VPS/Docker/partial deployment required. Manifest stays NO-GO with all production
 approval fields false. Tools/report changes only are prepared for the same GitHub RC branch.
+
+### Two verified staging blockers; single targeted resolution — 2026-10-27
+Operator3c81906:datadir/home/mysql;private mount/PID/network+host data/socket hiding PASS;
+no mysqld,DB connections,production policy/service changes. Reuse that explicit operator
+namespace receipt; do not rerun successful Schema/migration/Backend/Frontend/industrial QA.
+Remaining labels alone do NOT identify a loaded deny rule or the failed cgroup operation.
+
+Confirmed diagnostic defect: libapparmor allowed=false means requested mask is not fully
+in (allow & ~deny), so it can indicate MISSING ALLOW rather than EXPLICIT DENY, especially
+relevant to complain mode. Prior LOADED_POLICY_DENIES_REQUIRED_PATH wording overclaimed.
+Upstream reference libraries/libapparmor/src/kernel.c query_label, AA_CLASS_FILE header.
+Now query same loaded .access interface directly with exact full FILE path payload; emit
+per-path requested operations/allow+deny masks/explicit-denied and missing-allow operations.
+No kernel policy loader/cache/profile mode/source edits. Kernel interface does not expose
+source-file line numbers; do not fabricate a matching source line from an unequal disk file.
+Complain mode is never treated as an override to grant missing explicit permission.
+
+Only three bounded policy-compatible plans are considered: actual data/socket paths;
+actual data with canonical/run/mysqld socket; canonical/var/lib/mysql+/run/mysqld.
+Alternate paths require strict loaded-policy allowance AND a NEW CHILD-ONLY private parent
+mount proof. Mask original/home/mysql/sockets, create real (not symlink) private/var/lib
+and/or/run views within isolated mount/PID/network namespace, confirm canonical target
+identities and unchanged host data/varlib/run/socket identities. No copy-to-unconfined
+binary,deny exception,mode change or production mount. No alternative passes merely because
+its on-disk rule looks permissive. New mapping proof runs only when selecting a different
+logical path and only after policy+cgroup pass; original unchanged namespace proof reused.
+
+Confirmed cgroup diagnostic defects: broad exception catch hid phase/errno; cleanup could
+mask primary failure; preexec_fn obscured attachment errors; sleep-based .05sec membership
+sampling could race. Fixed structured phase/error fields for delegation,device resolution,
+create group,each memory/cpu/pids/io/swap write/readback,child attach,direct IO/accounting/
+throttle and cleanup. Preserve original error plus cleanup detail; clean ONLY group actually
+created by invocation. New child shell self-attaches before exec, never move host PIDs.
+No preexisting controller/limit/production group modifications.
+
+Potential device-selection defect corrected: partition MAJ:MIN is mapped via sysfs partition
+metadata to its parent block device for io.max; mapper devices retained,overlay/unknown major0
+refused. This was a supported code fix, NOT a claim that it caused the VPS failure. Missing
+swap controller accepted ONLY when actual host SwapTotal=0; otherwise block. All actual
+memory/CPU/PID/I/O readbacks and4MiB direct write/accounting/throttle requirements retained.
+EINVAL is explicitly NOT interpreted as proof the host lacks support. EACCES/EROFS/EPERM
+reported as host permission/read-only constraint; missing device/interface separately.
+
+Local18/18 NEW focused tests PASS: raw reply completeness/duplicate/missing rejection,
+full path encoding/NUL refusal,missing-allow vs explicit deny,strict current/alternative/no
+allowed plans,unconfined rejection,partition/mapper/overlay handling,phase+errno sanitization,
+child stderr privacy and actual mocked create-permission failure with no invalid cleanup.
+Python syntax PASS. No actual Linux resource/AppArmor runtime result fabricated. Existing
+successful QA not repeated. No Percona start,Schema/data import,migration,deploy or partial
+release. One commit contains whole resolution; manifest remains NO-GO/native approval false.
+
+NEXT operator action ONLY: close-native-isolation.py --resolve-blockers. Output either
+NATIVE_STAGING_GO for controlled schema-only preparation, or BLOCKED with exact path/
+operation/masks and cgroup phase/errno/device/readback evidence. An unsupported query,
+no strictly permitted candidate,unwritable/readonly cgroup hierarchy or missing usable
+controller/device remains a concrete blocker under current no-policy/service-change rules.
+No automatic root controller enabling or policy workaround; do not demand additional probes
+for checks already evidenced. No native Schema-only launch script is certified until this
+host-specific gate passes; production full release remains NO-GO regardless of native gate.

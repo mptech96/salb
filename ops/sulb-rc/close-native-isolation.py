@@ -69,24 +69,12 @@ def production_paths(pid):
     evidence['owned_filesystem_sockets']=sorted(set(sockets))
     return data,sorted(set(sockets)),evidence
 def kernel_policy(label,data,sockets,token):
-    name=re.sub(r' \((enforce|complain|kill)\)$','',label)
-    require(name!='unconfined','UNCONFINED_PROFILE_REQUIRES_REVIEW')
-    lib=ctypes.CDLL('libapparmor.so.1',use_errno=True)
-    query=lib.aa_query_file_path_len
-    query.argtypes=[ctypes.c_uint32,ctypes.c_char_p,ctypes.c_size_t,ctypes.c_char_p,ctypes.c_size_t,ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int)]
-    query.restype=ctypes.c_int
-    # Query the LOADED label: no inference from disk source/variables/deny regex.
-    paths=[(data+'/sulb-shipment-'+token+'/ibdata1',2|4|16|64|0x8000)]
-    for parent in sorted({os.path.dirname(s) for s in sockets}): paths.append((parent+'/sulb-stage-'+token+'.sock',2|4|16|64))
-    answers=[]
-    for path,mask in paths:
-        a=ctypes.c_int(); audit=ctypes.c_int(); n=name.encode(); p=path.encode()
-        require(query(mask,n,len(n),p,len(p),ctypes.byref(a),ctypes.byref(audit))==0,'LOADED_POLICY_QUERY_UNAVAILABLE')
-        answers.append(bool(a.value))
-    require(all(answers),'LOADED_POLICY_DENIES_REQUIRED_PATH')
-    return {'assessment':'LOADED_KERNEL_QUERY_PASS','target_queries':len(answers),'source_file_equality_required_for_decision':False,
-            'disk_source_equals_loaded':'NOT_CLAIMED','profile_mode':label.rsplit(' ',1)[-1]}
-def namespace_child(work,data,sockets):
+    from native_isolation_checks import policy_check,CheckBlocked
+    try: return policy_check(label,data,sockets,token)
+    except CheckBlocked as e: raise Blocked(e.code,e.evidence) from e
+
+def namespace_child(work,data,sockets,logical=None,logical_socket=None):
+
     work=pathlib.Path(work)
     run(['mount','--make-rprivate','/'])
     # Mask actual production data and all filesystem socket parents in CHILD ONLY.
@@ -95,6 +83,25 @@ def namespace_child(work,data,sockets):
         own=work/f'mask-{i}'; own.mkdir(mode=0o700)
         run(['mount','--bind',str(own),target])
         require(os.stat(target).st_ino==own.stat().st_ino and os.stat(target).st_dev==own.stat().st_dev,'MASK_IDENTITY_FAILED')
+    if logical is not None and logical!=data:
+        require(logical=='/var/lib/mysql','UNREVIEWED_LOGICAL_MAPPING')
+        # Do not follow a host /var/lib/mysql symlink to /home/mysql. Construct
+        # a real policy-compatible path in a CHILD-only private parent mount.
+        run(['mount','-t','tmpfs','-o','size=16m,mode=0755','sulb-private-varlib','/var/lib'])
+        pathlib.Path(logical).mkdir(mode=0o700)
+        own=work/'policy-data';own.mkdir(mode=0o700)
+        run(['mount','--bind',str(own),logical])
+        if data.startswith('/var/lib/'):pathlib.Path(data).mkdir(parents=True,exist_ok=True)
+        require(os.path.realpath(logical)==logical,'POLICY_CANONICAL_PATH_FAILED')
+        require(os.stat(logical).st_ino==own.stat().st_ino and os.stat(logical).st_dev==own.stat().st_dev,'POLICY_DATA_MASK_FAILED')
+    if logical_socket and logical_socket not in {os.path.dirname(s) for s in sockets}:
+        require(logical_socket=='/run/mysqld','UNREVIEWED_SOCKET_MAPPING')
+        run(['mount','-t','tmpfs','-o','size=4m,mode=0755','sulb-private-run','/run'])
+        pathlib.Path(logical_socket).mkdir(mode=0o700)
+        own=work/'policy-socket';own.mkdir(mode=0o700)
+        run(['mount','--bind',str(own),logical_socket])
+        require(os.path.realpath(logical_socket)==logical_socket,'POLICY_SOCKET_CANONICAL_PATH_FAILED')
+        require(os.stat(logical_socket).st_ino==own.stat().st_ino and os.stat(logical_socket).st_dev==own.stat().st_dev,'POLICY_SOCKET_MASK_FAILED')
     run(['mount','-t','proc','proc','/proc'])
     require(os.getpid()==1,'PRIVATE_PID_NAMESPACE_FAILED')
     require(not any(pathlib.Path(data).iterdir()),'PRODUCTION_DATA_VISIBLE_IN_CHILD')
@@ -103,35 +110,12 @@ def namespace_child(work,data,sockets):
     pathlib.Path(data,'sulb-namespace-marker').write_text('OWNED_PROBE_ONLY')
     routes=pathlib.Path('/proc/net/route').read_text().splitlines()[1:]
     require(not any(x.strip() for x in routes),'NETWORK_ROUTES_PRESENT')
-    print(json.dumps({'private_mounts':True,'private_pid':True,'private_network':True,'production_data_socket_hidden':True}))
+    print(json.dumps({'private_mounts':True,'private_pid':True,'private_network':True,'production_data_socket_hidden':True,'logical_datadir':logical or data,'logical_socket_parent':logical_socket}))
 def cgroup_probe(work):
-    root=pathlib.Path('/sys/fs/cgroup')
-    # Never enable controllers/change limits in any existing/production cgroup.
-    enabled=set((root/'cgroup.subtree_control').read_text().split())
-    require({'memory','cpu','pids','io'}<=enabled,'ROOT_CONTROLLERS_NOT_ALREADY_DELEGATED')
-    dev=run(['findmnt','-n','-o','MAJ:MIN','-T',str(work)])
-    require(re.fullmatch(r'[1-9]\d*:\d+',dev) and pathlib.Path('/sys/dev/block',dev).exists(),'IO_DEVICE_MAPPING_UNPROVEN')
-    cg=root/('sulb-isolation-'+uuid.uuid4().hex); cg.mkdir()
-    try:
-        limits={'memory.max':'268435456','memory.swap.max':'0','cpu.max':'25000 100000','pids.max':'32','io.max':dev+' rbps=1048576 wbps=1048576'}
-        for key,value in limits.items():
-            (cg/key).write_text(value)
-            observed=(cg/key).read_text().strip()
-            require(observed==value if key!='io.max' else dev in observed and 'wbps=1048576' in observed and 'rbps=1048576' in observed,'CGROUP_LIMIT_READBACK_FAILED')
-        def enter(): (cg/'cgroup.procs').write_text(str(os.getpid()))
-        p=subprocess.Popen(['/bin/sleep','1'],preexec_fn=enter,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        try: require(str(p.pid) in (cg/'cgroup.procs').read_text().split(),'CGROUP_CHILD_ATTACHMENT_FAILED')
-        finally: p.wait(timeout=3)
-        start=time.monotonic()
-        run(['dd','if=/dev/zero','of='+str(work/'owned-io-probe'),'bs=1048576','count=4','oflag=direct','conv=fsync','status=none'],preexec_fn=enter,timeout=20)
-        elapsed=time.monotonic()-start
-        stat=(cg/'io.stat').read_text()
-        require(any(x.startswith(dev+' ') and int(re.search(r'wbytes=(\d+)',x)[1])>=4194304 for x in stat.splitlines() if 'wbytes=' in x),'IO_ACCOUNTING_NOT_PROVEN')
-        require(elapsed>=2,'IO_THROTTLE_NOT_OBSERVED')
-        return {'memory_cpu_pids_limits_attached':True,'io_direct_write_throttled':True,'existing_cgroups_modified':False}
-    finally:
-        # Only this newly-created EMPTY cgroup may be removed; never kill/move host PIDs.
-        if not (cg/'cgroup.procs').read_text().strip(): cg.rmdir()
+    from native_isolation_checks import cgroup_check,CheckBlocked
+    try: return cgroup_check(work)
+    except CheckBlocked as e: raise Blocked(e.code,e.evidence) from e
+
 def main():
     result={'decision':'BLOCKED','mysqld_started':False,'database_connections':0,'production_policy_service_changed':False,'release_decision':'NO-GO'}
     try:
@@ -144,14 +128,17 @@ def main():
             try: result['apparmor']=kernel_policy(before[1],data,sockets,uuid.uuid4().hex)
             except Exception as e: failures.append(str(e) if isinstance(e,Blocked) else 'APPARMOR_QUERY_RUNTIME_UNAVAILABLE')
             try:
-                out=run(['unshare','--mount','--net','--pid','--fork',sys.executable,str(pathlib.Path(__file__).resolve()),'--namespace-child',str(work),data,json.dumps(sockets)],timeout=20)
+                logical=result.get('apparmor',{}).get('selected_logical_datadir',data)
+                out=run(['unshare','--mount','--net','--pid','--fork',sys.executable,str(pathlib.Path(__file__).resolve()),'--namespace-child',str(work),data,json.dumps(sockets),logical,result.get('apparmor',{}).get('selected_socket_parent','')],timeout=20)
                 result['namespace']=json.loads(out)
                 require(data_identity==(os.stat(data).st_dev,os.stat(data).st_ino),'HOST_MOUNT_CHANGED')
                 require(not pathlib.Path(data,'sulb-namespace-marker').exists(),'HOST_MARKER_PROPAGATED')
                 require(all(pathlib.Path(s).exists() for s in sockets),'HOST_SOCKET_DISAPPEARED')
             except Exception as e: failures.append(str(e) if isinstance(e,Blocked) else 'NAMESPACE_PROOF_FAILED')
             try: result['cgroup']=cgroup_probe(work)
-            except Exception as e: failures.append(str(e) if isinstance(e,Blocked) else 'CGROUP_PROOF_FAILED')
+            except Exception as e:
+                failures.append(str(e) if isinstance(e,Blocked) else 'CGROUP_PROOF_FAILED')
+                if isinstance(e,Blocked):result['cgroup_failure']=e.evidence
             require(process_state()==before,'PRODUCTION_PROCESS_LABEL_CHANGED')
             result['blockers']=failures
             if not failures: result['decision']='NATIVE_STAGING_GO'
@@ -159,6 +146,42 @@ def main():
         result['blockers']=[str(e) if isinstance(e,Blocked) else 'ISOLATION_PROOF_INCOMPLETE']
         if isinstance(e,Blocked) and e.evidence: result['mapping_evidence']=e.evidence
     print(json.dumps(result,indent=2));return 0 if result['decision']=='NATIVE_STAGING_GO' else 78
+def resolve_two_blockers():
+    result={'decision':'BLOCKED','scope':'two_verified_blockers_only','mysqld_started':False,'database_connections':0,'production_policy_service_changed':False,'release_decision':'NO-GO'}
+    try:
+        require(sys.platform=='linux' and os.geteuid()==0,'LINUX_ROOT_REQUIRED')
+        receipt=json.loads(pathlib.Path(__file__).with_name('release.json').read_text())['staging_preparation']['native_feasibility']['operator_namespace_receipt']
+        before=process_state();data,sockets,evidence=production_paths(before[0]);result['mapping_evidence']=evidence
+        require(data==receipt['resolved_data_root'] and all(receipt[k] is True for k in ['private_mounts','private_pid','private_network','production_data_socket_hidden']),'PRIOR_NAMESPACE_RECEIPT_NOT_APPLICABLE')
+        result['namespace']={'status':'PRIOR_OPERATOR_PASS_REUSED','source_commit':receipt['source_commit']}; failures=[]
+        with tempfile.TemporaryDirectory(prefix='sulb-isolation-',dir='/home/mgye-api-sulb') as temp:
+            work=pathlib.Path(temp);os.chmod(work,0o700)
+            for key,check in [('apparmor',lambda:kernel_policy(before[1],data,sockets,uuid.uuid4().hex)),('cgroup',lambda:cgroup_probe(work))]:
+                try:result[key]=check()
+                except Exception as e:
+                    failures.append(str(e) if isinstance(e,Blocked) else key.upper()+'_INSPECTION_UNAVAILABLE')
+                    if isinstance(e,Blocked): result[key+'_failure']=e.evidence
+                    elif isinstance(e,OSError):result[key+'_failure']={'errno':e.errno,'exception_type':type(e).__name__}
+            if not failures:
+                logical=result['apparmor']['selected_logical_datadir']
+                socket_parent=result['apparmor']['selected_socket_parent']
+                if logical!=data or socket_parent not in {os.path.dirname(s) for s in sockets}:
+                    identities={p:(os.stat(p).st_dev,os.stat(p).st_ino) for p in [data,'/var/lib','/run']}
+                    try:
+                        result['namespace']=json.loads(run(['unshare','--mount','--net','--pid','--fork',sys.executable,str(pathlib.Path(__file__).resolve()),'--namespace-child',str(work),data,json.dumps(sockets),logical,socket_parent],timeout=20))
+                    except subprocess.CalledProcessError as e:
+                        text=(e.stderr or b'').decode(errors='replace');match=re.search(r'Blocked: ([A-Z0-9_]+)',text)
+                        raise Blocked('POLICY_ALLOWED_ALTERNATIVE_NAMESPACE_FAILED',{'phase':'new_policy_mapping_only','child_code':match[1] if match else 'NAMESPACE_RUNTIME_FAILURE','returncode':e.returncode}) from e
+                    require(all(v==(os.stat(p).st_dev,os.stat(p).st_ino) for p,v in identities.items()),'HOST_MAPPING_CHANGED')
+                    require(all(pathlib.Path(s).exists() for s in sockets),'HOST_SOCKET_DISAPPEARED')
+                result['decision']='NATIVE_STAGING_GO'
+            require(process_state()==before,'PRODUCTION_PROCESS_LABEL_CHANGED')
+        result['blockers']=failures
+    except Exception as e:
+        result['decision']='BLOCKED';result['blockers']=[str(e) if isinstance(e,Blocked) else 'TARGETED_ISOLATION_PROOF_INCOMPLETE']
+        if isinstance(e,Blocked) and e.evidence:result['failure_evidence']=e.evidence
+    print(json.dumps(result,indent=2));return 0 if result['decision']=='NATIVE_STAGING_GO' else 78
 if __name__=='__main__':
-    if len(sys.argv)>1 and sys.argv[1]=='--namespace-child': namespace_child(sys.argv[2],sys.argv[3],json.loads(sys.argv[4]))
+    if len(sys.argv)>1 and sys.argv[1]=='--namespace-child': namespace_child(sys.argv[2],sys.argv[3],json.loads(sys.argv[4]),sys.argv[5] if len(sys.argv)>5 else None,sys.argv[6] if len(sys.argv)>6 else None)
+    elif len(sys.argv)>1 and sys.argv[1]=='--resolve-blockers':sys.exit(resolve_two_blockers())
     else: sys.exit(main())

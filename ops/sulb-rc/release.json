@@ -117,6 +117,29 @@
         "broad_application_roots_rejected": true,
         "focused_regression_tests_passed": 17,
         "actual_vps_result_pending": true
+      },
+      "operator_namespace_receipt": {
+        "source_commit": "3c8190688b82bc4bbca6a47e932e47340dac0373",
+        "resolved_data_root": "/home/mysql",
+        "private_mounts": true,
+        "private_pid": true,
+        "private_network": true,
+        "production_data_socket_hidden": true,
+        "mysqld_started": false,
+        "database_connections": 0
+      },
+      "remaining_operator_blockers": [
+        "LOADED_POLICY_DENIES_REQUIRED_PATH was boolean-only and did not distinguish missing allow",
+        "CGROUP_PROOF_FAILED lacked phase/errno; underlying host cause unknown"
+      ],
+      "targeted_resolution": {
+        "mode": "--resolve-blockers",
+        "local_new_unit_tests_passed": 18,
+        "actual_host_result_pending": true,
+        "policy_changed": false,
+        "parent_cgroups_changed": false,
+        "mysqld_started": false,
+        "native_staging_approved": false
       }
     }
   },
