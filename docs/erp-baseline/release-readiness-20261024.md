@@ -2058,3 +2058,42 @@ executor for QA-only14+4. Do not advertise it as ready or enable GO from static 
 Production executor/manifest/native harness/history/restore/security signoff remain pending.
 No production change performed. Decision NO-GO; practical next action ONLY host isolation/
 resource probe, not purchase, extraction, migration or deployment.
+
+### Native staging AppArmor review prepared — 2026-10-27
+Operator feasibility PASS:13,983,888KiB available memory,188,614,428KiB home free,4 CPUs,
+cgroup2fs,ephemeral mount/net/PID namespace test PASS,mysqld/unshare/setpriv/prlimit present.
+No mysqld started/no DB connections/no service changes. Preserve these results; no repeat
+of capacity,Schema,metadata,Percona or previous QA suites. cgroup controller delegation/
+IO enforcement is NOT established merely from cgroup2fs and still needs launch qualification.
+
+Added review-mysqld-apparmor.php. READ ONLY: systemctl show MainPID for existing mysql.service,
+read /proc/PID/exe and attr/current, identify on-disk source candidates, use AppArmor parser
+-N/-p with -Q(no kernel load),-K(no cache),-T(no cache read). No -r,-R,-a,-W or profile reload.
+Only known infrastructure path rules/hash/deny/variable markers leave server; full policy,
+other-user rules,commands with credentials,DB rows and DDL are not printed. PID consistency
+checked. On-disk source declaring a live label does NOT prove byte equality to loaded policy;
+summary explicitly retains that uncertainty and cannot approve access from regex alone.
+Local synthetic rule/deny/variable/no-false-authorization/privacy-filter checks and PHP lint
+PASS. Actual AppArmor behavior was NOT tested locally or on VPS by Codex.
+
+Potential no-policy-change design: keep current executable and its enforced AppArmor profile;
+private mount/PID/network namespace with fresh owned directories bound over already-allowed
+/var/lib/mysql,/run/mysqld,/var/log/mysql ONLY inside child namespace after private propagation.
+Actual prod data/socket paths must be hidden and this must be proven BEFORE initialization.
+No unconfined copied executable,profile unload/complain/reload,production file mutation,
+shared live datadir or TCP. Empty QA-owned DB name only; dedicated low-privilege execution,
+all capabilities dropped before server,matching private ownership for owner rules. Any deny/
+variable/symlink/attachment ambiguity or inaccessible required path stops launch; never weaken
+policy to continue. This is a design for review, not a runnable/approved native harness yet.
+
+Initial schema-only proposed limits:mysqld512MiB,total experiment2GiB,1CPU,256PID,private5GiB
+working budget. Bounded IO must be validated against actual device/cgroup controller before
+launch; a prlimit address-space limit is not a substitute for enforced memory cgroups.
+Historical dataset/storage limits require separate sizing/approval. Same-host resource sharing
+remains real despite namespaces. No purchase or Docker installation required by this plan.
+
+NEXT ACTION ONLY: operator runs AppArmor read-only inspector and returns filtered JSON. It
+will identify actual label/source candidates and relevant expanded rules for deciding private
+path mapping without touching production policy. Native instance approval remains FALSE.
+Comprehensive release,actual schema execution/history/backup-restore/security executor remain
+NO-GO pending their existing gates. No partial releases resumed.

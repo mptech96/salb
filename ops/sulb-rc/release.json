@@ -96,12 +96,16 @@
     "runtime_preflight": "read-only Composer version/QA extensions/memory/disk; no DB or schema access; 5 local boundary checks passed",
     "native_feasibility": {
       "architecturally_possible": true,
-      "host_capacity_verified": false,
-      "kernel_isolation_verified": false,
+      "host_capacity_verified": true,
+      "kernel_isolation_verified": true,
       "mac_policy_verified": false,
       "native_server_started": false,
       "production_service_changes_authorized": false,
-      "probe": "native-staging-feasibility.sh; no DB access or mysqld invocation"
+      "probe": "native-staging-feasibility.sh; no DB access or mysqld invocation",
+      "observed_memory_available_kib": 13983888,
+      "observed_home_free_kib": 188614428,
+      "observed_cpu_count": 4,
+      "apparmor_review": "Pending actual process label and expanded policy; no policy changes or native process launch authorized by this inspection"
     }
   },
   "production_schema_objects": {
