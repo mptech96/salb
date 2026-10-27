@@ -34,7 +34,9 @@ jobs:
           set -euo pipefail
           qa_dir="/var/lib/mysql/sulb-shipment-$(openssl rand -hex 16)"
           echo "SULB_SHIPMENT_TEST_DIR=$qa_dir" >> "$GITHUB_ENV"
-          echo "APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')" >> "$GITHUB_ENV"
+          qa_key="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+          echo "::add-mask::$qa_key"
+          echo "APP_KEY=$qa_key" >> "$GITHUB_ENV"
           docker run -d --name sulb-percona-qa -p 127.0.0.1:3339:3306 \
             -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_ROOT_HOST=% \
             percona/percona-server@sha256:eaa4cf955f8a01a43faa6ef656bf8fb69a17c17c278a3b0514212291ca0448b1 \

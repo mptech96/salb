@@ -6,7 +6,12 @@ if(getenv('APP_ENV')!=='testing'||!$directory||!preg_match('/sulb-shipment-[a-f0
 $root=new PDO('mysql:host=127.0.0.1;port=3339;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 $actual=$root->query('SELECT @@datadir')->fetchColumn();
 if(rtrim(str_replace('\\','/',$actual),'/')!==rtrim(str_replace('\\','/',$directory),'/'))throw new RuntimeException('WRONG_QA_SERVER');
-$server=releaseMetadataServer($root);$maria=$server['mariadb'];$account="'sulb_metadata_ro'@'127.0.0.1'";$password=bin2hex(random_bytes(20));$role='qa_meta_'.bin2hex(random_bytes(4));$child=$role.'_child';$other=$role.'_db';
+$server=releaseMetadataServer($root);$maria=$server['mariadb'];
+// Docker port forwarding is observed as the bridge IP, not127.0.0.1, by mysqld.
+// Restrict this disposable test user to the exact observed client; never use '%'.
+$clientHost=(string)$root->query("SELECT SUBSTRING_INDEX(USER(),'@',-1)")->fetchColumn();
+if($clientHost!=='localhost'&&!filter_var($clientHost,FILTER_VALIDATE_IP))throw new RuntimeException('QA_CLIENT_HOST_UNVERIFIED');
+$account="'sulb_metadata_ro'@".$root->quote($clientHost);$password=bin2hex(random_bytes(20));$role='qa_meta_'.bin2hex(random_bytes(4));$child=$role.'_child';$other=$role.'_db';
 if($root->query("SHOW DATABASES LIKE 'sulbprod'")->fetchColumn()!==false||(int)$root->query("SELECT COUNT(*) FROM mysql.user WHERE User='sulb_metadata_ro'")->fetchColumn())throw new RuntimeException('QA_NAME_ALREADY_EXISTS');
 if(!$maria&&$root->query('SELECT @@global.mandatory_roles')->fetchColumn()!=='')throw new RuntimeException('QA_GLOBAL_ROLES_NOT_EMPTY');
 $passed=[];$sets=[];
