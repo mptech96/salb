@@ -944,6 +944,10 @@
     "path": "backend/tests/Integration/Uom/OperationalSurfaceTest.php"
   },
   {
+    "sha256": "50581e191c4c2ccc28d036bd6094f31dcc714811bf70218d35a2f80dd51366e3",
+    "path": "backend/tests/Integration/Uom/PrivateSchemaMigrationRehearsalTest.php"
+  },
+  {
     "sha256": "da81560996b675c9fd6ed268464c61c3f76cd70f42dd1c3917ecbd4a5783c96c",
     "path": "backend/tests/Integration/Uom/ProcessingRecipeTest.php"
   },

@@ -1740,3 +1740,45 @@ Live VPS count verification not yet received; no zero-object conclusion claimed.
 Actual complete DDL compatibility cannot be inferred from a hash/count alone. Previous
 structural comparison remains valid; QA-only migration executor, exact collations/
 CHECK/DDL history rehearsal and approved anonymized staging remain pending. NO-GO.
+
+### Private schema contract and isolated rehearsal preparation — 2026-10-27
+Operator PASS on efb0483:111 tables, explicit0 VIEW/TRIGGER/PROCEDURE/FUNCTION/EVENT,
+all captured CREATE definitions present, hash901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f.
+Trigger visibility gap CLOSED from actual operator verification. Do not rerun account,
+engine, credentials or metadata capture. Private DDL stays solely on VPS.
+
+Added private-migration-contract.php: FILE-ONLY, no connection/SQL execution, pinned
+capture hash, existing administrative capture format, explicit zero non-table objects,
+parent signedness/type prerequisites, actual currency FK column/table collation and
+unique parent, existing UOM column/table collisions and L3 evidence collisions,
+all14 catalog source hashes/order. Emits counts/reason codes only, no DDL/grants.
+Static prerequisite PASS is deliberately not a successful migration rehearsal/GO.
+Local7/7 focused checks PASS, including signedness/collation/parent-unique/UOM collision
+negative cases. Production static contract result still pending operator execution.
+
+Added PrivateSchemaMigrationRehearsalTest: accepts pinned schema-only JSON, refuses
+nonempty target, owned loopback3339 test DB/datadir enforced; no production connection
+accepted. Imports table definitions only, refuses qualified cross-schema references/
+external data-directory connections. FK checks disabled ONLY for empty QA import and
+restored in finally, all imported tables checked empty, installs14 plus L3 dependencies,
+checks original tables retained and LOT values not invented. No row imports.
+Actual native MySQL8.4.8 isolated synthetic empty-schema test:1/1 PASS,229 assertions.
+New harness exercised110 baseline tables; this is NOT proof for private111-table VPS
+DDL, actual Percona staging or historical Backfill. Owned QA DB removed, server stopped,
+previous data retained. An initial sandbox/server-start attempt failed to connect;
+no migration ran in those failed attempts. Successful run used only owned QA.
+
+SECURITY: new offline tool cannot read secrets via DB or execute DDL; only count/reason
+summaries leave VPS. Rehearsal remains under existing testing-only ownership guards;
+no guard weakened and no production executor enabled. Prior authorization tests retained.
+Full security signoff remains pending actual staged data flows/UAT and deployment executor.
+BACKUP/ROLLBACK: existing synthetic separate-schema restore proof remains valid; private
+production-equivalent restore must be tested before approval. Preserve post-cutover
+customer transactions; no automatic live DB restore or destructive migration down.
+Do not rely on code tar/hash verification as a database-restore proof. No extraction of
+customer rows authorized or implemented. Approved representative history still missing.
+
+NEXT ACTION ONLY: run offline contract against existing private schema with its pinned
+hash; return safe JSON only. Then execute prepared test on isolated Percona staging
+with approved input, not on sulbprod. Production-compatible migration executor, history
+Backfill/FIFO/LOT=GL/concurrency/failure/restore and security UAT remain NO-GO gates.

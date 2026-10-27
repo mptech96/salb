@@ -71,6 +71,25 @@
     "safe_alternative": "operator-controlled isolated private staging enclave; no raw data transfer",
     "actual_history_staging_tested": false,
     "cloudpanel_master_auth": "official clpctl db:show:master-credentials captured in memory; fail closed; never evaluated or printed",
-    "operator_reported_schema_capture_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f"
+    "operator_reported_schema_capture_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f",
+    "private_schema_runner": {
+      "offline_contract_checks": 7,
+      "synthetic_mysql84_tests": 1,
+      "synthetic_mysql84_assertions": 229,
+      "actual_private_schema_rehearsal_passed": false,
+      "history_passed": false
+    }
+  },
+  "production_schema_objects": {
+    "operator_verification": "PASS",
+    "tables": 111,
+    "views": 0,
+    "triggers": 0,
+    "procedures": 0,
+    "functions": 0,
+    "events": 0,
+    "zero_counts_explicitly_verified": true,
+    "schema_capture_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f",
+    "full_compatibility_approved": false
   }
 }
