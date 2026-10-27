@@ -22,4 +22,7 @@ $fixture=function($role='NONE',$grant='GRANT SELECT, SHOW VIEW, TRIGGER, EVENT O
 $r=schemaCapture($fixture());$assert(count($r['definitions'])===3&&!$r['business_rows_exported']&&!$r['automatic_import_authorized']);
 $assert(!str_contains(json_encode($r),'GRANT SELECT'));
 foreach([$fixture('admin_role'),$fixture('NONE','GRANT SELECT ON sulbprod.* TO admin')]as$read){try{schemaCapture($read);throw new LogicException('ACCEPTED');}catch(RuntimeException $e){$assert(true);}}
+$secret='synthetic-qa-password!$()';
+foreach(["Host: 127.0.0.1\nUser Name: admin\nPassword: $secret\nPort: 3306", "| Host | localhost |\n| User Name | admin |\n| Password | $secret |\n| Port | 3306 |"]as$output){$credentials=cloudPanelMasterCredentials($output);$assert($credentials['password']===$secret&&$credentials['user']==='admin');}
+foreach(["Connect Command: mysql -uroot -psecret", "Host: remote.example\nUser: admin\nPassword: qa\nPort: 3306", "Host: localhost\nUser: sulbprod\nPassword: qa\nPort: 3306", "Host: localhost\nUser: admin\nPassword: qa\nPort: 3306\nPort: 3307"]as$output){try{cloudPanelMasterCredentials($output);throw new LogicException('ACCEPTED');}catch(RuntimeException $e){$assert(true);}}
 echo "PASS $checks local contract checks; fake reader only, not a live engine integration test\n";

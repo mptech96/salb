@@ -1705,3 +1705,20 @@ extraction/deploy/migration implied. Actual representative-history staging still
 its own approved input. Fourteen migrations/backfill/LOT=GL/concurrency/restore are NOT
 rerun or claimed passed on unavailable history. Comprehensive final security approval
 and production migration executor remain open; no gates weakened. Manifest stays NO-GO.
+
+### CloudPanel administrative schema authentication — 2026-10-27
+Official supported command verified in CloudPanel documentation:
+https://www.cloudpanel.io/docs/v2/cloudpanel-cli/root-user-commands/
+New --execute-schema-only-cloudpanel mode requires OS root and invokes only
+/usr/bin/clpctl db:show:master-credentials --no-ansi through an argv array.
+Credentials are captured in process memory, never printed, saved, passed via argv/env,
+or obtained from application.env. Returned Connect Command is NEVER executed/evaluated.
+Parser permits only exact local endpoint, valid port, nonapplication username and
+unambiguous labelled output. Unrecognized formats/authentication/role/global visibility
+failures stop generically; no fallback credentials, privilege changes or reset.
+Existing schema-only approval prompt remains. Fixed schema reads/SHOW CREATE only.
+Private schema JSON0600/directory0700 remain outside htdocs. Safe verification.json
+contains object counts/hash/false row-export flag only; no DDL, grants or credentials.
+Local15/15 contract checks PASS (six new credential parser cases, synthetic passwords),
+PHP lint PASS. Not a live CloudPanel CLI or engine integration result. No VPS connection
+or production extraction was performed by Codex. Deployment remains NO-GO.
