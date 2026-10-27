@@ -116,10 +116,19 @@
   },
   "no_migration_release": {
     "deployment_authorized": false,
-    "current_live_diff_received": false,
+    "current_live_diff_received": true,
     "runtime_subset_approved": false,
-    "reason": "Full RC includes UOM/LOT/L3 runtime and permission seed dependencies; current live-only customizations/normalized diff not yet known",
+    "reason": "Independent four-runtime-file candidate tested on matching legacy schema/Percona with frontend build; no operator deployment approval. Remaining RC features deferred.",
     "audit_tool": "ops/sulb-rc/live-code-diff-readonly.php",
-    "local_filter_fingerprint_checks_passed": 14
+    "local_filter_fingerprint_checks_passed": 14,
+    "candidate_qualified": true,
+    "partial_branch": "codex/sulb-schema-compatible-rc-20261027",
+    "partial_candidate_commit": "e6a15aad50045d3ffce796d9313d7effac205f16",
+    "candidate_runtime_files": 4,
+    "content_classification": {
+      "compatible_without_migration": 30,
+      "migration_dependent": 92,
+      "unresolved": 45
+    }
   }
 }

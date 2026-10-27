@@ -1924,3 +1924,68 @@ verified private backup restored into ANOTHER schema and new source transactions
 No migration down or old DB restore over post-cutover customer transactions. Existing
 execution gate remains NO-GO; production paths/services/DB untouched. A final deploy
 command is not certified until an exact artifact and its evidence gates are approved.
+
+### Actual-content decision and independent migration-free patch — 2026-10-27
+Received existing operator code-diff.json:359 identical,80 content-different,87 candidate-
+only,live-only frontend/next-env.d.ts. No production comparison requested/repeated.
+All80 live content hashes resolve to repository blobs (169 historical blobs examined).
+The clean db2b9d63ccda67aadaa0f49e087cc9e0137b42e7 tree matches ALL526 reported runtime
+path states, including87 absent files. Actual old-vs-new content can be reviewed locally
+without reading VPS source or uploading secrets. This is more than filename/hash-only
+triage: e.g.account parent is_active guard, report catch-only redaction, tree/lookup/group
+ledger changes, payroll branch/accrual/loan changes, voucher numbering/writer locks,
+Support financial owners and UOM shipment/invoice/recipe snapshot contracts examined.
+
+Classification for EACH167 changed/new runtime source file is in
+ops/sulb-rc/partial-content-review.json:30 COMPATIBLE_WITHOUT_MIGRATION (schema-level,
+not blanket deployment approval),92 MIGRATION_DEPENDENT feature/mixed-file bundles,
+45 UNRESOLVED financial/API dependency qualification. Per-file reasons and all80 old
+blob identities are recorded. Pure helper classification is distinguished from feature
+activation; mixed files can contain compatible hunks but are deferred as whole files.
+359 identical files need no change; preserve generated live-only next-env.d.ts.
+
+Created separate managed worktree and branch codex/sulb-schema-compatible-rc-20261027
+FROM db2b9d6, not from the comprehensive RC. Original dirty checkout/full RC retained.
+Exactly FOUR runtime files selected:
+backend/app/Domain/Accounting/Services/AccountService.php — inactive parent guard;
+frontend/app/accounts/AccountForm.tsx — only active parent groups selectable;
+backend/app/Support/ApiExceptionMessage.php — pure SQL exception redaction helper;
+backend/app/Http/Controllers/Api/AdvancedReportController.php — two catch responses only.
+No routes/middleware/UOM/LOT/L3/permission/schema/package-lock changes, no Migration.
+Existing companies/accounts/journal/inventory column definitions used by this scope
+match the previously accepted production metadata; extra printing tables are untouched.
+AccountRepository remains the ORIGINAL production version; no hierarchy feature sneaked in.
+
+Focused tests on isolated native MySQL8.4 legacy schema:6/6 PASS,59 assertions. Active/root/
+group accounts, inactive/foreign/missing/analytical parent refusal, duplicates, outer
+rollback, no inventory/GL mutation, PDO-chain redaction and actual report run/CSV/XLS/PDF
+failure responses covered.2/2 frontend static-render tests cover active/inactive/leaf
+options and existing string-flag serialization. New tests do not claim mobile browser UAT.
+Local Windows build failed due cross-drive node_modules junction resolution; no code
+compiler failure conclusion. Clean Linux dependency install/build verified below.
+
+Actual isolated Percona8.4+Linux focused CI PASS:
+https://github.com/mptech96/salb/actions/runs/40447864166
+Runtime source tested43d89108ac6a23fc426f5403acd5f2a92b12ec8c.
+6 tests/59 assertions,2 frontend tests,Next.js production webpack build+TypeScript,
+61/61 static pages PASS. No accepted broad ERP/Schema suites were repeated. QA databases/
+container removed. Native local QA stopped, source datadir preserved.
+
+DECISION: YES, a LIMITED four-runtime-file partial candidate is technically READY FOR
+USER APPROVAL. This is not broad security approval for the rest of the old production
+code and not authorization to deploy. Manifest records exact old/new file hashes and
+allowlist; no whole-RC rsync, no blind deletion, no old builds/.env/storage copied.
+Backend autoload must be refreshed for new helper; fresh frontend build must preserve
+existing production build settings. Live file drift must STOP replacement. Back up the
+old source/build privately, verify hashes and perform code/build-only rollback if needed;
+no customer DB restoration. Final executor and operator approval still required.
+
+COMPREHENSIVE SINGLE PLAN (still NO-GO): provision authorized separate staging with
+existing Docker/Percona8.4; privately transfer the already captured pinned schema via
+verified SSH; run the tested networkless schema-only14+4 harness; independently approve
+representative private history in an operator-controlled enclave; verify dry-run exceptions,
+Backfill restart/rollback, FIFO/LOT=GL, concurrency/company/branch/Support authorization,
+reports/mobile/PDF; rehearse verified backup restore into ANOTHER staging database while
+preserving newer source transactions; review security and exact production migration
+executor/write fence; only then approve one pinned Backend+Frontend+migration deployment.
+No anonymous-history exporter or production executor has been silently certified.

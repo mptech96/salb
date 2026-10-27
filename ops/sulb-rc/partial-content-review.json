@@ -1,0 +1,1362 @@
+{
+    "scope": "80 changed +87 candidate-only runtime source files",
+    "source_report_sha256": "8638c5fcdf2856a27fe5a85deb560418e6e30c756e0a70781ca7c8b715d63af0",
+    "production_matching_base": "db2b9d63ccda67aadaa0f49e087cc9e0137b42e7",
+    "base_matches_all_reported_runtime_paths": 526,
+    "all_80_live_contents_resolved_to_repository_blobs": true,
+    "classification_limits": "Compatible means no DDL requirement; it is not permission to deploy unselected features. Migration-dependent mixed files can contain compatible hunks; entire files are deferred. UNRESOLVED is not a failure claim.",
+    "counts": {
+        "COMPATIBLE_WITHOUT_MIGRATION": 30,
+        "MIGRATION_DEPENDENT": 92,
+        "UNRESOLVED": 45
+    },
+    "selected_runtime_files": [
+        "backend/app/Domain/Accounting/Services/AccountService.php",
+        "backend/app/Http/Controllers/Api/AdvancedReportController.php",
+        "backend/app/Support/ApiExceptionMessage.php",
+        "frontend/app/accounts/AccountForm.tsx"
+    ],
+    "preserve_live_only": [
+        "frontend/next-env.d.ts"
+    ],
+    "files": [
+        {
+            "path": "backend/app/Domain/Accounting/Repositories/AccountRepository.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Company-scoped hierarchy/search/pagination on existing accounts fields; separate feature bundle, not selected.",
+            "live_git_blob": "fe504499abd307afecaadf5276952979fd4a3943"
+        },
+        {
+            "path": "backend/app/Domain/Accounting/Services/AccountService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": true,
+            "content_review": "Reject inactive parent using existing is_active/company_id/is_group fields; selected.",
+            "live_git_blob": "a2a77e6bb14a9408a5f778caec313321348bf293"
+        },
+        {
+            "path": "backend/app/Domain/Accounting/Services/AccountingReportService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Group ledger expands existing descendants and tenant-scopes journal joins; needs coordinated report tests, not selected.",
+            "live_git_blob": "63baee0952ccca9ebf0e253939ce7297e3911e0c"
+        },
+        {
+            "path": "backend/app/Domain/Accounting/Services/JournalService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Manual reversal lock/idempotency on existing journal fields; activation/controller permission changes excluded.",
+            "live_git_blob": "2c71dd4dbaa2dad68a959972ff3ec4ccec966fd9"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/AccountController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "New options calls repository selectionPage and shared exception redaction; API bundle not selected.",
+            "live_git_blob": "9a697a7dcb25eb36b6381a74091dda00990accc3"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/AccountStatementController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Uses full account tree/group ledger and shared exception formatter; coupled report bundle not selected.",
+            "live_git_blob": "f98aa5b05965e65b6db609768dcfc57b88da712e"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/AdvancedReportController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": true,
+            "content_review": "Only two catch responses switch to formatter; selected with formatter, run/export privacy tested.",
+            "live_git_blob": "f1c606d80d057385ba5fbe0a0bec15b3df68cf3f"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/CommercialDocumentController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "e9a0d1dc300670d6f06dc379ac52a5a7cbf45b39"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/CommercialReturnController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "04c2536def3f49e4832a8fe9949fd94ab80557b6"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/DashboardController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "0b09ba4b0c096bd09d2787ea6214fa675cda56a6"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/DriverShipmentStatementController.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New driver report routes require report dependencies, entitlement and financial evidence qualification.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/FinancialAccountController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Selection endpoints/meta filtering and error formatter use existing tables; API route bundle not selected.",
+            "live_git_blob": "3d61896a7164900943aaae4268a3b53d708e81f5"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/FinancialSetupController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Account selection/scoped GL validation and error formatter use existing fields; not selected.",
+            "live_git_blob": "03895b190cb7377ef0efa69e6f305245cc9131fa"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/InventoryController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "48db90e8db094cdc520424adf727c82daabc3172"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/InventoryOperationController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "804ad6332b86ccf89e101485b41d9e156ada3ef5"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/ItemController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "b1c1054bc29f850e2b86f585c843cb0e3e1b5015"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/ItemUnitController.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/JournalEntryController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "5d19577f36378e1febb8c913cca7d7e668d1db96"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/OpeningBalanceController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "1ef5e42f3ccea3620997658cda50a0f472e84204"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/PayrollController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Branch/salary-slip restrictions plus financial-account response shape; payroll/permissions bundle requires independent qualification.",
+            "live_git_blob": "87eaf50cae12ecb46c5f78631fbe66ab54cab4b9"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/ProcessingRecipeController.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/PurchaseInvoiceController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "80c6e46c2bd48c53514a277bd84e53ab1284ef2b"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/SalesInvoiceController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "9a2acee6cf5f0d7b08eac80e98a7db5f276f39b9"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/ShipmentController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "9ee62c1a5f6e4d9c845999c551c04dbabf6eafd0"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/ShipmentCostController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "d80847f639b69d67bd2978a9fd8d2a57b0f76dce"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/VoucherController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Company-lock numbering, selection APIs, error/rollback flow; must review all voucher writers and duplicate history together.",
+            "live_git_blob": "e438260bc4a698cb07c701130f6e5baa53696fc4"
+        },
+        {
+            "path": "backend/app/Http/Controllers/Api/WorkerController.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Worker loan/commission accounting and beneficiary/reversal changes interact with historical journals; not independently approved.",
+            "live_git_blob": "141d6e5e9382eaf635a757f4c59eb3a122d66366"
+        },
+        {
+            "path": "backend/app/Http/Middleware/EnforceUsageLimit.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Route name/action/API-prefix quota matching, existing entitlement storage; behavior test bundle deferred.",
+            "live_git_blob": "8b876953cc7dec8a5f471fcd83f6891d7bf82d27"
+        },
+        {
+            "path": "backend/app/Http/Middleware/EnsureRoutePermission.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": "4107e6b8ff95ba14ef7ad585c41eb2d02542692d"
+        },
+        {
+            "path": "backend/app/Http/Middleware/EnsureSupportAccess.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "6bbc52c5701119934b78e79b64a33a5fb881cba6"
+        },
+        {
+            "path": "backend/app/Services/Accounting/AtomicInvoiceVoucherService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Accounting/EnterpriseAccountingPostingService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "329ff1a5db41ff1348b833a20dc5f19b1724aba6"
+        },
+        {
+            "path": "backend/app/Services/Accounting/ExpensePosting.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Automatic voucher numbering shares new company reservation protocol; full writer closure/history required.",
+            "live_git_blob": "008e2d3ab33ee683cc5f0a52aadd1b191e090b56"
+        },
+        {
+            "path": "backend/app/Services/Accounting/HistoricalAccountingAuthorization.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Accounting/HistoricalDecimal.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Pure exact decimal arithmetic helper; no DB reads/writes; not selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Accounting/HistoricalInvoiceAccountingService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Accounting/InventoryCostService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "b51da1b8bedc9f1245ca4229388a3dc00814b338"
+        },
+        {
+            "path": "backend/app/Services/Accounting/InvoiceAllocationService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Accounting/InvoiceSnapshotPostingService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Accounting/IsolatedHistoricalAccountingGate.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Accounting/SnapshotReturnPostingService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Accounting/VoucherPosting.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changes customer/supplier counterpart account resolution; financial history mapping not qualified for partial.",
+            "live_git_blob": "1bb9f52998b5c96c608f8e19fd6fbe7fd9cdd42f"
+        },
+        {
+            "path": "backend/app/Services/CommercialDocumentService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "228599c36097e6a4b70c8f2410e0f9daddf9a898"
+        },
+        {
+            "path": "backend/app/Services/CommercialReturnService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "6f5742258fb2e4de52ea81eabb657f23f62177a6"
+        },
+        {
+            "path": "backend/app/Services/Demo/DemoCompanyInstaller.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Calls new voucher reservation requiring financial root transaction; demo caller bundle excluded.",
+            "live_git_blob": "0c563e7f7e7f1aa537bea40f8832f004e10ac76e"
+        },
+        {
+            "path": "backend/app/Services/DriverCostSettlement.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/DriverSettlementIsolation.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/DriverShipmentStatement.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Read-only scoped report across existing/optional cost settlement evidence; coupled route/UI bundle not qualified.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/EnterpriseInvoiceService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "7df142ff504647b6b333c1879c60d86c989d47ec"
+        },
+        {
+            "path": "backend/app/Services/ExistingItemUnitContract.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Existing KG/TON validation only, no DDL; stricter behavior requires item-history review, not selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/FinancialAccountService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Paginated company/branch scoped operational account lookup on existing joins; not selected.",
+            "live_git_blob": "df8be3d281781d1c24a472f9e2d9390308017dd6"
+        },
+        {
+            "path": "backend/app/Services/InventoryLotService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "8bb284c373ea023313e985cc633447a7b5d102a1"
+        },
+        {
+            "path": "backend/app/Services/InventoryLotValue.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/InventoryOperationService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "3f6a9f7184c7788d77941ce9ab6893bbf990be11"
+        },
+        {
+            "path": "backend/app/Services/InventoryPostingLocks.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Existing company/item row lock helper, no new storage; requires caller protocol tests, not selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/InventoryService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "a45bbf0f75f4b83b57dc6967391f16970e7037b9"
+        },
+        {
+            "path": "backend/app/Services/InventoryTransferTransactionOwner.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New financial root/isolation protocol; helper alone cannot certify full legacy transfer writer closure.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/MigrationCenterService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "855fe8b36aa215b352ecbb9be1ac882cffcb3d8c"
+        },
+        {
+            "path": "backend/app/Services/OpeningBalanceService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "3f15683554cb6e0356e255a952e362c10e327b56"
+        },
+        {
+            "path": "backend/app/Services/Payroll/IsolatedWorkerCreationRequest.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Payroll/IsolatedWorkerLoanSettlement.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Payroll/PayrollApprover.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changes commission accrual consumption, per-worker GL and loan evidence validation; financial historical qualification required.",
+            "live_git_blob": "5ac2844b6359d2d47f3040b23bbc3566f7ea48df"
+        },
+        {
+            "path": "backend/app/Services/Payroll/PayrollJournalCapacity.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Preflight existing100-line cap, pure validation; not selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Payroll/PayrollPayment.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Original accrual/payable validation and worker GL settlement changed; historical qualification required.",
+            "live_git_blob": "f011036387b2deae7e3a6b5d3efa086dc7f1b6b4"
+        },
+        {
+            "path": "backend/app/Services/Payroll/PayrollService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Branch validation/filter added to existing payroll tables; historical semantics review required, not selected.",
+            "live_git_blob": "3e6c5bf3d8f427b448187aad8ee475ce333bf729"
+        },
+        {
+            "path": "backend/app/Services/Payroll/SalaryCalculator.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Branch-scoped commission/loan sums use existing columns; not selected before payroll history UAT.",
+            "live_git_blob": "3423b361f4aa7a0c7f3a9f9f52ab5964af9a5b46"
+        },
+        {
+            "path": "backend/app/Services/Payroll/WorkerAccountingSupport.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Worker branch/auth and original journal counterpart evidence affects financial history; no partial approval.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Print/ChromiumPdfRenderer.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Chromium header flags/Windows binary order/diagnostics, no DDL; not selected pending renderer security/runtime review.",
+            "live_git_blob": "6e433edfb1ba88483c39e4d6ed80d9eee97a6c18"
+        },
+        {
+            "path": "backend/app/Services/ReportCenterService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "dcf7722126efddf16e751810f16c3af014122e12"
+        },
+        {
+            "path": "backend/app/Services/ShipmentAllocationLedger.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentAllocationPlan.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentCostDistributionService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "f8681f17a7b6b15bae726ca0f759c3fa52d5231a"
+        },
+        {
+            "path": "backend/app/Services/ShipmentCostPayee.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Canonical beneficiary normalization/scope validation affects historical/new party contracts; not qualified alone.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentCostReadIsolation.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Isolation protocol requires matching prepared root and new feature flag; no standalone approval.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentCostService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "4edce27e68012d26542f0155ca534a4262b568d9"
+        },
+        {
+            "path": "backend/app/Services/ShipmentCostVoucherGuard.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Protects financial source-voucher reversals; requires financial writer/evidence bundle.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentInventoryLockScope.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New ordered inventory locks require caller-prepared scope and concurrency proof for deployed writer set.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentLargestRemainder.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Exact allocation arithmetic and deterministic ties; pure helper, L3 callers excluded.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentLineIdentity.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentPostingFailure.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Typed internal rollback failure wrapper, no storage; owner/caller bundle excluded.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentPurchaseCostRead.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Fresh-read scope depends on qualified FK/index/isolation contract; not independently enabled.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentPurchasePostingScope.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Builds scope for linked purchase/sale posting; depends on shipment root writer bundle.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/ShipmentService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "63d8e279040e26e053a60377664e8be91b7a43c1"
+        },
+        {
+            "path": "backend/app/Services/ShipmentTransactionOwner.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New shared financial root/rollback protocol; no independent feature approval without caller closure.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/SulbDocumentSequenceService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Voucher company locks/reservation on existing sequence/voucher tables; must travel with all writers, not selected.",
+            "live_git_blob": "e902a06a3ef65dc76bd8077950c4553f380455c0"
+        },
+        {
+            "path": "backend/app/Services/Tenant/TenantResourceScopeService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "813a8cee2c2d345b506d541b0a4d874d0db7adb8"
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseAdjustmentService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseCostContract.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseInventory.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseInvoiceHeaderCost.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseLotCapitalization.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseOpeningLine.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseProcessingService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseReturns.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseShipmentAdmission.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/BaseShipmentDistribution.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/CapturedDocumentSnapshot.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/ContractTestingGuard.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/DecimalQuantity.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Pure decimal conversion precision helper; UOM scope explicitly excluded from partial.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/DocumentSnapshotService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/InventoryQuantitySql.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/ItemUnitService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/LegacyCapitalizationEvidence.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/LegacyRecipeInventory.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/LegacyWeightGuard.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/OperationalDocument.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/OperationalTransactionOwner.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/OperationalWriteGate.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Unconditional deny-only guard, no storage; UOM scope excluded.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/ProcessingExtraCost.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/ProcessingRecipeService.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/ShipmentBaseLine.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/ShipmentCostBasis.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/UnifiedInventoryReader.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/UnitCatalog.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/UnitPriceQuote.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/Uom/UomAuthorization.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Services/WeighbridgeService.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "500dc585363a9539d2be7d39d9f070c2abf4b0e2"
+        },
+        {
+            "path": "backend/app/Support/ApiExceptionMessage.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": true,
+            "content_review": "Pure exception redaction with known lock codes; selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/app/Support/DatabaseIsolation.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Read-only MySQL/MariaDB isolation metadata alias helper; no new tables, not selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/config/inventory_transfer.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New root protocol flag defaults OFF; whole transfer activation not qualified.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/config/inventory_value.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/config/manual_journal.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/config/release_write_permissions.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/config/shipment_allocation.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/config/shipment_cost_read.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/config/sulb_features.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "2e6f5220f5fd63be5afb5389ea190fb80cb6cefa"
+        },
+        {
+            "path": "backend/config/uom.php",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "Qualified evidence/receipt/identity storage, permission seeds or isolated-only schema contract required; do not activate on production.",
+            "live_git_blob": null
+        },
+        {
+            "path": "backend/routes/api.php",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "98cde30dd2e9171e3f6d04a93df08a112f9c7938"
+        },
+        {
+            "path": "frontend/app/accounts/AccountForm.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": true,
+            "content_review": "Filter parent options to active groups; paired existing API/backend guard selected.",
+            "live_git_blob": "b9303418bb1afe216db0c1787047f8d2823548b7"
+        },
+        {
+            "path": "frontend/app/accounts/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Optional account_path text search, no new DB API; not selected.",
+            "live_git_blob": "ab399162ed134a6948e093fa15a8e94c633a6be3"
+        },
+        {
+            "path": "frontend/app/commercial-returns/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "a1e0c45aac8bdcf9b747dfbde2748ca969176e81"
+        },
+        {
+            "path": "frontend/app/expenses/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New account-options endpoint and AccountSearchSelect; live backend does not provide new API route bundle.",
+            "live_git_blob": "28339f3ec2deaccca71efd7b1a2fdcc159c51e17"
+        },
+        {
+            "path": "frontend/app/financial-accounts/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New gl-options endpoint and reduced meta accounts require coordinated API bundle.",
+            "live_git_blob": "aea056a2bdb1cf49b32106c6664284cd522941cb"
+        },
+        {
+            "path": "frontend/app/financial-setup/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New AccountSearchSelect and include_accounts=false require coordinated account lookup APIs.",
+            "live_git_blob": "c6f24a58694f4739a1b42ce32851de5dce0956c6"
+        },
+        {
+            "path": "frontend/app/inventory-operations/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "54423820be0d4f1b4cefb51d5b5477ead2cbeb4d"
+        },
+        {
+            "path": "frontend/app/inventory-operations/recipes/page.tsx",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/app/inventory/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "e9d9707bab1b68a7a453b8d4cb7064c5074d502a"
+        },
+        {
+            "path": "frontend/app/items/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "45c4d7f91d64abfd225a2fc12e9dd33968d00d9f"
+        },
+        {
+            "path": "frontend/app/journal-entries/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "0a50bc42741c044bec3b898860f8f41a0f9680ff"
+        },
+        {
+            "path": "frontend/app/opening-balances/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "d25b0a3034972289ed7ebb21bdf45499b86433b4"
+        },
+        {
+            "path": "frontend/app/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "4ceb32e52b8aa285f25eeb8841bbea5e3d5c92c8"
+        },
+        {
+            "path": "frontend/app/payroll/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Payroll financial account selection behavior coupled to server metadata/authorization changes.",
+            "live_git_blob": "3513b8b772e55f45a98e88b6c98f3f5ad90a3ef3"
+        },
+        {
+            "path": "frontend/app/print/[type]/[id]/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "330e33073614f797d1495b0be14bad1e284108c1"
+        },
+        {
+            "path": "frontend/app/reports/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Changed/new runtime behavior remains coupled to unapproved financial/API feature dependencies; no independent compatibility approval.",
+            "live_git_blob": "8c120fc4f4b752b161948a598e1b79b7f0f68afc"
+        },
+        {
+            "path": "frontend/app/shipments/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "2250aeb0da96dd6f653226d45b82bf0252aaa616"
+        },
+        {
+            "path": "frontend/app/statements/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New driver shipment statement API and richer hierarchy; report/settlement evidence dependencies unresolved.",
+            "live_git_blob": "26a15e01657287bb487c815edd107834964b102e"
+        },
+        {
+            "path": "frontend/app/vouchers/page.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Account-options API and selection component coupled with server numbering/payment changes.",
+            "live_git_blob": "750b31f0b1cb63c6b6897c7db3acc40de3d8bdb2"
+        },
+        {
+            "path": "frontend/components/erp/CommercialDocumentMasterPage.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "8052de8ce58257fad3723d8ce8660850909c7ec9"
+        },
+        {
+            "path": "frontend/components/erp/InvoiceMasterPage.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "f73d128debf4d025a28ccc1389898b552320412e"
+        },
+        {
+            "path": "frontend/components/erp/tree/ERPTree.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Inactive badge using existing is_active field, no DDL; not selected.",
+            "live_git_blob": "497b82c9f22116ea64ffb46740a1709d3c5fa19c"
+        },
+        {
+            "path": "frontend/components/finance/AccountSearchSelect.tsx",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New paginated lookup contract requires endpoint/permission/schema-compatible backend bundle, not standalone.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/components/finance/DriverShipmentStatement.tsx",
+            "change": "CANDIDATE_ONLY",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "New read report endpoints and optional settlement evidence need coupled server report qualification.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/components/finance/OpeningLookup.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "UNRESOLVED",
+            "selected_for_partial": false,
+            "content_review": "Adds new opening GL/financial lookup endpoints in a route file also carrying UOM; separate API patch not qualified.",
+            "live_git_blob": "39aa8a9d6a902926d5e82cfce5d834fd0feea6c6"
+        },
+        {
+            "path": "frontend/components/inventory/ItemUnitManager.tsx",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/components/inventory/NewBaseItem.tsx",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/components/inventory/ProcessingCostEditor.tsx",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/components/print/TaxInvoicePrint.tsx",
+            "change": "CONTENT_DIFFERS",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": "0eea412101d7af420b979b0b3d40811949b8d906"
+        },
+        {
+            "path": "frontend/lib/commercial-uom.ts",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/lib/inventory-uom.ts",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/lib/invoice-uom.ts",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/lib/manual-journal.ts",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/lib/opening-uom.ts",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/lib/processing-recipe.ts",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/lib/shipment-print.ts",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/lib/shipment-uom.ts",
+            "change": "CANDIDATE_ONLY",
+            "classification": "MIGRATION_DEPENDENT",
+            "selected_for_partial": false,
+            "content_review": "UOM snapshot/base quantity/recipe or permission API contract; mixed file deferred as a whole, no standalone backport selected.",
+            "live_git_blob": null
+        },
+        {
+            "path": "frontend/next.config.ts",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "QA-only distDir override; not needed in production patch.",
+            "live_git_blob": "e8acd89f693df7c5682f49ce41d6325297d35ee1"
+        },
+        {
+            "path": "frontend/tsconfig.json",
+            "change": "CONTENT_DIFFERS",
+            "classification": "COMPATIBLE_WITHOUT_MIGRATION",
+            "selected_for_partial": false,
+            "content_review": "Formatting and QA type-output includes; not needed in production patch.",
+            "live_git_blob": "51a12122122f53acc7a468c39cb1f2d170f0e1ce"
+        }
+    ],
+    "comprehensive_release": "NO-GO",
+    "partial_deployment_authorized": false
+}
