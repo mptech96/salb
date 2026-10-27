@@ -1,0 +1,62 @@
+{
+  "release_id": "sulb-schema-compatible-rc-20261027",
+  "base": "db2b9d63ccda67aadaa0f49e087cc9e0137b42e7",
+  "base_runtime_paths_match_report": 526,
+  "decision": "READY_FOR_USER_APPROVAL_LIMITED_SCOPE",
+  "deployment_authorized": false,
+  "comprehensive_release_decision": "NO-GO",
+  "tested_runtime_commit": "43d89108ac6a23fc426f5403acd5f2a92b12ec8c",
+  "ci": "https://github.com/mptech96/salb/actions/runs/40447864166",
+  "percona_tests": 6,
+  "percona_assertions": 59,
+  "frontend_component_tests": 2,
+  "frontend_build": "PASS; TypeScript and61pages",
+  "approved_migrations": [],
+  "permission_changes": [],
+  "feature_flags_to_enable": [],
+  "runtime_files": [
+    {
+      "path": "backend/app/Domain/Accounting/Services/AccountService.php",
+      "expected_live_sha256": "f337d414580d12e69afa3b6600609a58b1016613e9dcf9d40e224f04fc51588e",
+      "candidate_git_blob_sha256": "4c4c90736a95e4fb4ee6f207ec1c3e4b8fd8100accff45fe0b56346ab619e855"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/AdvancedReportController.php",
+      "expected_live_sha256": "fc4463f0a1efad8cd8346897dde433126e9e78887a2898c5bac253a71eb4a052",
+      "candidate_git_blob_sha256": "83ff873adb7d47d0709f750104e232f98d06165dabfc0eece0d7c9ae6bb6f158"
+    },
+    {
+      "path": "backend/app/Support/ApiExceptionMessage.php",
+      "expected_live_sha256": null,
+      "candidate_git_blob_sha256": "3e5d95d919d520878f8bc23c71d5d40e31ff4ae12c1a0781820fa6f16b149124"
+    },
+    {
+      "path": "frontend/app/accounts/AccountForm.tsx",
+      "expected_live_sha256": "ca2147c88ca625129979c5d8f48b3e71719e3c36177465d4f2faf5eeb83272dd",
+      "candidate_git_blob_sha256": "40fdbb8784fb390d703eef0bdf4063accd0879b261a34ce551ec1ec572bf778a"
+    }
+  ],
+  "preserve_live_only": [
+    "frontend/next-env.d.ts"
+  ],
+  "exclude": [
+    ".env*",
+    "storage/",
+    "vendor/",
+    "node_modules/",
+    ".next*/",
+    "public/uploads/"
+  ],
+  "requires_backend_autoload_refresh": true,
+  "requires_fresh_frontend_build": true,
+  "forbid_whole_rc_rsync": true,
+  "rollback": "Backup only replaced source and current frontend build privately; restore code/build only after hash checks; never restore old DB over new customer transactions",
+  "deployment_conditions": [
+    "Independent explicit approval for this exact four-file patch",
+    "Check exact expected live hashes immediately before replacement; stop if changed",
+    "Private verified backup of replaced files and working frontend build",
+    "Fresh frontend build with existing production build settings, no old generated output copied from repository",
+    "Existing env/storage/uploads remain in place; no migration or permission seed",
+    "Refresh application autoload/opcache under reviewed executor; smoke account creation/report privacy then authorize service cutover"
+  ]
+}
