@@ -43,3 +43,4 @@ jobs:
         shell: bash
         run: |
           sudo find /home/mgye-api-sulb -maxdepth 2 -type f \( -name private-test.log -o -name dependencies.log -o -name container-error.log -o -name readiness.log \) -exec tail -n 45 {} \;
+          sudo unshare --net -- php -r '$a=readlink("/proc/self/ns/net");$b=readlink("/proc/1/ns/net");$r=file_get_contents("/proc/net/route");echo json_encode(["different_network_namespace"=>$a!==$b,"route_file_readable"=>$r!==false,"trimmed_route_lines"=>count(preg_split("/\r?\n/",trim($r)))]).PHP_EOL;'

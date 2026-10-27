@@ -5,8 +5,11 @@ try {
     if(PHP_OS_FAMILY==='Windows'||filetype($socket)!=='socket'||is_link($socket)
        ||!preg_match('#^/var/lib/mysql/sulb-shipment-[a-f0-9]{32}$#D',$datadir)
        ||!preg_match('/^[a-f0-9]{64}$/D',$sha)||!hash_equals($sha,hash_file('sha256',$capture)))throw new RuntimeException('OWNED_SOCKET_REQUIRED');
-    $routes=@file('/proc/net/route',FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES);
-    if($routes===false||count($routes)!==1)throw new RuntimeException('PRIVATE_NETWORK_NAMESPACE_REQUIRED');
+    $selfNs=@readlink('/proc/self/ns/net');$hostNs=@readlink('/proc/1/ns/net');
+    if(!$selfNs||!$hostNs||$selfNs===$hostNs)throw new RuntimeException('PRIVATE_NETWORK_NAMESPACE_REQUIRED');
+    $routes=@file_get_contents('/proc/net/route');
+    if($routes===false)throw new RuntimeException('PRIVATE_NETWORK_NAMESPACE_REQUIRED');
+    foreach(array_slice(preg_split('/\r?\n/',trim($routes)),1)as$route){if(trim($route)!==''&&preg_split('/\s+/',trim($route))[0]!=='lo')throw new RuntimeException('PRIVATE_NETWORK_NAMESPACE_REQUIRED');}
     $admin=new PDO('mysql:unix_socket='.$socket.';charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_TIMEOUT=>10]);
     $server=$admin->query('SELECT VERSION() version,@@version_comment distribution,@@datadir datadir,@@skip_networking offline')->fetch(PDO::FETCH_ASSOC);
     if(!preg_match('/^8\.4\./',$server['version'])||stripos($server['distribution'],'Percona')===false
