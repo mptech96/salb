@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__.'/history-archive.php';
-$checks=0;$admin=null;$owned=[];$readerUser=null;
+$checks=0;$admin=null;$owned=[];$readerUser=null;$readerHost=null;$qaExit=0;
 $assert=function(bool $ok)use(&$checks){if(!$ok)throw new RuntimeException('HISTORY_QA_ASSERTION_FAILED');$checks++;};
 $options=[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false,PDO::ATTR_STRINGIFY_FETCHES=>true,PDO::MYSQL_ATTR_MULTI_STATEMENTS=>false];
 try{
@@ -27,8 +27,10 @@ try{
     $stmt=$admin->prepare('INSERT INTO private_payloads(id,payload,note,nullable_value,j,flags,ratio,enum_unit,set_unit,amount) VALUES(?,?,?,?,?,CAST(CAST(? AS CHAR) AS UNSIGNED),?,?,?,?)');
     $stmt->execute(['0',"PRIVATE_CUSTOMER_MARKER\0\xff\x01",'synthetic '.hex2bin('d8b5d984d8a8'),null,'{"escaped":"\\u0000","test":true}','18446744073709551610','0.12345678912345678','PCS','PCS,KG','123456789012345678.12345678']);
     $readerUser='sulb_hist_ro_'.bin2hex(random_bytes(6));$password=bin2hex(random_bytes(24));
-    $admin->exec('CREATE USER '.$admin->quote($readerUser)."@'127.0.0.1' IDENTIFIED BY ".$admin->quote($password));
-    $admin->exec('GRANT SELECT, SHOW VIEW ON '.historyId($source).'.* TO '.$admin->quote($readerUser)."@'127.0.0.1'");
+    $readerHost=(string)$admin->query("SELECT SUBSTRING_INDEX(USER(),'@',-1)")->fetchColumn();
+    if($readerHost===''||str_contains($readerHost,'%')||str_contains($readerHost,'_')||strlen($readerHost)>255)throw new RuntimeException('HISTORY_QA_CLIENT_IDENTITY_REQUIRED');
+    $admin->exec('CREATE USER '.$admin->quote($readerUser).'@'.$admin->quote($readerHost).' IDENTIFIED BY '.$admin->quote($password));
+    $admin->exec('GRANT SELECT, SHOW VIEW ON '.historyId($source).'.* TO '.$admin->quote($readerUser).'@'.$admin->quote($readerHost));
     $reader=new PDO('mysql:host=127.0.0.1;port=3339;dbname='.$source.';charset=utf8mb4',$readerUser,$password,$options);unset($password);
     $denied=false;try{$reader->exec('INSERT INTO companies VALUES(3)');}catch(PDOException $e){$denied=(int)($e->errorInfo[1]??0)===1142;}$assert($denied);
     $root=dirname(__DIR__,2).'/backend/storage/framework/testing/history-archive-qa-'.bin2hex(random_bytes(8));mkdir($root,0700,true);
@@ -68,7 +70,8 @@ try{
     $assert($changed);$assert(!$reader->inTransaction());
     $assert((string)$admin->query('SELECT DATABASE()')->fetchColumn()===$source);
     echo json_encode(['history_tools_qa'=>'PASS','checks'=>$checks,'server_version'=>$observed['v'],'synthetic_only'=>true,'concurrent_snapshot_consistent'=>true,'two_restores_verified'=>true,'source_newer_transaction_preserved'=>true,'production_connected'=>false,'production_history_validated'=>false,'release_decision'=>'NO-GO'],JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR).PHP_EOL;
-}catch(Throwable $e){$reason=preg_match('/^HISTORY_[A-Z0-9_]+$/D',$e->getMessage())?$e->getMessage():'HISTORY_QA_RUNTIME_FAILURE';$state=$e instanceof PDOException?(string)($e->errorInfo[0]??''):'';$code=$e instanceof PDOException?(int)($e->errorInfo[1]??0):0;fwrite(STDERR,"$reason SQLSTATE=$state CODE=$code CHECKS=$checks LINE={$e->getLine()}\n");exit(1);
+}catch(Throwable $e){$reason=preg_match('/^HISTORY_[A-Z0-9_]+$/D',$e->getMessage())?$e->getMessage():'HISTORY_QA_RUNTIME_FAILURE';$state=$e instanceof PDOException?(string)($e->errorInfo[0]??''):'';$code=$e instanceof PDOException?(int)($e->errorInfo[1]??0):0;fwrite(STDERR,"$reason SQLSTATE=$state CODE=$code CHECKS=$checks LINE={$e->getLine()}\n");$qaExit=1;
 }finally{
-    if($admin){foreach($owned as$d)if(preg_match('/^sulb_hist_(source|restore)_[a-f0-9]{16}$/D',$d))$admin->exec('DROP DATABASE IF EXISTS '.historyId($d));if($readerUser)$admin->exec('DROP USER IF EXISTS '.$admin->quote($readerUser)."@'127.0.0.1'");}
+    if($admin){foreach($owned as$d)if(preg_match('/^sulb_hist_(source|restore)_[a-f0-9]{16}$/D',$d))$admin->exec('DROP DATABASE IF EXISTS '.historyId($d));if($readerUser)$admin->exec('DROP USER IF EXISTS '.$admin->quote($readerUser).'@'.$admin->quote($readerHost));}
 }
+exit($qaExit);

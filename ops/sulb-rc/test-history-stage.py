@@ -15,7 +15,7 @@ class HistorySafety(unittest.TestCase):
             group=mock.Mock(created=False)
             if cleanup_error:group.cleanup.side_effect=RuntimeError('SECRET')
             result=payload or {'history_readiness':'PASS','production_rows_read':False,'snapshot_created':False}
-            with mock.patch.object(h,'BASE',pathlib.Path(directory)),mock.patch.object(h.sys,'platform','linux'),mock.patch.object(h.os,'geteuid',return_value=0,create=True),mock.patch.object(h,'OwnedGroup',return_value=group),mock.patch.object(h,'collector',return_value=result),contextlib.redirect_stdout(io.StringIO()) as out:
+            with mock.patch.object(h,'BASE',pathlib.Path(directory)),mock.patch.object(h.sys,'platform','linux'),mock.patch.object(h.os,'geteuid',return_value=0,create=True),mock.patch.object(h,'OwnedGroup',return_value=group),mock.patch.object(h,'disable_core_dumps'),mock.patch.object(h,'collector',return_value=result),contextlib.redirect_stdout(io.StringIO()) as out:
                 code=h.main(['--check-readiness'])
             return code,json.loads(out.getvalue()),group
     def test_readiness_is_success_without_extraction(self):

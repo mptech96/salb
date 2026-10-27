@@ -45,6 +45,8 @@ function historyCaptureCli(array $argv):int {
         if($mode==='--capture-approved'&&!historyPolicyAllowsCapture($release))throw new RuntimeException('HISTORY_EXTRACTION_NOT_AUTHORIZED');
         if(PHP_OS_FAMILY!=='Linux'||!function_exists('posix_geteuid')||posix_geteuid()!==0)throw new RuntimeException('HISTORY_LINUX_ROOT_REQUIRED');
         historyPrivateDirectory($work);
+        if(!preg_match('#^0::/sulb-schema-[a-f0-9]{32}$#D',trim(file_get_contents('/proc/self/cgroup'))))throw new RuntimeException('HISTORY_OWNED_COLLECTOR_CGROUP_REQUIRED');
+        $limits=posix_getrlimit();if(!in_array($limits['soft core']??null,[0,'0'],true)||!in_array($limits['hard core']??null,[0,'0'],true))throw new RuntimeException('HISTORY_CORE_DUMPS_MUST_BE_DISABLED');
         if(!extension_loaded('sodium')||!extension_loaded('pdo_mysql'))throw new RuntimeException('HISTORY_REQUIRED_EXTENSION_MISSING');
         $available=0;if(preg_match('/^MemAvailable:\s+(\d+) kB/m',file_get_contents('/proc/meminfo'),$m))$available=(int)$m[1]*1024;
         $db=historyHiddenReader();$ready=historyCaptureReadiness($db,(int)disk_free_space($work),$available);

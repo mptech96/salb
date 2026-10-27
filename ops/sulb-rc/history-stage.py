@@ -11,6 +11,10 @@ def secure_directory(path,prefix):
     if not re.fullmatch(re.escape(str(BASE)+'/'+prefix)+r'[a-f0-9]{16}',str(p)) or p.is_symlink() or p.resolve()!=p or not p.is_dir() or p.stat().st_uid!=0 or p.stat().st_mode&0o077:raise CheckBlocked('HISTORY_PRIVATE_DIRECTORY_REQUIRED')
     return p
 
+def disable_core_dumps():
+    import resource
+    resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+
 def collector(mode,work,group):
     import termios
     # Keep the controlling TTY for hidden input; never pass a password in argv/env.
@@ -83,7 +87,7 @@ def main(argv):
             policy=json.loads(pathlib.Path(__file__).with_name('release.json').read_text())
             if policy.get('history_capture',{}).get('production_extraction_authorized') is not True:raise CheckBlocked('HISTORY_EXTRACTION_NOT_AUTHORIZED')
         if sys.platform!='linux' or os.geteuid()!=0:raise CheckBlocked('HISTORY_LINUX_ROOT_REQUIRED')
-        os.umask(0o077)
+        os.umask(0o077);disable_core_dumps();result['core_dumps_disabled']=True
         if mode=='--check-readiness':
             if len(argv)!=1:raise CheckBlocked('HISTORY_ARGUMENTS_INVALID')
             work=BASE/('sulb-history-ready-'+uuid.uuid4().hex[:16]);work.mkdir(mode=0o700)
