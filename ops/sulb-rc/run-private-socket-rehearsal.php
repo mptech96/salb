@@ -5,6 +5,8 @@ try {
     if(PHP_OS_FAMILY==='Windows'||filetype($socket)!=='socket'||is_link($socket)
        ||!preg_match('#^/var/lib/mysql/sulb-shipment-[a-f0-9]{32}$#D',$datadir)
        ||!preg_match('/^[a-f0-9]{64}$/D',$sha)||!hash_equals($sha,hash_file('sha256',$capture)))throw new RuntimeException('OWNED_SOCKET_REQUIRED');
+    $routes=@file('/proc/net/route',FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES);
+    if($routes===false||count($routes)!==1)throw new RuntimeException('PRIVATE_NETWORK_NAMESPACE_REQUIRED');
     $admin=new PDO('mysql:unix_socket='.$socket.';charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_TIMEOUT=>10]);
     $server=$admin->query('SELECT VERSION() version,@@version_comment distribution,@@datadir datadir,@@skip_networking offline')->fetch(PDO::FETCH_ASSOC);
     if(!preg_match('/^8\.4\./',$server['version'])||stripos($server['distribution'],'Percona')===false
@@ -29,7 +31,7 @@ try {
     if($exit!==0)throw new RuntimeException('SCHEMA_REHEARSAL_FAILED');
     $admin->exec('DROP DATABASE `'.$owned.'`');
     $result=['schema_only_rehearsal'=>'PASS','server_version'=>$server['version'],'server_family'=>'Percona',
-      'networking_disabled'=>true,'connection_transport'=>'owned Unix socket only','schema_file_sha256'=>$sha,
+      'networking_disabled'=>true,'php_network_namespace_isolated'=>true,'connection_transport'=>'owned Unix socket only','schema_file_sha256'=>$sha,
       'uom_migrations_applied'=>14,'lot_l3_dependencies_applied'=>4,'business_rows_imported'=>false,
       'owned_database_removed'=>true,'production_connected'=>false,'historical_validation_passed'=>false,
       'release_decision'=>'NO-GO'];

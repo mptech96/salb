@@ -5,7 +5,8 @@ umask 077
 # All writes are confined to a NEW private staging folder/container. No host DB client.
 fail() { printf '%s\n' 'STOP: isolated staging prerequisites/rehearsal failed. Do not share private logs or DDL.' >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || fail
-command -v docker >/dev/null && command -v composer >/dev/null && command -v php >/dev/null || fail
+command -v docker >/dev/null && command -v composer >/dev/null && command -v php >/dev/null && command -v unshare >/dev/null || fail
+unshare --net true || fail
 docker info >/dev/null 2>&1 || fail  # Never install/start/change Docker or production services.
 php -r 'exit(PHP_VERSION_ID>=80400 && extension_loaded("pdo_mysql") ? 0:1);' || fail
 capture=${1:?Private capture path required}; sha=${2:?Pinned capture hash required}
@@ -18,7 +19,7 @@ available=$(awk '/^MemAvailable:/{print $2}' /proc/meminfo)
 [ "${available:-0}" -ge 1572864 ] || fail
 [ "$(df -Pk /home/mgye-api-sulb | awk 'NR==2{print $4}')" -ge 2097152 ] || fail
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-[ -z "$(git -c safe.directory="$root" -C "$root" status --porcelain)" ] || fail
+[ -z "$(git --no-optional-locks -c safe.directory="$root" -C "$root" status --porcelain)" ] || fail
 work=$(mktemp -d /home/mgye-api-sulb/sulb-schema-stage.XXXXXXXX)
 chmod 700 "$work"
 container="sulb-schema-stage-$(openssl rand -hex 16)"
@@ -57,7 +58,7 @@ done
 env -i PATH="$PATH" HOME="$work" COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_HOME="$work/composer-home" COMPOSER_CACHE_DIR="$work/composer-cache" \
   composer --working-dir="$work/source/backend" install --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins >"$work/dependencies.log" 2>&1
 datadir="/var/lib/mysql/sulb-shipment-${container##*-}"
-env -i PATH="$PATH" HOME="$work" php -d display_errors=0 -d log_errors=0 \
+unshare --net -- env -i PATH="$PATH" HOME="$work" php -d display_errors=0 -d log_errors=0 \
   "$work/source/ops/sulb-rc/run-private-socket-rehearsal.php" \
   "$work/socket/mysql.sock" "$datadir" "$capture" "$sha" "$work/verification.json" >"$work/private-test.log" 2>&1
 test -s "$work/verification.json" || fail
