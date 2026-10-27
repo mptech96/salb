@@ -33,8 +33,9 @@
   },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
   "staging_blocked_inputs": [
-    "complete administrator-visible schema/trigger definitions and column collations",
+    "actual execution of the approved private schema in isolated native Percona; not yet run",
     "approved representative anonymized relational history",
+    "private backup/restore rehearsal and production executor qualification",
     "active site FPM and production-equivalent runtime evidence"
   ],
   "minimum_php": "8.3.0",
@@ -98,17 +99,17 @@
       "architecturally_possible": true,
       "host_capacity_verified": true,
       "kernel_isolation_verified": true,
-      "mac_policy_verified": false,
+      "mac_policy_verified": true,
       "native_server_started": false,
       "production_service_changes_authorized": false,
       "probe": "native-staging-feasibility.sh; no DB access or mysqld invocation",
       "observed_memory_available_kib": 13983888,
       "observed_home_free_kib": 188614428,
       "observed_cpu_count": 4,
-      "apparmor_review": "Pending actual process label and expanded policy; no policy changes or native process launch authorized by this inspection",
+      "apparmor_review": "PASS: operator c925a596; strict loaded-policy exact socket plus PID-file operations; no policy change",
       "observed_apparmor_process_label": "/usr/sbin/mysqld (complain)",
-      "combined_gate": "close-native-isolation.py: loaded-kernel path query + temporary namespace masking + own cgroup limits/direct IO; actual VPS result pending",
-      "last_operator_blocker": "DATADIR_MAPPING_REQUIRES_REVIEW from hardcoded /var/lib prefix; actual VPS path not yet supplied or presumed",
+      "combined_gate": "NATIVE_STAGING_GO: operator-supplied result c925a596; no mysqld or DB connection in gate",
+      "last_operator_blocker": null,
       "mapping_fix": {
         "location_independent": true,
         "requires_two_open_engine_file_anchors": true,
@@ -116,7 +117,7 @@
         "only_owned_listening_sockets": true,
         "broad_application_roots_rejected": true,
         "focused_regression_tests_passed": 17,
-        "actual_vps_result_pending": true
+        "actual_vps_result_pending": false
       },
       "operator_namespace_receipt": {
         "source_commit": "3c8190688b82bc4bbca6a47e932e47340dac0373",
@@ -128,18 +129,43 @@
         "mysqld_started": false,
         "database_connections": 0
       },
-      "remaining_operator_blockers": [
-        "LOADED_POLICY_DENIES_REQUIRED_PATH was boolean-only and did not distinguish missing allow",
-        "CGROUP_PROOF_FAILED lacked phase/errno; underlying host cause unknown"
-      ],
+      "remaining_operator_blockers": [],
       "targeted_resolution": {
         "mode": "--resolve-blockers",
         "local_new_unit_tests_passed": 18,
-        "actual_host_result_pending": true,
+        "actual_host_result_pending": false,
         "policy_changed": false,
         "parent_cgroups_changed": false,
         "mysqld_started": false,
-        "native_staging_approved": false
+        "native_staging_approved": true
+      },
+      "native_staging_approved": true,
+      "operator_native_receipt": {
+        "source_commit": "c925a5963339cf40d75c61a251a66e244ca3da75",
+        "decision": "NATIVE_STAGING_GO",
+        "apparmor": "PASS",
+        "private_socket_bind": true,
+        "private_lock_create": true,
+        "production_socket_hidden_before_bind": true,
+        "host_socket_inodes_unchanged": true,
+        "cgroup_receipt": "d3ab1a13",
+        "mysqld_started": false,
+        "database_connections": 0
+      },
+      "schema_only_runner": {
+        "path": "ops/sulb-rc/rehearse-native-schema.py",
+        "execution_requires": "--execute-schema-only",
+        "authorized_scope": "owned isolated Percona schema-only; no production connections or business rows",
+        "python_contract_tests_passed": 19,
+        "php_contract_checks_passed": 16,
+        "actual_vps_execution_passed": false,
+        "memory_max_bytes": 268435456,
+        "cpu_quota": "25000 100000",
+        "pids_max": 32,
+        "io_bytes_per_second": 1048576,
+        "swap_max": 0,
+        "schema_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f",
+        "execution_authorized": true
       }
     }
   },

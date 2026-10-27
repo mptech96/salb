@@ -17,6 +17,8 @@ final class PrivateSchemaMigrationRehearsalTest extends \Tests\TestCase
         self::assertSame('PASS',$contract['static_prerequisites']);
         // The outer owned runner created this EMPTY database. Never drop existing tables.
         self::assertSame([],DB::select('SHOW TABLES'));
+        $progress=function(string $step):void{$file=getenv('SULB_SCHEMA_PROGRESS_FILE');if($file)file_put_contents($file,json_encode(['step'=>$step],JSON_THROW_ON_ERROR),LOCK_EX);};
+        $progress('schema_import');
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         try{foreach($capture['definitions']as$o){
             $row=$o['ddl'][0];$sql=array_values(array_filter($row,fn($v,$k)=>str_starts_with(strtolower((string)$k),'create '),ARRAY_FILTER_USE_BOTH))[0];
@@ -25,14 +27,18 @@ final class PrivateSchemaMigrationRehearsalTest extends \Tests\TestCase
         }}finally{DB::statement('SET FOREIGN_KEY_CHECKS=1');}
         foreach($capture['definitions']as$o)self::assertSame(0,DB::table($o['name'])->count());
         config(['uom.schema_install_approved'=>true]);$applied=0;
-        foreach(glob(database_path('uom-migrations/*.php'))as$file){
-            if(str_contains(basename($file),'000010_'))foreach(['stock_movements_company_source_index.php','shipment_cost_parent_fk.php','shipment_cost_allocation_receipts.php','inventory_lot_value_balances.php']as$dependency)(require base_path('../docs/erp-baseline/proposed-migrations/'.$dependency))->up();
-            (require $file)->up();$applied++;
+        require_once base_path('../ops/sulb-rc/private-rehearsal-plan.php');
+        foreach(privateRehearsalPlan(dirname(base_path()))as$step){
+            $progress($step['step']);
+            (require base_path('../'.$step['path']))->up();
+            if(str_starts_with($step['step'],'uom:'))$applied++;
         }
+        $progress('schema_assertions');
         self::assertSame(14,$applied);self::assertSame(1,(int)DB::selectOne('SELECT @@foreign_key_checks n')->n);
         foreach(['uom_processing_cost_sources','uom_inventory_adjustments','inventory_lot_value_balances','shipment_cost_allocation_receipts']as$t)self::assertTrue(DB::getSchemaBuilder()->hasTable($t));
         foreach($capture['definitions']as$o)self::assertTrue(DB::getSchemaBuilder()->hasTable($o['name']));
         self::assertSame(0,DB::table('inventory_lot_value_balances')->count());
+        $progress('complete');
         // This test intentionally provides no historical/backfill/security/UAT approval.
     }
 }

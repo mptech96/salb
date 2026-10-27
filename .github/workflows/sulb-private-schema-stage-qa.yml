@@ -6,6 +6,9 @@ on:
       - '.github/workflows/sulb-private-schema-stage-qa.yml'
       - 'ops/sulb-rc/rehearse-private-schema.sh'
       - 'ops/sulb-rc/run-private-socket-rehearsal.php'
+      - 'ops/sulb-rc/*native*rehearsal*'
+      - 'ops/sulb-rc/private-rehearsal-plan.php'
+      - 'backend/tests/Integration/Uom/PrivateSchemaMigrationRehearsalTest.php'
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,6 +26,12 @@ jobs:
           extensions: bcmath, pdo_mysql, pdo_sqlite, mbstring, dom, xml, fileinfo, zip
           coverage: none
           tools: composer:v2
+      - name: Native launch safety contracts without a database
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ops/sulb-rc/test-native-rehearsal.py
+          php ops/sulb-rc/test-native-rehearsal-contract.php
       - name: Build synthetic schema-only input; no production DDL or credentials
         shell: bash
         run: |
