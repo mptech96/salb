@@ -1,9 +1,9 @@
 <?php
 /** Only an ownership-verified offline Percona socket is accepted. No TCP fallback. */
 try {
-    [$script,$socket,$datadir,$capture,$sha,$proof]=$argv;
-    $native=$argv[7]??null;
-    if($native!==null){require_once __DIR__.'/native-rehearsal-context.php';verifyNativeRehearsalContext($native,$socket,$datadir);}
+    require_once __DIR__.'/native-rehearsal-context.php';
+    [$script,$socket,$datadir,$capture,$sha,$proof,$native]=privateSocketArguments($argv);
+    if($native!==null)verifyNativeRehearsalContext($native,$socket,$datadir);
     if(PHP_OS_FAMILY==='Windows'||filetype($socket)!=='socket'||is_link($socket)
        ||($native===null&&!preg_match('#^/var/lib/mysql/sulb-shipment-[a-f0-9]{32}$#D',$datadir))
        ||!preg_match('/^[a-f0-9]{64}$/D',$sha)||!hash_equals($sha,hash_file('sha256',$capture)))throw new RuntimeException('OWNED_SOCKET_REQUIRED');
@@ -43,7 +43,7 @@ try {
       'release_decision'=>'NO-GO'];
     if(file_put_contents($proof,json_encode($result,JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR),LOCK_EX)===false)throw new RuntimeException('PROOF_WRITE_FAILED');
 }catch(Throwable $e){
-    $allowed=['NATIVE_PRIVATE_CONTEXT_REQUIRED','OWNED_SOCKET_REQUIRED','PRIVATE_NETWORK_NAMESPACE_REQUIRED','OFFLINE_PERCONA_REQUIRED','EMPTY_INSTANCE_REQUIRED','OWNED_NAME_REQUIRED','NO_ENV_OR_CONFIG_CACHE_ALLOWED','SCHEMA_REHEARSAL_FAILED','PROOF_WRITE_FAILED'];
+    $allowed=['REHEARSAL_ARGUMENTS_REQUIRED','NATIVE_PRIVATE_CONTEXT_REQUIRED','OWNED_SOCKET_REQUIRED','PRIVATE_NETWORK_NAMESPACE_REQUIRED','OFFLINE_PERCONA_REQUIRED','EMPTY_INSTANCE_REQUIRED','OWNED_NAME_REQUIRED','NO_ENV_OR_CONFIG_CACHE_ALLOWED','SCHEMA_REHEARSAL_FAILED','PROOF_WRITE_FAILED'];
     $reason=in_array($e->getMessage(),$allowed,true)?$e->getMessage():'RUNTIME_FAILURE';
     if($e instanceof PDOException)$reason='PDO_FAILURE_'.preg_replace('/[^0-9A-Z]/','',(string)($e->errorInfo[0]??'')).'_'.(int)($e->errorInfo[1]??0);
     fwrite(STDERR,"STOP_CODE=$reason; isolated rehearsal failed; no DDL or credential diagnostics emitted.\n");exit(1);

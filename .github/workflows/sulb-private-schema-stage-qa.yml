@@ -8,6 +8,7 @@ on:
       - 'ops/sulb-rc/run-private-socket-rehearsal.php'
       - 'ops/sulb-rc/*native*rehearsal*'
       - 'ops/sulb-rc/private-rehearsal-plan.php'
+      - 'ops/sulb-rc/test-native-socket-argv.*'
       - 'backend/tests/Integration/Uom/PrivateSchemaMigrationRehearsalTest.php'
   workflow_dispatch:
 permissions:
@@ -30,6 +31,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 ops/sulb-rc/test-native-socket-argv.py
+          php ops/sulb-rc/test-native-socket-argv.php
           python3 ops/sulb-rc/test-native-rehearsal.py
           php ops/sulb-rc/test-native-rehearsal-contract.php
       - name: Build synthetic schema-only input; no production DDL or credentials

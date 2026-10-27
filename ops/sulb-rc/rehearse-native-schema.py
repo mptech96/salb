@@ -12,7 +12,10 @@ def safe_log_codes(path):
     if not pathlib.Path(path).is_file():return {}
     with open(path,'rb') as log:
         log.seek(max(0,pathlib.Path(path).stat().st_size-1048576));text=log.read(1048576).decode(errors='replace')
-    return {'mysql_error_ids':list(dict.fromkeys(re.findall(r'\bMY-\d{6}\b',text)))[-12:],
+    allowed={'REHEARSAL_ARGUMENTS_REQUIRED','NATIVE_PRIVATE_CONTEXT_REQUIRED','OWNED_SOCKET_REQUIRED','PRIVATE_NETWORK_NAMESPACE_REQUIRED','OFFLINE_PERCONA_REQUIRED','EMPTY_INSTANCE_REQUIRED','OWNED_NAME_REQUIRED','NO_ENV_OR_CONFIG_CACHE_ALLOWED','SCHEMA_REHEARSAL_FAILED','PROOF_WRITE_FAILED','RUNTIME_FAILURE'}
+    codes=[c for c in re.findall(r'\bSTOP_CODE=([A-Z0-9_]+)',text) if c in allowed or re.fullmatch(r'PDO_FAILURE_[A-Z0-9]{5}_\d{1,5}',c)]
+    return {'stop_codes':list(dict.fromkeys(codes))[-12:],
+            'mysql_error_ids':list(dict.fromkeys(re.findall(r'\bMY-\d{6}\b',text)))[-12:],
             'sqlstates':list(dict.fromkeys(re.findall(r'SQLSTATE\[([A-Z0-9]{5})\]',text)))[-12:],
             'known_failure_categories':[x for x in ['Allowed memory size','Permission denied','Could not resolve host','SSL certificate problem','Resource temporarily unavailable'] if x in text]}
 
@@ -77,6 +80,9 @@ def mysql_args(datadir,sock):
       '--table-open-cache=128','--table-open-cache-instances=1','--thread-cache-size=0','--temptable-max-ram=16M',
       '--restrict-fk-on-non-standard-key=ON','--local-infile=OFF','--secure-file-priv=NULL','--event-scheduler=OFF']
 
+def rehearsal_command(source,work,sock,datadir,contextfile):
+    return ['php','-d','memory_limit=128M','-d','display_errors=0','-d','log_errors=0',str(source/'ops/sulb-rc/run-private-socket-rehearsal.php'),sock,datadir,str(work/'schema-private.json'),SHA,str(work/'migration-result.json'),str(contextfile)]
+
 def native_child(work):
     os.umask(0o077)
     work=pathlib.Path(work);specification=json.loads((work/'launch.json').read_text())
@@ -127,7 +133,7 @@ def native_child(work):
         contextfile=work/'native-context.json';contextfile.write_text(json.dumps(context));contextfile.chmod(0o600)
         result['stage']='ORDERED_SCHEMA_MIGRATIONS'
         source=work/'source'
-        private_command(['php','-d','memory_limit=128M','-d','display_errors=0','-d','log_errors=0',str(source/'ops/sulb-rc/run-private-socket-rehearsal.php'),sock,datadir,str(work/'schema-private.json'),SHA,str(work/'migration-result.json'),str(contextfile)],work/'migration-private.log',1800,clean_env(work))
+        private_command(rehearsal_command(source,work,sock,datadir,contextfile),work/'migration-private.log',1800,clean_env(work))
         proof=json.loads((work/'migration-result.json').read_text())
         if proof.get('schema_only_rehearsal')!='PASS':raise CheckBlocked('REHEARSAL_RESULT_NOT_PASS')
         result.update(proof);result['stage']='COMPLETE'

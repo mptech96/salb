@@ -165,7 +165,30 @@
         "io_bytes_per_second": 1048576,
         "swap_max": 0,
         "schema_sha256": "901f01f5069078cc1174f5bdd913609abbf72f2cadab9852cff05133a5a9047f",
-        "execution_authorized": true
+        "execution_authorized": true,
+        "last_operator_result": {
+          "source_commit": "7fb00be66af12d0d298b065cf281db1d65c92cb4",
+          "schema_only_rehearsal": "BLOCKED",
+          "stop_code": "OWNED_SOCKET_REQUIRED",
+          "migration_checkpoint": "NOT_RECORDED",
+          "production_connected": false,
+          "owned_server_stopped": true,
+          "host_production_identities_unchanged": true,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "argv_fix": {
+          "cause": "native-context is argv[6], incorrectly read from argv[7]; /home/mysql rejected as legacy Docker datadir before PDO",
+          "native_context_index": 6,
+          "strict_argument_counts": [
+            6,
+            7
+          ],
+          "python_php_boundary_tests_passed": 3,
+          "php_guard_checks_passed": 12,
+          "old_index_mutation_rejected": true,
+          "actual_vps_retry_passed": false
+        }
       }
     }
   },

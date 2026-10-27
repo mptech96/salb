@@ -1,4 +1,10 @@
 <?php
+/** CLI layout: script,socket,datadir,capture,sha,proof[,native-context]. */
+function privateSocketArguments(array $args):array {
+    if(!in_array(count($args),[6,7],true))throw new RuntimeException('REHEARSAL_ARGUMENTS_REQUIRED');
+    foreach($args as$value)if(!is_string($value)||$value===''||str_contains($value,"\0"))throw new RuntimeException('REHEARSAL_ARGUMENTS_REQUIRED');
+    return [$args[0],$args[1],$args[2],$args[3],$args[4],$args[5],$args[6]??null];
+}
 /** No connection is made here. Native PID1 shares the private netns by design. */
 function nativeRehearsalContext(array $c,string $socket,string $datadir,string $net,string $pid):void {
     if(($c['mode']??null)!=='NATIVE_SCHEMA_ONLY'||($c['production_connected']??null)!==false
