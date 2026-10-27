@@ -26,6 +26,7 @@ jobs:
           coverage: none
       - name: New history contracts, no DB connections
         run: |
+          php ops/sulb-rc/test-history-read-privileges.php
           php ops/sulb-rc/test-history-contract.php
           python3 ops/sulb-rc/test-history-stage.py
       - name: Start owned synthetic Percona 8.4 only

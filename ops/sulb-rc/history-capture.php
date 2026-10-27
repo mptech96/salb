@@ -10,11 +10,32 @@ function historyBudget(int $estimated,int $free,int $available):array {
     if($free<$required)throw new RuntimeException('HISTORY_DISK_HEADROOM_REQUIRED');
     return ['estimated_source_bytes'=>$estimated,'required_free_bytes'=>$required,'free_bytes'=>$free,'max_archive_bytes'=>min($estimated*3+536870912,intdiv($free-2147483648,6)),'memory_max_bytes'=>268435456,'cpu_quota'=>'25000 100000','pids_max'=>32,'io_bytes_per_second'=>1048576];
 }
-function historyRequiredSchemaReadPrivileges(PDO $db):void {
-    $present=[];foreach($db->query('SHOW GRANTS FOR CURRENT_USER')->fetchAll(PDO::FETCH_COLUMN)as$grant){
-        if(preg_match('/^GRANT (.*?) ON `?sulbprod`?\.\* TO /s',$grant,$m))$present=array_merge($present,array_map('trim',explode(',',$m[1])));
+final class HistorySchemaSelectRequired extends RuntimeException {
+    public function __construct(public readonly array $evidence,public readonly string $sqlForReview){parent::__construct('HISTORY_SCHEMA_SELECT_REQUIRED');}
+}
+function historySchemaReadEvidence(array $grants):array {
+    $present=[];
+    foreach($grants as$grant){
+        if(!is_string($grant)||stripos($grant,'WITH GRANT OPTION')!==false||!preg_match('/^GRANT (.*?) ON (.*?) TO /s',$grant,$m))throw new RuntimeException('HISTORY_READ_SCOPE_UNVERIFIED');
+        $privileges=array_map('trim',explode(',',$m[1]));$scope=str_replace('`','',$m[2]);
+        if($scope==='*.*'&&$privileges===['USAGE'])continue;
+        if($scope!=='sulbprod.*'||array_diff($privileges,['SELECT','SHOW VIEW']))throw new RuntimeException('HISTORY_READ_SCOPE_UNVERIFIED');
+        $present=array_merge($present,$privileges);
     }
-    if(array_diff(['SELECT','SHOW VIEW'],$present))throw new RuntimeException('HISTORY_SCHEMA_WIDE_READ_REQUIRED');
+    // This snapshot supports only BASE TABLE/InnoDB; inventory still rejects VIEW.
+    // SELECT covers row reads and SHOW CREATE TABLE. SHOW VIEW is optional here.
+    return ['required_schema_privileges'=>['SELECT'],'schema_wide_select'=>in_array('SELECT',$present,true),'show_view_granted'=>in_array('SHOW VIEW',$present,true),'base_tables_only'=>true];
+}
+function historyRequiredSchemaReadPrivileges(PDO $db):array {
+    // Keep verifyReleaseMetadataReader() first: all role/global/write checks remain.
+    $evidence=historySchemaReadEvidence($db->query('SHOW GRANTS FOR CURRENT_USER')->fetchAll(PDO::FETCH_COLUMN));
+    if(!$evidence['schema_wide_select']){
+        $identity=explode('@',(string)$db->query('SELECT CURRENT_USER()')->fetchColumn(),2);
+        if(count($identity)!==2||$identity[0]!=='sulbmetadata')throw new RuntimeException('DEDICATED_READER_REQUIRED');
+        $sql='GRANT SELECT ON `sulbprod`.* TO '.$db->quote($identity[0]).'@'.$db->quote($identity[1]).';';
+        throw new HistorySchemaSelectRequired($evidence,$sql);
+    }
+    return $evidence;
 }
 function historyPolicyAllowsCapture(array $release):bool{return ($release['history_capture']['production_extraction_authorized']??false)===true;}
 function historyApprovedReceipt(array $release,string $work,string $file):array {
@@ -36,12 +57,12 @@ function historyHiddenReader():PDO {
     try{$db=new PDO('mysql:host=localhost;dbname=sulbprod;charset=utf8mb4','sulbmetadata',$password,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false,PDO::ATTR_TIMEOUT=>10,PDO::ATTR_STRINGIFY_FETCHES=>true,PDO::MYSQL_ATTR_MULTI_STATEMENTS=>false]);$db->exec('SET SESSION lock_wait_timeout=5');$db->exec('SET SESSION max_execution_time=600000');return $db;}finally{unset($password);}
 }
 function historyCaptureReadiness(PDO $db,int $free,int $available):array {
-    $gate=verifyReleaseMetadataReader($db);historyRequiredSchemaReadPrivileges($db);
+    $gate=verifyReleaseMetadataReader($db);$scope=historyRequiredSchemaReadPrivileges($db);
     if($gate['server']['family']!=='Percona'||!str_starts_with($gate['server']['version'],'8.4.'))throw new RuntimeException('HISTORY_PERCONA84_REQUIRED');
     if(!is_file(HISTORY_PINNED_FILE)||is_link(HISTORY_PINNED_FILE)||realpath(HISTORY_PINNED_FILE)!==HISTORY_PINNED_FILE||filesize(HISTORY_PINNED_FILE)>16777216||!hash_equals(HISTORY_PINNED_SHA,hash_file('sha256',HISTORY_PINNED_FILE)))throw new RuntimeException('HISTORY_PINNED_SCHEMA_REQUIRED');
     $inventory=historyInventory($db);historyMatchPinned($inventory,json_decode(file_get_contents(HISTORY_PINNED_FILE),true,512,JSON_THROW_ON_ERROR));
     $estimated=array_sum(array_column($inventory,'estimated_bytes'));$budget=historyBudget($estimated,$free,$available);
-    return ['mode'=>'HISTORY_READINESS','created_unix'=>time(),'server_uuid'=>$db->query('SELECT @@server_uuid')->fetchColumn(),'schema_capture_sha256'=>HISTORY_PINNED_SHA,'inventory_sha256'=>historyInventoryHash($inventory),'table_count'=>count($inventory),'authorization'=>['dedicated_reader'=>true,'schema_wide_select_show_view'=>true,'roles_and_grants_verified'=>true],'budget'=>$budget,'source_load_qualified'=>false,'limits_scope'=>'collector and isolated restore; source SELECT session timeouts do not throttle production server cgroup','production_rows_read'=>false,'production_extraction_authorized'=>false,'release_decision'=>'NO-GO'];
+    return ['mode'=>'HISTORY_READINESS','created_unix'=>time(),'server_uuid'=>$db->query('SELECT @@server_uuid')->fetchColumn(),'schema_capture_sha256'=>HISTORY_PINNED_SHA,'inventory_sha256'=>historyInventoryHash($inventory),'table_count'=>count($inventory),'authorization'=>['dedicated_reader'=>true,'roles_and_grants_verified'=>true]+$scope,'budget'=>$budget,'source_load_qualified'=>false,'limits_scope'=>'collector and isolated restore; source SELECT session timeouts do not throttle production server cgroup','production_rows_read'=>false,'production_extraction_authorized'=>false,'release_decision'=>'NO-GO'];
 }
 function historyCaptureCli(array $argv):int {
     ini_set('display_errors','0');ini_set('log_errors','0');umask(0077);
@@ -73,6 +94,8 @@ function historyCaptureCli(array $argv):int {
         $manifest=historyCapture($db,$work.'/snapshot.enc',$key,$ready['budget']['max_archive_bytes']);historyVerify($work.'/snapshot.enc',$key,$manifest);
         historyPrivateJson($work.'/manifest-private.json',$manifest);sodium_memzero($key);
         echo json_encode(['history_capture'=>'PASS','snapshot_sha256'=>$manifest['file_sha256'],'private_work_directory'=>$work,'consistent_snapshot'=>true,'archive_integrity_verified'=>true,'encrypted'=>true,'restored'=>false,'release_decision'=>'NO-GO'],JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR).PHP_EOL;return 0;
-    }catch(Throwable $e){$allowed=['DEDICATED_READER_REQUIRED','ROLES_NOT_ALLOWED','MANDATORY_ROLES_NOT_ALLOWED','GRANT_OPTION_NOT_ALLOWED','PRIVILEGE_OUTSIDE_READ_SCOPE','UNVERIFIED_GRANT','UNVERIFIED_GRANT_SCOPE','NO_GRANT_EVIDENCE','UNSUPPORTED_METADATA_SERVER'];$code=preg_match('/^HISTORY_[A-Z0-9_]+$/D',$e->getMessage())||in_array($e->getMessage(),$allowed,true)?$e->getMessage():'HISTORY_READINESS_OR_CAPTURE_FAILED';echo json_encode(['history_status'=>'BLOCKED','reason'=>$code,'sqlstate'=>$e instanceof PDOException?(string)($e->errorInfo[0]??''):null,'mysql_code'=>$e instanceof PDOException?(int)($e->errorInfo[1]??0):null,'release_decision'=>'NO-GO'],JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR).PHP_EOL;return 78;}
+    }catch(Throwable $e){$allowed=['DEDICATED_READER_REQUIRED','ROLES_NOT_ALLOWED','MANDATORY_ROLES_NOT_ALLOWED','GRANT_OPTION_NOT_ALLOWED','PRIVILEGE_OUTSIDE_READ_SCOPE','UNVERIFIED_GRANT','UNVERIFIED_GRANT_SCOPE','NO_GRANT_EVIDENCE','UNSUPPORTED_METADATA_SERVER'];$code=preg_match('/^HISTORY_[A-Z0-9_]+$/D',$e->getMessage())||in_array($e->getMessage(),$allowed,true)?$e->getMessage():'HISTORY_READINESS_OR_CAPTURE_FAILED';$result=['history_status'=>'BLOCKED','reason'=>$code,'sqlstate'=>$e instanceof PDOException?(string)($e->errorInfo[0]??''):null,'mysql_code'=>$e instanceof PDOException?(int)($e->errorInfo[1]??0):null,'release_decision'=>'NO-GO'];
+        if($e instanceof HistorySchemaSelectRequired){$result['authorization']=$e->evidence;$result['sql_for_review_only']=$e->sqlForReview;$result['privileges_modified']=false;}
+        echo json_encode($result,JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR).PHP_EOL;return 78;}
 }
 if(realpath($_SERVER['SCRIPT_FILENAME']??'')===__FILE__)exit(historyCaptureCli($argv));

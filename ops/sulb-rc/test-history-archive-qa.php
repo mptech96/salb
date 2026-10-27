@@ -30,7 +30,7 @@ try{
     $readerHost=(string)$admin->query("SELECT SUBSTRING_INDEX(USER(),'@',-1)")->fetchColumn();
     if($readerHost===''||str_contains($readerHost,'%')||str_contains($readerHost,'_')||strlen($readerHost)>255)throw new RuntimeException('HISTORY_QA_CLIENT_IDENTITY_REQUIRED');
     $admin->exec('CREATE USER '.$admin->quote($readerUser).'@'.$admin->quote($readerHost).' IDENTIFIED BY '.$admin->quote($password));
-    $admin->exec('GRANT SELECT, SHOW VIEW ON '.historyId($source).'.* TO '.$admin->quote($readerUser).'@'.$admin->quote($readerHost));
+    $admin->exec('GRANT SELECT ON '.historyId($source).'.* TO '.$admin->quote($readerUser).'@'.$admin->quote($readerHost));
     $reader=new PDO('mysql:host=127.0.0.1;port=3339;dbname='.$source.';charset=utf8mb4',$readerUser,$password,$options);unset($password);
     $denied=false;try{$reader->exec('INSERT INTO companies VALUES(3)');}catch(PDOException $e){$denied=(int)($e->errorInfo[1]??0)===1142;}$assert($denied);
     $root=dirname(__DIR__,2).'/backend/storage/framework/testing/history-archive-qa-'.bin2hex(random_bytes(8));mkdir($root,0700,true);

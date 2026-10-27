@@ -287,6 +287,21 @@
     "approved_readiness_sha256": null,
     "percona_ci_tested_commit": "1c702f7c3c77e327d4ab16b024ab24f8362aba04",
     "percona_ci_run": "https://github.com/mptech96/salb/actions/runs/40569774943",
-    "percona_synthetic_checks_passed": 31
+    "percona_synthetic_checks_passed": 31,
+    "production_required_privileges": {
+      "sulbprod.*": [
+        "SELECT"
+      ]
+    },
+    "show_view_required_for_current_base_table_snapshot": false,
+    "read_privilege_gate_tests_passed": 33,
+    "minimum_select_only_percona_test_pending": true,
+    "last_operator_readiness": {
+      "source_commit": "0888346c8143aa83a3587f1613a646a49293ba02",
+      "history_status": "BLOCKED",
+      "reason": "HISTORY_SCHEMA_WIDE_READ_REQUIRED",
+      "row_extraction_authorized": false,
+      "actual_missing_privilege_not_identified_by_old_code": true
+    }
   }
 }
