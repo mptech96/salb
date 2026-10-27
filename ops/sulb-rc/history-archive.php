@@ -90,7 +90,7 @@ function historyCapture(PDO $source,string $file,string $key,int $maxBytes=10737
                 [$sql,$params]=historyReadPage($name,$table,$last,$effectivePage);$q=$source->prepare($sql);$q->execute($params);$received=0;$pages++;
                 while(($row=$q->fetch(PDO::FETCH_NUM))!==false){$received++;$values=historyRow($row);historyStatsAdd($stats,$values);historyFrameWrite($f,$state,['kind'=>'row','values'=>$values]);
                     foreach($row as$v)$bytesRead+=strlen((string)$v);historySourceThrottle($started,$bytesRead,$rate);
-                    if($keys){$last=[];foreach($keys as$key)$last[$key]=$row[array_search($key,$names,true)];}
+                    if($keys){$last=[];foreach($keys as$pkName)$last[$pkName]=$row[array_search($pkName,$names,true)];}
                     if(ftell($f)>$maxBytes)throw new RuntimeException('HISTORY_ARCHIVE_SIZE_LIMIT');
                     if(microtime(true)-$started>3600)throw new RuntimeException('HISTORY_SNAPSHOT_TIME_LIMIT');
                     if(($stats['rows']%128)===0&&disk_free_space(dirname($file))<2147483648)throw new RuntimeException('HISTORY_DISK_RESERVE_REQUIRED');
