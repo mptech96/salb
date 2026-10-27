@@ -1,0 +1,40 @@
+name: SULB private socket staging harness (synthetic only)
+on:
+  push:
+    branches: [codex/sulb-complete-rc-20261027]
+    paths:
+      - '.github/workflows/sulb-private-schema-stage-qa.yml'
+      - 'ops/sulb-rc/rehearse-private-schema.sh'
+      - 'ops/sulb-rc/run-private-socket-rehearsal.php'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.4'
+          extensions: bcmath, pdo_mysql, pdo_sqlite, mbstring, dom, xml, fileinfo, zip
+          coverage: none
+          tools: composer:v2
+      - name: Build synthetic schema-only input; no production DDL or credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          php ops/sulb-rc/test-private-migration-contract.php --write-synthetic-fixture
+          directory="/home/mgye-api-sulb/sulb-private-schema-$(openssl rand -hex 12)"
+          sudo mkdir -p "$directory"
+          sudo chmod 700 "$directory"
+          sudo install -m 600 backend/storage/framework/testing/private-schema-synthetic.json "$directory/schema-private.json"
+          echo "SULB_SYNTHETIC_CAPTURE=$directory/schema-private.json" >> "$GITHUB_ENV"
+          echo "SULB_SYNTHETIC_SHA=$(sha256sum backend/storage/framework/testing/private-schema-synthetic.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
+      - name: Rehearse full network-none Unix-socket harness and fourteen migrations
+        shell: bash
+        run: |
+          sudo env PATH="$PATH" bash ops/sulb-rc/rehearse-private-schema.sh "$SULB_SYNTHETIC_CAPTURE" "$SULB_SYNTHETIC_SHA"
