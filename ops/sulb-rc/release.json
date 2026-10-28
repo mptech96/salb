@@ -267,10 +267,10 @@
     "release_decision": "NO-GO"
   },
   "history_capture": {
-    "production_extraction_authorized": true,
+    "production_extraction_authorized": false,
     "approved_scope": "Explicit operator approval: one consistent SELECT-only sulbmetadata snapshot of sulbprod, encrypted private same-VPS archive; isolated restore and historical migration/backfill/FIFO/LOT/GL rehearsal only; no production writes or deployment",
     "readiness_command": "python3 ops/sulb-rc/history-stage.py --check-readiness",
-    "capture_command_requires_new_approval": false,
+    "capture_command_requires_new_approval": true,
     "format": "SULBHST1 / libsodium secretstream XChaCha20-Poly1305",
     "key_location": "separate root-private directory; never password/key in argv/env/GitHub",
     "windows_mysql84_synthetic_checks_passed": 31,
@@ -279,7 +279,7 @@
     "percona_synthetic_ci_passed": true,
     "vps_history_readiness_passed": true,
     "production_history_validated": false,
-    "production_backup_restore_rehearsed": false,
+    "production_backup_restore_rehearsed": true,
     "production_source_load_qualified": false,
     "source_timeout_limits_are_session_only": true,
     "production_server_cgroup_changed": false,
@@ -323,8 +323,8 @@
     "snapshot_created": false
   },
   "history_plan": {
-    "state": "OPERATOR_APPROVED_HISTORY_EXPERIMENT_ONLY",
-    "execution_authorized": true,
+    "state": "SNAPSHOT_RESTORE_PASS_SIX_ACCOUNT_EXCEPTIONS_REVIEW_ONLY",
+    "execution_authorized": false,
     "execution_approved_unix": 1793203532,
     "approved_readiness_sha256": "8ede8362220b5bba9d794272f4ddcc2d4837dc8e8b67c91b36b43c7cfd3d8565",
     "source_capture_memory_bytes": 268435456,
@@ -362,5 +362,34 @@
     "production_writes_authorized": false,
     "production_migrations_authorized": false,
     "deployment_authorized": false
+  },
+  "operator_historical_experiment": {
+    "source_commit": "d7348ad734aca8ec787c473e8ed5a51a9b3f2207",
+    "authentication": "PASS",
+    "capture": "PASS",
+    "consistent_snapshot": true,
+    "archive_integrity_verified": true,
+    "encrypted": true,
+    "snapshot_restore_rehearsal": "PASS",
+    "two_restores_verified": true,
+    "uom_migrations_applied": 14,
+    "lot_l3_dependencies_applied": 4,
+    "legacy_financial_columns_preserved": true,
+    "restore_production_connected": false,
+    "host_production_identities_unchanged": true,
+    "exceptions_by_reason": {
+      "INVENTORY_ACCOUNT_EVIDENCE_REQUIRED": 6
+    },
+    "historical_validation_passed": false,
+    "backfill_companies_applied": 0,
+    "idempotency": "NOT_RUN",
+    "production_executor_qualified": false
+  },
+  "account_exception_review": {
+    "tool": "php ops/sulb-rc/review-account-evidence.php",
+    "scope": "offline authenticated encrypted archive and existing private audit only; no SQL/no restore/no migrations",
+    "new_synthetic_checks_passed": 17,
+    "account_mappings_approved": false,
+    "reason_semantics": "Backfill demands direct item account; existing runtime resolver also supports category parents/group/company setting. Inherited settings are candidates, not historical financial approval."
   }
 }
