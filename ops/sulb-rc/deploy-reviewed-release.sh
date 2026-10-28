@@ -111,6 +111,7 @@ test "$(pwd -P)" = /home/sulb-release
 test "$(git rev-parse HEAD)" = "${SULB_APPROVED_COMMIT:?Pinned approved commit required}"
 test -z "$(git status --porcelain)"
 : "${SULB_BACKUP_CNF:?Protected dedicated backup-client config required}"
+: "${SULB_UPGRADE_AUTHORIZATION_FILE:?Qualified source-bound upgrade receipt required}"
 : "${SULB_WRITE_FENCE_RECEIPT:?Reviewed web/queue/import write-fence evidence required}"
 test -s "$SULB_WRITE_FENCE_RECEIPT"
 test "$(stat -c %a "$SULB_BACKUP_CNF")" = 600
@@ -139,9 +140,9 @@ php "$backend/artisan" down --retry=60
 rsync -a --exclude='.git/' --exclude='.env*' --exclude='storage/' --exclude='bootstrap/cache/' --exclude='vendor/' --exclude='tests/' --exclude='public/storage' --exclude='public/uploads/' backend/ "$backend/"
 rsync -a --exclude='.git/' --exclude='.env*' --exclude='.next*/' --exclude='node_modules/' --exclude='public/uploads/' frontend/ "$frontend/"
 (cd "$backend" && composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader)
-while IFS= read -r migration; do
-  (cd "$backend" && php artisan migrate --force --path="$migration")
-done <<< "$approved_migrations"
+php "$backend/artisan" config:clear
+export SULB_CURRENT_BACKUP_DIR="$backup"
+php "$tools/production-upgrade.php" --execute
 (cd "$frontend" && npm ci && npm run build)
 systemctl restart sulb-frontend.service
 php "$backend/artisan" up

@@ -1,0 +1,151 @@
+{
+  "format": "EXPLICIT_PRODUCTION_ADAPTERS_V1",
+  "qa_guard_untouched": true,
+  "production_qualified": false,
+  "schedule": [
+    {
+      "step": 1,
+      "source_path": "backend/database/uom-migrations/2026_10_13_000001_uom_foundation.php",
+      "source_sha256": "fe1c46fda192480f8c6c82272c04132aa9bf8d81843967b49f7f62fd8d544096",
+      "adapter_path": "ops/sulb-rc/production-upgrade/001.php",
+      "adapter_sha256": "9f43fac724b618be143dcb6398469b6fdace545063f8a4285b0709f790713e3c",
+      "repository_name": "2026_10_13_000001_uom_foundation"
+    },
+    {
+      "step": 2,
+      "source_path": "backend/database/uom-migrations/2026_10_14_000002_uom_contracts.php",
+      "source_sha256": "ecf680139ad45e5431e586752c147f6f54562f759b4a9dd0e29ff7b18e0007c9",
+      "adapter_path": "ops/sulb-rc/production-upgrade/002.php",
+      "adapter_sha256": "2d068452291c25a02ad1f824ed219c4ac35539c79dac7897fd5a13c824355e19",
+      "repository_name": "2026_10_14_000002_uom_contracts"
+    },
+    {
+      "step": 3,
+      "source_path": "backend/database/uom-migrations/2026_10_24_000003_uom_operational.php",
+      "source_sha256": "986ad1b537f9bcc08e64b497f4ef002cb755efd66575648481a46f99d1cfd6dc",
+      "adapter_path": "ops/sulb-rc/production-upgrade/003.php",
+      "adapter_sha256": "3a85094aa2a34cea3f4560e2420137c65b53ff979bf7adf81f1b55b083dede24",
+      "repository_name": "2026_10_24_000003_uom_operational"
+    },
+    {
+      "step": 4,
+      "source_path": "backend/database/uom-migrations/2026_10_25_000004_commercial_snapshots.php",
+      "source_sha256": "9693a42115c69934259f9e6209187e8f427ef0a8fb456905d38f99117d57ee32",
+      "adapter_path": "ops/sulb-rc/production-upgrade/004.php",
+      "adapter_sha256": "2718bc61f9f12715c599d09e1d952871bcf296d4c801be3520db9491406fc3bc",
+      "repository_name": "2026_10_25_000004_commercial_snapshots"
+    },
+    {
+      "step": 5,
+      "source_path": "backend/database/uom-migrations/2026_10_25_000005_opening_snapshots.php",
+      "source_sha256": "63853538e9b6585ceec65096954fc09942a1d0359bb52dcd8b6d1cc423f50dcf",
+      "adapter_path": "ops/sulb-rc/production-upgrade/005.php",
+      "adapter_sha256": "50fb368b38632e6545ca60fb7c4fb56c41eb38ca3375737e9b678caf26ec3dbb",
+      "repository_name": "2026_10_25_000005_opening_snapshots"
+    },
+    {
+      "step": 6,
+      "source_path": "backend/database/uom-migrations/2026_10_25_000006_base_adjustments.php",
+      "source_sha256": "3f5f48ddb9318c35a8bc42a7eb7268943ceb027df5aa045549cdb5cba45fcfe0",
+      "adapter_path": "ops/sulb-rc/production-upgrade/006.php",
+      "adapter_sha256": "2cd4b62d12d54779e8b8a33d64c0c65519d093722ffe6c02373ecdaee250bd10",
+      "repository_name": "2026_10_25_000006_base_adjustments"
+    },
+    {
+      "step": 7,
+      "source_path": "backend/database/uom-migrations/2026_10_25_000007_shipment_snapshots.php",
+      "source_sha256": "2e8e450618fbd79425bfa29f675170ad989b465394a487b1be1c3286e7663119",
+      "adapter_path": "ops/sulb-rc/production-upgrade/007.php",
+      "adapter_sha256": "d24c10ba99fc0901c8b47d91c74384729da9b1862df549df176bcabf57358469",
+      "repository_name": "2026_10_25_000007_shipment_snapshots"
+    },
+    {
+      "step": 8,
+      "source_path": "backend/database/uom-migrations/2026_10_25_000008_processing_recipes.php",
+      "source_sha256": "ac7465982aa962156336aeff2821431474f47e5cdd0142ee2411fdfffdee40fc",
+      "adapter_path": "ops/sulb-rc/production-upgrade/008.php",
+      "adapter_sha256": "90f3a4a478453139aec57aa8bfd1d1888069425a20ec25b21f0154bfee23b697",
+      "repository_name": "2026_10_25_000008_processing_recipes"
+    },
+    {
+      "step": 9,
+      "source_path": "backend/database/uom-migrations/2026_10_25_000009_processing_commands.php",
+      "source_sha256": "7f251e5ef1c4a5c9eb6e7997b658f4a41f8ec34329db2fe3c37d05501a801ca9",
+      "adapter_path": "ops/sulb-rc/production-upgrade/009.php",
+      "adapter_sha256": "204d81a8d0a0fcc463769f4f54bcfc000c5329ab9e10f1b0f83179c4e2856fd9",
+      "repository_name": "2026_10_25_000009_processing_commands"
+    },
+    {
+      "step": 10,
+      "source_path": "docs/erp-baseline/proposed-migrations/stock_movements_company_source_index.php",
+      "source_sha256": "d41a9465b7f84e49d3617c513be4ab847a23eb6639aa75fd9e2ae3da6cc0a5ab",
+      "adapter_path": "ops/sulb-rc/production-upgrade/010.php",
+      "adapter_sha256": "dc516560690ddf9094ff07ab868bb2b72eb1850970d0d4507998e4fb24317286",
+      "repository_name": "stock_movements_company_source_index"
+    },
+    {
+      "step": 11,
+      "source_path": "docs/erp-baseline/proposed-migrations/shipment_cost_parent_fk.php",
+      "source_sha256": "aecf0e13f7999ceea69780b1be27a1ae78789ad40b89b35e35267cb7267c4acd",
+      "adapter_path": "ops/sulb-rc/production-upgrade/011.php",
+      "adapter_sha256": "80291cab0d3aa2507bc0e54b2907ca281fd41402a9dc0204ca73bd1cf694187b",
+      "repository_name": "shipment_cost_parent_fk"
+    },
+    {
+      "step": 12,
+      "source_path": "docs/erp-baseline/proposed-migrations/shipment_cost_allocation_receipts.php",
+      "source_sha256": "c20be2dbc8d9f03f4f6171d153d3d0d1e2eca69fef25750a5864dc324b3ef001",
+      "adapter_path": "ops/sulb-rc/production-upgrade/012.php",
+      "adapter_sha256": "a179fee77f556ffc921b64a8cac397fda117da528fada9e39d5b15d755fadb33",
+      "repository_name": "shipment_cost_allocation_receipts"
+    },
+    {
+      "step": 13,
+      "source_path": "docs/erp-baseline/proposed-migrations/inventory_lot_value_balances.php",
+      "source_sha256": "85882059834c01e24475e15437d55924961198d69f25d3c9d59c9af246a1f1d6",
+      "adapter_path": "ops/sulb-rc/production-upgrade/013.php",
+      "adapter_sha256": "ea0aae8a8a0b195dc286981ea9e1e4843d12546f0dca9003fd8507dfff6e4faa",
+      "repository_name": "inventory_lot_value_balances"
+    },
+    {
+      "step": 14,
+      "source_path": "backend/database/uom-migrations/2026_10_26_000010_base_capitalization.php",
+      "source_sha256": "ae2e057d1be633f5ff7213f23ed80401043e98644ffc068c5be8ae7eb1726648",
+      "adapter_path": "ops/sulb-rc/production-upgrade/014.php",
+      "adapter_sha256": "410796ac95dd5b9733987988fd8894271337f5337da3e587b5865d53279a0176",
+      "repository_name": "2026_10_26_000010_base_capitalization"
+    },
+    {
+      "step": 15,
+      "source_path": "backend/database/uom-migrations/2026_10_26_000011_invoice_header_cost.php",
+      "source_sha256": "c15c8f79685d187c6a1d65ea351d6bcb42f989d5831d9e9e95f7faa1d58b878b",
+      "adapter_path": "ops/sulb-rc/production-upgrade/015.php",
+      "adapter_sha256": "8be79db970e3a9e6fccb71dd8f20ce48647fa4147144cae7f33d4a6aa93d543e",
+      "repository_name": "2026_10_26_000011_invoice_header_cost"
+    },
+    {
+      "step": 16,
+      "source_path": "backend/database/uom-migrations/2026_10_26_000012_processing_cost_sources.php",
+      "source_sha256": "03ce488d3cb7093697ac3a67e5a20a609f30f137eb7b669d8731d352afc36b7c",
+      "adapter_path": "ops/sulb-rc/production-upgrade/016.php",
+      "adapter_sha256": "2163c5ce40c42cc3ec8dacb96c5fcb39c1aa121dbbdd26326df8ebd7d57258e6",
+      "repository_name": "2026_10_26_000012_processing_cost_sources"
+    },
+    {
+      "step": 17,
+      "source_path": "backend/database/uom-migrations/2026_10_26_000013_manual_journal_permissions.php",
+      "source_sha256": "99bfd1983fed73253cc9b13fb23dbfeb5b4ac595093865c924a2ad966696914e",
+      "adapter_path": "ops/sulb-rc/production-upgrade/017.php",
+      "adapter_sha256": "35750533e5f33ac4ad798954d165e13aa1ddd5dfc1c78fe41986673122578011",
+      "repository_name": "2026_10_26_000013_manual_journal_permissions"
+    },
+    {
+      "step": 18,
+      "source_path": "backend/database/uom-migrations/2026_10_26_000014_resource_write_permissions.php",
+      "source_sha256": "fee50a376de8f1037b0c58b5b1bc9f4212e22f826071a1a6cc600e9ebc237706",
+      "adapter_path": "ops/sulb-rc/production-upgrade/018.php",
+      "adapter_sha256": "10c329e9cf21f490bae5ec177d6e6ce9ac5d61054cf7eab4100e495c89a2f93c",
+      "repository_name": "2026_10_26_000014_resource_write_permissions"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+<?php
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+return new class extends \Illuminate\Database\Migrations\Migration {
+    public function up():void
+    {
+        \Sulb\Release\ProductionUpgradeContext::guard();
+        \Sulb\Release\ProductionUpgradeContext::guard();
+        if(!config('uom.schema_install_approved')||!Schema::hasTable('uom_operational_schema'))throw new RuntimeException('UOM_SCHEMA_ORDER');
+        if(!Schema::hasColumn('shipments','uom_cost_policy'))DB::unprepared('ALTER TABLE shipments ADD uom_cost_policy VARCHAR(40) NULL, ADD uom_cost_basis_approved_by BIGINT NULL, ADD uom_cost_basis_approved_at DATETIME NULL');
+        foreach(['uom_cost_basis_approved_by','uom_cost_basis_approved_at'] as $column)if(!Schema::hasColumn('shipments',$column))throw new RuntimeException('UOM_PARTIAL_SHIPMENT_POLICY_SCHEMA');
+        if(!Schema::hasColumn('shipment_items','uom_version'))DB::unprepared("ALTER TABLE shipment_items ADD uom_version VARCHAR(12) NOT NULL DEFAULT 'LEGACY_KG', ADD quantity DECIMAL(18,6) NULL, ADD unit_code VARCHAR(20) NULL, ADD uom_mapping_id BIGINT UNSIGNED NULL, ADD base_uom_id_snapshot BIGINT UNSIGNED NULL, ADD uom_factor_snapshot DECIMAL(18,6) NULL, ADD uom_price_snapshot DECIMAL(24,6) NULL, ADD base_quantity DECIMAL(24,6) NULL, ADD remaining_base_qty DECIMAL(24,6) NULL, ADD sold_base_qty DECIMAL(24,6) NULL, ADD actual_weight_kg DECIMAL(18,3) NULL, ADD CHECK(uom_version IN ('LEGACY_KG','BASE_V1')), ADD CHECK(actual_weight_kg IS NULL OR actual_weight_kg>=0), ADD CHECK(uom_version='LEGACY_KG' OR (quantity>0 AND uom_mapping_id IS NOT NULL AND base_uom_id_snapshot IS NOT NULL AND uom_factor_snapshot>0 AND base_quantity=quantity*uom_factor_snapshot AND remaining_base_qty>=0 AND sold_base_qty>=0 AND remaining_base_qty+sold_base_qty=base_quantity AND qty_kg=0 AND remaining_qty_kg=0 AND sold_qty_kg=0 AND inventory_qty_kg=0))");
+        foreach(['quantity','unit_code','uom_mapping_id','base_uom_id_snapshot','uom_factor_snapshot','uom_price_snapshot','base_quantity','remaining_base_qty','sold_base_qty','actual_weight_kg'] as $column)if(!Schema::hasColumn('shipment_items',$column))throw new RuntimeException('UOM_PARTIAL_SHIPMENT_SCHEMA');
+        if(!DB::selectOne("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shipment_items' AND CONSTRAINT_NAME='ck_uom_shipment_base_complete'"))DB::unprepared("ALTER TABLE shipment_items ADD CONSTRAINT ck_uom_shipment_base_complete CHECK(uom_version='LEGACY_KG' OR (quantity IS NOT NULL AND unit_code IS NOT NULL AND base_quantity IS NOT NULL AND remaining_base_qty IS NOT NULL AND sold_base_qty IS NOT NULL AND uom_factor_snapshot IS NOT NULL AND uom_price_snapshot IS NOT NULL AND uom_price_snapshot>=0 AND price_unit='UNIT' AND unit_price_per_kg=0 AND gross_qty_kg=0 AND accepted_qty_kg=0 AND deduction_qty_kg=0 AND weighed_qty_kg=0))");
+        foreach(['INSERT','UPDATE'] as $action){
+            DB::unprepared("DROP TRIGGER IF EXISTS uom_closed_shipment_items_{$action}");
+            \Sulb\Release\ProductionUpgradeDialect::trigger("CREATE OR REPLACE TRIGGER uom_version_shipment_items_{$action} BEFORE {$action} ON shipment_items FOR EACH ROW BEGIN DECLARE mode_guard VARCHAR(20); DECLARE item_guard BIGINT UNSIGNED; SELECT id INTO item_guard FROM items WHERE company_id=NEW.company_id AND id=NEW.item_id FOR UPDATE; SELECT mode INTO mode_guard FROM uom_item_modes WHERE company_id=NEW.company_id AND item_id=NEW.item_id FOR UPDATE; IF (mode_guard='BASE_ONLY' AND NEW.uom_version<>'BASE_V1') OR (NEW.uom_version='BASE_V1' AND (mode_guard IS NULL OR mode_guard<>'BASE_ONLY' OR NOT EXISTS(SELECT 1 FROM item_uom_mappings m JOIN uom_units u ON u.id=m.unit_id WHERE m.id=NEW.uom_mapping_id AND m.company_id=NEW.company_id AND m.item_id=NEW.item_id AND m.base_unit_id=NEW.base_uom_id_snapshot AND m.factor_to_base=NEW.uom_factor_snapshot AND u.code=NEW.unit_code))) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='UOM_SHIPMENT_VERSION_SCOPE'; END IF; END");
+        }
+    }
+    public function down():void {
+        throw new \RuntimeException('PRODUCTION_DESTRUCTIVE_DOWN_FORBIDDEN');throw new RuntimeException('Preserve shipment snapshots');}
+};

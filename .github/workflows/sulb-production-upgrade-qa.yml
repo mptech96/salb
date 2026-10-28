@@ -1,0 +1,48 @@
+name: SULB new production upgrade adapters only
+on:
+  push:
+    branches: [codex/sulb-complete-rc-20261027]
+    paths:
+      - 'ops/sulb-rc/production-upgrade*'
+      - 'ops/sulb-rc/production-upgrade/**'
+      - 'ops/sulb-rc/test-production-upgrade*'
+      - '.github/workflows/sulb-production-upgrade-qa.yml'
+permissions:
+  contents: read
+jobs:
+  upgrade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, sodium, bcmath, mbstring, dom, xml, fileinfo, zip
+          tools: composer:v2
+          coverage: none
+      - name: New adapter contracts without database
+        run: php ops/sulb-rc/test-production-upgrade-contracts.php
+      - name: New executor dependencies only
+        run: composer install --working-dir=backend --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins
+      - name: Owned Percona for NEW executor only
+        run: |
+          set -euo pipefail
+          data="/var/lib/mysql/sulb-shipment-$(openssl rand -hex 16)"
+          echo "SULB_HISTORY_QA_DATADIR=$data" >> "$GITHUB_ENV"
+          docker run -d --name sulb-upgrade-qa --memory 512m --cpus 1 --pids-limit 128 \
+            -p 127.0.0.1:3339:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_ROOT_HOST=% \
+            percona/percona-server@sha256:eaa4cf955f8a01a43faa6ef656bf8fb69a17c17c278a3b0514212291ca0448b1 \
+            --datadir="$data" --port=3306 --bind-address=0.0.0.0 --mysqlx=0 --skip-log-bin --innodb-buffer-pool-size=64M
+          for n in $(seq 1 90); do
+            if docker exec sulb-upgrade-qa mysqladmin ping -h127.0.0.1 --silent >/dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: NEW production executor 18 adapters, original row preservation and tenant FK
+        run: php -d memory_limit=512M ops/sulb-rc/test-production-upgrade.php
+      - name: Stop owned QA container only
+        if: always()
+        run: docker rm -f sulb-upgrade-qa >/dev/null 2>&1 || true

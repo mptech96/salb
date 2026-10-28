@@ -6,5 +6,7 @@ $missing=array_values(array_filter($gates,fn($gate)=>($release[$gate]??false)!==
 if(($release['release_decision']??'')!=='GO'||$missing||!preg_match('/^[a-f0-9]{64}$/D',$release['expected_production_schema_sha256']??'')||!count($release['approved_migration_paths']??[])){
     fwrite(STDERR,"NO-GO: release approval, exact schema evidence, staging and ordered production executor are not certified.\n");exit(78);
 }
-foreach($release['approved_migration_paths'] as $path){if(!preg_match('#^database/migrations/[A-Za-z0-9_]+\.php$#D',$path))throw new RuntimeException('UNAPPROVED_MIGRATION_PATH');}
+require_once __DIR__.'/production-upgrade-runtime.php';
+$plan=\Sulb\Release\ProductionUpgradeExecutor::plan(dirname(__DIR__,2));
+if($release['approved_migration_paths']!==array_column($plan,'source_path'))throw new RuntimeException('EXACT_ORDERED_18_PRODUCTION_ADAPTERS_REQUIRED');
 if(($argv[1]??'')==='--migrations')foreach($release['approved_migration_paths'] as $path)echo $path.PHP_EOL;
