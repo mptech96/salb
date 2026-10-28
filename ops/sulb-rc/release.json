@@ -406,9 +406,11 @@
       ],
       "active_same_company_asset_reported": true,
       "posted_purchase_debit_reported": true,
-      "postable_actual_flags_pending": true,
+      "postable_actual_flags_pending": false,
       "journal_1_additional_debit_account": 184,
-      "mapping_approved": false
+      "mapping_approved": false,
+      "postable": true,
+      "fifo_ready": true
     },
     "postable_diagnostic_corrected": "Use allow_posting=1 and is_group=0; is_postable may be absent. Active same-company ASSET and compatible branch also required.",
     "proposed_account_180_check": {
@@ -427,6 +429,33 @@
       "approval_record": "private SHA256-bound proposal, not applied; summary contains IDs and equality booleans only",
       "actual_result_pending": true,
       "isolated_database_backfill_pending_accountant_approval": true
+    },
+    "operator_account180_proposal": {
+      "source_commit": "16a27d32e613df7fb01133f4c46819d97a49a524",
+      "result": "BLOCKED",
+      "source_journal_1_component_equal": true,
+      "branch3_and8_equal_reported": false,
+      "only_lot3_displayed": true,
+      "exceptions": [
+        "PURCHASE_SOURCE_REVIEW_REQUIRED",
+        "EXPECTED_CASES_INCOMPLETE",
+        "BRANCH_LOT_GL_MISMATCH"
+      ],
+      "invalid_partial_scope_comparison_identified": true,
+      "mapping_approved": false
+    },
+    "diagnostic_correction": {
+      "new_checks_passed": 22,
+      "affected_existing_checks_passed": 25,
+      "all_six_cases_retained_on_source_failure": true,
+      "per_case_source_checks": true,
+      "source_group_lot_ids_and_completeness": true,
+      "journal113_gl_counted_once": true,
+      "full_gl_comparison_null_when_lot_scope_incomplete": true,
+      "ledger_bridge": "posted account180 by journal/branch; associated purchase LOTs, scoped stock movements and return header evidence; unlinked GL not assumed to belong to LOTs",
+      "actual_fifo_reused_only_if_prior_private_proposal_matches_archive_sha256": true,
+      "actual_reconciliation_result_pending": true,
+      "production_connections": 0
     }
   }
 }
