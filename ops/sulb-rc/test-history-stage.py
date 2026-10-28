@@ -6,6 +6,16 @@ spec=importlib.util.spec_from_file_location('history',pathlib.Path(__file__).wit
 h=importlib.util.module_from_spec(spec);spec.loader.exec_module(h)
 FIX=pathlib.Path(__file__).resolve().parents[2]/'backend/storage/framework/testing/history-stage-contracts';FIX.mkdir(parents=True,exist_ok=True)
 class HistorySafety(unittest.TestCase):
+    def test_new_backfill_requires_two_decisions_before_any_resources(self):
+        for policy in [{},{'legacy_allocation_accounting_approval':{'authorized':True}}]:
+            with mock.patch.object(h.pathlib.Path,'read_text',return_value=json.dumps(policy)),mock.patch.object(h,'OwnedGroup') as group,contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(h.main(['--approved-backfill','unused']),78)
+            group.assert_not_called();self.assertEqual(json.loads(out.getvalue())['reason'],'TWO_EXPLICIT_HISTORY_APPROVALS_REQUIRED')
+    def test_new_history_pass_cannot_override_failed_server_shutdown(self):
+        r={'snapshot_restore_rehearsal':'PASS','historical_status':'PASS','owned_server_stopped':True}
+        self.assertEqual(h.restore_outcome(r),'PASS')
+        for changed in [{'owned_server_stopped':False},{'snapshot_restore_rehearsal':'BLOCKED'},{'historical_status':'BLOCKED'}]:
+            self.assertEqual(h.restore_outcome(r|changed),'BLOCKED')
     def test_unapproved_capture_stops_before_credentials_and_resources(self):
         with mock.patch.object(h.pathlib.Path,'read_text',return_value='{"history_capture":{"production_extraction_authorized":false}}'),mock.patch.object(h,'collector') as collect,mock.patch.object(h,'OwnedGroup') as group,contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(h.main(['--capture-approved','unused']),78)

@@ -1,8 +1,17 @@
-name: SULB new production upgrade adapters only
+name: SULB affected release closure and adapters
 on:
   push:
     branches: [codex/sulb-complete-rc-20261027]
     paths:
+      - 'backend/app/Support/ReleaseWriteFence.php'
+      - 'backend/app/Http/Middleware/EnforceReleaseWriteFence.php'
+      - 'backend/app/Providers/AppServiceProvider.php'
+      - 'backend/bootstrap/app.php'
+      - 'ops/sulb-rc/*approved*'
+      - 'ops/sulb-rc/record-history-approvals.php'
+      - 'ops/sulb-rc/*write-fence*'
+      - 'ops/sulb-rc/*release-fence*'
+      - 'ops/sulb-rc/release-process-fence.php'
       - 'ops/sulb-rc/production-upgrade*'
       - 'ops/sulb-rc/production-upgrade/**'
       - 'ops/sulb-rc/test-production-upgrade*'
@@ -27,6 +36,13 @@ jobs:
         run: php ops/sulb-rc/test-production-upgrade-contracts.php
       - name: New executor dependencies only
         run: composer install --working-dir=backend --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins
+      - name: New accounting policy and application fence only
+        run: |
+          php ops/sulb-rc/test-approved-history-policy.php
+          php ops/sulb-rc/test-write-fence.php
+          php ops/sulb-rc/test-write-fence-integration.php
+          php ops/sulb-rc/test-release-fence-evidence.php
+          python3 ops/sulb-rc/test-history-stage.py
       - name: Owned Percona for NEW executor only
         run: |
           set -euo pipefail
@@ -43,6 +59,8 @@ jobs:
           exit 1
       - name: NEW production executor 18 adapters, original row preservation and tenant FK
         run: php -d memory_limit=512M ops/sulb-rc/test-production-upgrade.php
+      - name: New approved history engine with independent company4
+        run: php -d memory_limit=512M ops/sulb-rc/test-approved-backfill.php
       - name: Stop owned QA container only
         if: always()
         run: docker rm -f sulb-upgrade-qa >/dev/null 2>&1 || true

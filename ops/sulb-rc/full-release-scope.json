@@ -649,7 +649,8 @@
     },
     {
       "path": "backend/app/Providers/AppServiceProvider.php",
-      "sha256_git_blob": "296716a654b46443e00a8042c43ae01a78171ca3cbe7ed70567d3ac8773e5dff"
+      "sha256_git_blob": "28e101fd2c34c01b33cd8e246f1d5b11914440951fbd4b5cecebbd813aa5f46d",
+      "previous_sha256_git_blob": "296716a654b46443e00a8042c43ae01a78171ca3cbe7ed70567d3ac8773e5dff"
     },
     {
       "path": "backend/app/Repositories/Base/BaseRepository.php",
@@ -1205,7 +1206,8 @@
     },
     {
       "path": "backend/bootstrap/app.php",
-      "sha256_git_blob": "52ee9ac91f1fc260191b388e0065a07e811e48b1a2af48b7abc1103d3da0ed8f"
+      "sha256_git_blob": "8e61c8a78127975d910094320bfeeefe74443528b6feddbe9ce9cdb2395fbc96",
+      "previous_sha256_git_blob": "52ee9ac91f1fc260191b388e0065a07e811e48b1a2af48b7abc1103d3da0ed8f"
     },
     {
       "path": "backend/bootstrap/cache/.gitignore",
@@ -3146,6 +3148,16 @@
     {
       "path": "frontend/tsconfig.json",
       "sha256_git_blob": "52e449c103173c58157048c856f5a339802efad2e4733bb18861e7d84832e4bd"
+    },
+    {
+      "path": "backend/app/Support/ReleaseWriteFence.php",
+      "sha256_git_blob": "6213bf2619731e8eb9103b688d6c4bc4e7a443117062256aebbbc2538e7cf872",
+      "addition_reason": "Global migration write fence"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnforceReleaseWriteFence.php",
+      "sha256_git_blob": "0e22529078d9595e61d4d0be418b06fce1d014dfb992e0a30672313321d8ad85",
+      "addition_reason": "Global migration write fence"
     }
   ],
   "ordered_migrations": [
@@ -3249,5 +3261,12 @@
   ],
   "production_executor_qualified": false,
   "deployment_authorized": false,
-  "release_decision": "NO-GO"
+  "release_decision": "NO-GO",
+  "original_application_file_count_retained": 786,
+  "application_file_count": 788,
+  "closure_changed_application_files": [
+    "backend/app/Providers/AppServiceProvider.php",
+    "backend/bootstrap/app.php"
+  ],
+  "source_reference_commit": "e5416f46d75348ab8bbc8c60e002b773d7d34607"
 }

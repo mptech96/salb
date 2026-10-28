@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withCommands()
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(\App\Http\Middleware\EnforceReleaseWriteFence::class);
         /*
          * واجهات API يجب ألا تتحول إلى Route باسم login عند غياب المصادقة.
          * إعادة null تجعل Laravel يرمي AuthenticationException،

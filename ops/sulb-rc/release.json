@@ -536,7 +536,7 @@
   "deployment_backup_restore_qualified": false,
   "final_closure": {
     "scope_manifest": "ops/sulb-rc/full-release-scope.json",
-    "scope_sha256": "de938dd6f114d95d2c42c5cdb8f032924b98a1b5607a8c1ee47889f523a2c280",
+    "scope_sha256": "d30086a0b0b028c3442cf6092b45208d51ce718ff800a8b927cff6763296aac4",
     "full_release_only": true,
     "tenant_account180_scope": {
       "company_id": 3,
@@ -544,11 +544,12 @@
       "accounting_approval_pending": true
     },
     "mandatory_remaining": [
-      "Explicit SHA-bound accounting attestation and separate account mapping approval",
-      "Isolated approved Backfill/LOT=GL/idempotency on existing snapshot",
-      "Qualified production migration executor preserving SaaS tenant safety and QA guards",
-      "Final security closure plus live write-fence, exact pre-upgrade consistent backup/restore qualification and failure recovery",
-      "Independent deployment approval"
+      "Two explicit SHA-bound accounting decisions plus private reviewer identity/reference binding",
+      "Approved existing-archive Backfill/LOT=GL/idempotency using the new guarded path",
+      "Actual closed-set production writer exclusion and old process drain evidence",
+      "Integrate and qualify same-run encrypted deployment backup, isolated restore and dynamic upgrade receipt; current script is not qualified",
+      "Qualify production derived-balance application and final postchecks without replaying stale historical plans over newer transactions",
+      "Final security approval and independent production deployment authorization"
     ],
     "accepted_evidence_not_rerun": [
       "native isolation/AppArmor/cgroup",
@@ -560,7 +561,7 @@
     "cleanup_authorized": false,
     "vps_reclaim_bytes_not_measured": true,
     "build_and_deploy_not_performed": true,
-    "source_files_frozen": 786,
+    "source_files_frozen": 788,
     "ordered_migrations_frozen": 18,
     "new_inventory_tests": {
       "passed": 5,
@@ -583,7 +584,7 @@
     "entry": "php ops/sulb-rc/production-upgrade.php --execute",
     "catalog": "ops/sulb-rc/production-upgrade/catalog.json",
     "catalog_sha256": "5cb2c98eb35d5355ea0ba5113ca085d239646292f97689effba8cef13e4ae9cd",
-    "original_qa_guard_and_786_application_files_unchanged": true,
+    "original_qa_guard_and_786_application_files_unchanged": false,
     "sql_payload_identity_checks_passed": 74,
     "mysql84_new_executor_checks_passed": 20,
     "percona84_new_executor_checks_passed": 20,
@@ -597,6 +598,59 @@
     "automatic_destructive_down": false,
     "partial_ddl_failure_requires_reviewed_forward_repair": true,
     "tenant_cross_link_rejected_in_new_executor_test": true,
-    "unproven_write_fence_backup_or_accounting_blocks_before_production_actions": true
+    "unproven_write_fence_backup_or_accounting_blocks_before_production_actions": true,
+    "original_qa_guards_unchanged": true,
+    "original_application_files_retained": 786
+  },
+  "inventory_account_mapping_approval": {
+    "authorized": false,
+    "packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
+    "company_id": 3,
+    "account_id": 180,
+    "item_ids": [
+      1,
+      39
+    ],
+    "lot_ids": [
+      3,
+      34,
+      35,
+      36,
+      37,
+      38
+    ],
+    "production_authorized": false
+  },
+  "history_accounting_authority_sha256": null,
+  "write_fence_plan": {
+    "qualified": false,
+    "writer_accounts": [],
+    "trusted_privileged_accounts": [],
+    "site_uid": null,
+    "php_fpm_unit": null,
+    "worker_units": [],
+    "account_or_service_changes_authorized": false
+  },
+  "one_shot_closure_20261029": {
+    "reference_commit": "e5416f46d75348ab8bbc8c60e002b773d7d34607",
+    "approval_recording": "BLOCKED_NO_HUMAN_DECISIONS",
+    "private_authority_template": "ops/sulb-rc/accounting-authority.example.json",
+    "real_approval_recorded": false,
+    "existing_encrypted_archive_only": true,
+    "synthetic_mysql84_new_backfill_checks": 11,
+    "independent_approval_checks": 18,
+    "application_fence_checks": 14,
+    "application_fence_integration_checks": 11,
+    "direct_writer_policy_checks": 11,
+    "affected_orchestration_tests": 10,
+    "actual_archival_backfill": "PENDING_TWO_EXPLICIT_APPROVALS",
+    "percona_new_closure_ci": "PENDING",
+    "current_backup_receipt_lifecycle": "BLOCKED_NOT_INTEGRATED",
+    "live_writer_fence": "BLOCKED_PROFILE_AND_EXCLUSION_NOT_QUALIFIED",
+    "production_derived_balance_executor": "BLOCKED_NOT_QUALIFIED",
+    "deployment_pipeline": "BLOCKED_NOT_QUALIFIED",
+    "original_786_files_retained": true,
+    "guard_additions": 2,
+    "release_decision": "NO-GO"
   }
 }

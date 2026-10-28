@@ -1,0 +1,7 @@
+<?php
+require dirname(__DIR__,2).'/backend/vendor/autoload.php';$n=0;$ok=function($v)use(&$n){if(!$v)throw new RuntimeException('FENCE_ASSERT_'.($n+1));$n++;};
+\App\Support\ReleaseWriteFence::assertState(false);$ok(true);\App\Support\ReleaseWriteFence::assertState(true,true);$ok(true);
+$bad=false;try{\App\Support\ReleaseWriteFence::assertState(true,false);}catch(\Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException $e){$bad=$e->getStatusCode()===503;}$ok($bad);
+// Before-execution callback must block SQL of every kind, including SELECT with side effects, before PDO opens.
+foreach(['SELECT dangerous_function()','WITH x AS (SELECT 1) SELECT * FROM x','UPDATE anything SET n=1','INSERT INTO anything VALUES(1)','DELETE FROM anything','CALL anything()','ALTER TABLE anything ADD n INT']as$sql){$opened=false;$c=new \Illuminate\Database\Connection(function()use(&$opened){$opened=true;throw new RuntimeException('PDO_MUST_NOT_OPEN');});$c->beforeExecuting(fn()=>\App\Support\ReleaseWriteFence::assertState(true,false));$bad=false;try{$c->statement($sql);}catch(\Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException $e){$bad=true;}$ok($bad&&!$opened);}
+$source=file_get_contents(dirname(__DIR__,2).'/backend/app/Support/ReleaseWriteFence.php');$ok(!str_contains($source,'HTTP_'));$ok(str_contains($source,"posix_geteuid()!==0"));$ok(str_contains($source,"PHP_SAPI!=='cli'"));$ok(str_contains($source,'beforeExecuting'));echo 'PASS '.$n.' new write-fence checks; SQL executed=0; production marker unchanged'.PHP_EOL;

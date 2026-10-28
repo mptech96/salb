@@ -54,6 +54,9 @@ def collector(mode,work,group):
     finally:
         termios.tcsetattr(fd,termios.TCSANOW,saved);os.close(fd)
 
+def restore_outcome(result):
+    return 'PASS' if result.get('snapshot_restore_rehearsal')=='PASS' and result.get('historical_status','PASS')=='PASS' and result.get('owned_server_stopped') is True else 'BLOCKED'
+
 def restore_child(work):
     work=pathlib.Path(work);s=json.loads((work/'launch.json').read_text());server=None
     result={'snapshot_restore_rehearsal':'BLOCKED','stage':'PRIVATE_MOUNTS','production_connected':False,'release_decision':'NO-GO'}
@@ -86,6 +89,8 @@ def restore_child(work):
         (work/'native-context.json').write_text(json.dumps(ctx));(work/'native-context.json').chmod(0o600)
         result['stage']='AUTHENTICATED_PRIVATE_RESTORE'
         cmd=['php','-d','memory_limit=512M','-d','display_errors=0','-d','log_errors=0',str(work/'source/ops/sulb-rc/run-private-history-restore.php'),s['socket'],data,str(work/'snapshot.enc'),str(work/'snapshot.key'),str(work/'manifest-private.json'),str(work/'native-context.json'),str(work/'history-result.json')]
+        if s.get('approved_backfill'):
+            cmd=['php','-d','memory_limit=512M','-d','display_errors=0','-d','log_errors=0',str(work/'source/ops/sulb-rc/run-approved-history-backfill.php'),s['socket'],data,str(work/'snapshot.enc'),str(work/'snapshot.key'),str(work/'manifest-private.json'),str(work/'native-context.json'),str(work/'approvals-private.json'),str(work/'history-result.json')]
         try:b.private_command(cmd,work/'restore-private.log',7200,b.clean_env(work))
         except CheckBlocked:
             if not (work/'history-result.json').is_file():raise
@@ -97,16 +102,20 @@ def restore_child(work):
             if server.poll() is None:
                 server.terminate()
                 try:server.wait(timeout=60)
-                except subprocess.TimeoutExpired:server.kill();server.wait(timeout=10);result.update(snapshot_restore_rehearsal='BLOCKED',reason='HISTORY_SERVER_FORCED_STOP')
+                except subprocess.TimeoutExpired:server.kill();server.wait(timeout=10);result.update(snapshot_restore_rehearsal='BLOCKED',historical_status='BLOCKED',reason='HISTORY_SERVER_FORCED_STOP')
             result['owned_server_stopped']=server.poll() is not None
         (work/'child-summary.json').write_text(json.dumps(result,indent=2));(work/'child-summary.json').chmod(0o600)
-    return 0 if result.get('historical_status',result['snapshot_restore_rehearsal'])=='PASS' else 78
+    return 0 if restore_outcome(result)=='PASS' else 78
 
 def main(argv):
     result={'history_status':'BLOCKED','production_rows_extraction_authorized':False,'release_decision':'NO-GO'};group=None;work=None;before=None;identities={}
     try:
         mode=argv[0] if argv else ''
-        if mode not in ['--check-readiness','--capture-approved','--restore-approved']:raise CheckBlocked('HISTORY_EXPLICIT_MODE_REQUIRED')
+        if mode not in ['--check-readiness','--capture-approved','--restore-approved','--approved-backfill']:raise CheckBlocked('HISTORY_EXPLICIT_MODE_REQUIRED')
+        if mode=='--approved-backfill':
+            policy=json.loads(pathlib.Path(__file__).with_name('release.json').read_text())
+            for k in ['legacy_allocation_accounting_approval','inventory_account_mapping_approval']:
+                if policy.get(k,{}).get('authorized') is not True:raise CheckBlocked('TWO_EXPLICIT_HISTORY_APPROVALS_REQUIRED')
         if mode=='--capture-approved':
             policy=json.loads(pathlib.Path(__file__).with_name('release.json').read_text())
             if policy.get('history_capture',{}).get('production_extraction_authorized') is not True:raise CheckBlocked('HISTORY_EXTRACTION_NOT_AUTHORIZED')
@@ -117,9 +126,9 @@ def main(argv):
             work=BASE/('sulb-history-ready-'+uuid.uuid4().hex[:16]);work.mkdir(mode=0o700)
         else:
             if len(argv)!=2:raise CheckBlocked('HISTORY_ARGUMENTS_INVALID')
-            original=secure_directory(argv[1],'sulb-history-ready-')
+            original=secure_directory(argv[1],'sulb-history-restore-' if mode=='--approved-backfill' else 'sulb-history-ready-')
             work=original if mode=='--capture-approved' else BASE/('sulb-history-restore-'+uuid.uuid4().hex[:16])
-            if mode=='--restore-approved':work.mkdir(mode=0o700)
+            if mode in ['--restore-approved','--approved-backfill']:work.mkdir(mode=0o700)
         group=OwnedGroup(work);group.create()
         if mode in ['--check-readiness','--capture-approved']:
             payload=collector(mode,work,group);result.update(payload)
@@ -127,8 +136,15 @@ def main(argv):
             result['history_status']='PASS' if payload.get(expected)=='PASS' and payload.get('history_status')!='BLOCKED' else 'BLOCKED'
             result['production_rows_extraction_authorized']=mode=='--capture-approved'
         else:
-            key=BASE/'sulb-history-keys'/(original.name[len('sulb-history-ready-'):]+'.key')
+            key=original/'snapshot.key' if mode=='--approved-backfill' else BASE/'sulb-history-keys'/(original.name[len('sulb-history-ready-'):]+'.key')
             files={'snapshot.enc':original/'snapshot.enc','manifest-private.json':original/'manifest-private.json','snapshot.key':key}
+            if mode=='--approved-backfill':
+                policy=json.loads(pathlib.Path(__file__).with_name('release.json').read_text())
+                for k in ['legacy_allocation_accounting_approval','inventory_account_mapping_approval']:
+                    if policy.get(k,{}).get('authorized') is not True:raise CheckBlocked('TWO_EXPLICIT_HISTORY_APPROVALS_REQUIRED')
+                packet=policy['legacy_allocation_accounting_approval']['packet_sha256']
+                files['approvals-private.json']=original/('approved-history-'+packet+'.json')
+                files['authority-private.json']=original/'accounting-authority.json'
             for name,path in files.items():
                 if path.is_symlink() or not path.is_file() or path.stat().st_uid!=0 or path.stat().st_mode&0o077:raise CheckBlocked('HISTORY_PRIVATE_BUNDLE_FILES_REQUIRED')
                 # Immutable authenticated bundles share the private filesystem; no unbounded bulk copy.
@@ -145,13 +161,13 @@ def main(argv):
             for name in ['composer-home','composer-cache']:(work/name).mkdir(mode=0o700)
             env=b.clean_env(work);env.update(COMPOSER_ALLOW_SUPERUSER='1',COMPOSER_HOME=str(work/'composer-home'),COMPOSER_CACHE_DIR=str(work/'composer-cache'),COMPOSER_MAX_PARALLEL_HTTP='2',COMPOSER_MAX_PARALLEL_PROCESSES='1')
             b.private_command(group.wrap(['composer','--working-dir='+str(source/'backend'),'install','--no-interaction','--prefer-dist','--no-progress','--no-scripts','--no-plugins']),work/'dependencies-private.log',1800,env)
-            launch={'data':data,'sockets':sockets,'logical':plan['selected_logical_datadir'],'socket':plan['selected_socket_path'],'token':token,'label':before[1],'host_net':os.readlink('/proc/self/ns/net'),'host_pid':os.readlink('/proc/self/ns/pid'),'cgroup_name':group.path.name}
+            launch={'data':data,'sockets':sockets,'logical':plan['selected_logical_datadir'],'socket':plan['selected_socket_path'],'token':token,'label':before[1],'host_net':os.readlink('/proc/self/ns/net'),'host_pid':os.readlink('/proc/self/ns/pid'),'cgroup_name':group.path.name,'approved_backfill':mode=='--approved-backfill'}
             (work/'launch.json').write_text(json.dumps(launch));(work/'launch.json').chmod(0o600)
             try:b.private_command(group.wrap(['unshare','--mount','--net','--pid','--fork',sys.executable,str(source/'ops/sulb-rc/history-stage.py'),'--restore-child',str(work)]),work/'namespace-private.log',9000,b.clean_env(work))
             except CheckBlocked:
                 if not (work/'child-summary.json').is_file():raise
             result.update(json.loads((work/'child-summary.json').read_text()))
-            result['history_status']=result.get('historical_status',result['snapshot_restore_rehearsal'])
+            result['history_status']=restore_outcome(result)
     except Exception as e:result.update(history_status='BLOCKED',reason=e.code if isinstance(e,CheckBlocked) else 'HISTORY_STAGE_FAILED',failure=exception_evidence('HISTORY_STAGE',e))
     finally:
         if group is not None:
