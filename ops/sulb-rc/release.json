@@ -570,9 +570,33 @@
     "new_deployment_guard_tests_passed": 3,
     "bash_syntax_passed": true,
     "production_executor_specific_blockers": [
-      "Current check-approval accepts database/migrations paths only; reviewed schedule uses database/uom-migrations and docs proposed dependencies",
-      "UOM migrations require QA-only guard; production executor must be explicitly qualified without removing guards",
-      "Current deploy script does not execute approved historical Backfill; final security/write-fence/deployment backup recovery remain unqualified"
-    ]
+      "Code path/order/QA-runtime-dependency defects resolved by separate guarded production adapters; operational approval remains false",
+      "Actual accounting attestation and separate company3 account mapping approval pending; no legacy value may be changed",
+      "Approved isolated historical Backfill/LOT=GL/idempotency pending",
+      "Exact current-backup/upgrade-receipt lifecycle and all-tenant write-fence/final security qualification remain required before deploy GO"
+    ],
+    "production_executor_code_path_repaired": true,
+    "old_source_count_preserved": 786
+  },
+  "production_upgrade": {
+    "implementation": "EXPLICIT_18_PRODUCTION_ADAPTERS_V1",
+    "entry": "php ops/sulb-rc/production-upgrade.php --execute",
+    "catalog": "ops/sulb-rc/production-upgrade/catalog.json",
+    "catalog_sha256": "5cb2c98eb35d5355ea0ba5113ca085d239646292f97689effba8cef13e4ae9cd",
+    "original_qa_guard_and_786_application_files_unchanged": true,
+    "sql_payload_identity_checks_passed": 74,
+    "mysql84_new_executor_checks_passed": 20,
+    "percona84_new_executor_checks_passed": 20,
+    "percona_ci_commit": "3d1ce368c40fc3a2d75b027afd049135f53b1e65",
+    "percona_ci_run": "https://github.com/mptech96/salb/actions/runs/40763826311",
+    "adapter_engine_qualification": "PASS",
+    "operational_production_qualification": false,
+    "receipt_sha256": null,
+    "no_dynamic_guard_patch_no_test_environment_in_production": true,
+    "financial_backfill_performed": false,
+    "automatic_destructive_down": false,
+    "partial_ddl_failure_requires_reviewed_forward_repair": true,
+    "tenant_cross_link_rejected_in_new_executor_test": true,
+    "unproven_write_fence_backup_or_accounting_blocks_before_production_actions": true
   }
 }
