@@ -644,13 +644,18 @@
     "direct_writer_policy_checks": 11,
     "affected_orchestration_tests": 10,
     "actual_archival_backfill": "PENDING_TWO_EXPLICIT_APPROVALS",
-    "percona_new_closure_ci": "PENDING",
+    "percona_new_closure_ci": "PASS",
     "current_backup_receipt_lifecycle": "BLOCKED_NOT_INTEGRATED",
     "live_writer_fence": "BLOCKED_PROFILE_AND_EXCLUSION_NOT_QUALIFIED",
     "production_derived_balance_executor": "BLOCKED_NOT_QUALIFIED",
     "deployment_pipeline": "BLOCKED_NOT_QUALIFIED",
     "original_786_files_retained": true,
     "guard_additions": 2,
-    "release_decision": "NO-GO"
-  }
+    "release_decision": "NO-GO",
+    "percona_tested_commit": "e627e13",
+    "percona_ci_run": "https://github.com/mptech96/salb/actions/runs/40780227587",
+    "affected_history_orchestration_ci_run": "https://github.com/mptech96/salb/actions/runs/40780227555"
+  },
+  "production_derived_balance_executor_qualified": false,
+  "deployment_pipeline_qualified": false
 }
