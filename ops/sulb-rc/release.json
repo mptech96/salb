@@ -267,10 +267,10 @@
     "release_decision": "NO-GO"
   },
   "history_capture": {
-    "production_extraction_authorized": false,
-    "approved_scope": "development and synthetic local QA; metadata readiness only on VPS",
+    "production_extraction_authorized": true,
+    "approved_scope": "Explicit operator approval: one consistent SELECT-only sulbmetadata snapshot of sulbprod, encrypted private same-VPS archive; isolated restore and historical migration/backfill/FIFO/LOT/GL rehearsal only; no production writes or deployment",
     "readiness_command": "python3 ops/sulb-rc/history-stage.py --check-readiness",
-    "capture_command_requires_new_approval": true,
+    "capture_command_requires_new_approval": false,
     "format": "SULBHST1 / libsodium secretstream XChaCha20-Poly1305",
     "key_location": "separate root-private directory; never password/key in argv/env/GitHub",
     "windows_mysql84_synthetic_checks_passed": 31,
@@ -323,9 +323,9 @@
     "snapshot_created": false
   },
   "history_plan": {
-    "state": "PREPARED_FOR_REVIEW_NOT_AUTHORIZED",
-    "execution_authorized": false,
-    "execution_approved_unix": null,
+    "state": "OPERATOR_APPROVED_HISTORY_EXPERIMENT_ONLY",
+    "execution_authorized": true,
+    "execution_approved_unix": 1793193626,
     "approved_readiness_sha256": "8ede8362220b5bba9d794272f4ddcc2d4837dc8e8b67c91b36b43c7cfd3d8565",
     "source_capture_memory_bytes": 268435456,
     "restore_memory_bytes": 805306368,
@@ -356,6 +356,11 @@
       "pipeline_pressure_tests": 5,
       "production_data_used": false,
       "actual_history_validation": false
-    }
+    },
+    "execution_approval_expires_utc": "2026-10-28T14:20:26+00:00",
+    "approval_source": "Explicit human HISTORY EXTRACTION APPROVAL in this conversation on 2026-10-28",
+    "production_writes_authorized": false,
+    "production_migrations_authorized": false,
+    "deployment_authorized": false
   }
 }
