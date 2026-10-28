@@ -325,7 +325,7 @@
   "history_plan": {
     "state": "OPERATOR_APPROVED_HISTORY_EXPERIMENT_ONLY",
     "execution_authorized": true,
-    "execution_approved_unix": 1793193626,
+    "execution_approved_unix": 1793203045,
     "approved_readiness_sha256": "8ede8362220b5bba9d794272f4ddcc2d4837dc8e8b67c91b36b43c7cfd3d8565",
     "source_capture_memory_bytes": 268435456,
     "restore_memory_bytes": 805306368,
@@ -357,8 +357,8 @@
       "production_data_used": false,
       "actual_history_validation": false
     },
-    "execution_approval_expires_utc": "2026-10-28T14:20:26+00:00",
-    "approval_source": "Explicit human HISTORY EXTRACTION APPROVAL in this conversation on 2026-10-28",
+    "execution_approval_expires_utc": "2026-10-28T16:57:25+00:00",
+    "approval_source": "Explicit human RENEW HISTORY EXECUTION WINDOW authorization in this conversation, 2026-10-28; same hash and scope; previous attempt not executed",
     "production_writes_authorized": false,
     "production_migrations_authorized": false,
     "deployment_authorized": false
