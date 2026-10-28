@@ -489,6 +489,43 @@
       "actual_archive_capitalization_result_pending": true,
       "mapping_approved": false,
       "production_extraction_authorized": false
+    },
+    "operator_allocation_receipt_result": {
+      "source_commit": "31465e14d36adfc2819b62d40fca2f0bf0681065",
+      "purchase_base_matches": true,
+      "lot_cost_components_sum": true,
+      "cost_documents_posted": true,
+      "shipment_recorded_allocations_equal_posted_costs": true,
+      "posted_costs_agree_inventory180_net": true,
+      "receipt_rows_for_five": 0,
+      "fifo_prior_pass_reused": true,
+      "historical_validation_passed": false,
+      "mapping_approved": false
     }
+  },
+  "legacy_allocation_accounting_approval": {
+    "authorized": false,
+    "packet_sha256": null,
+    "reviewer": null,
+    "review_reference": null,
+    "company_id": 3,
+    "account_id": 180,
+    "lot_ids": [
+      34,
+      35,
+      36,
+      37,
+      38
+    ],
+    "prepare_command": "php ops/sulb-rc/legacy-allocation-approval.php --prepare",
+    "record_requires_explicit_human_sha_bound_accounting_approval": true,
+    "scope": "Contemporary attestation of preserved legacy per-LOT recorded allocations for isolated rehearsal only; not a retroactive immutable receipt and not a new cost allocation",
+    "new_safety_checks_passed": 28,
+    "database_changes_performed": false,
+    "production_writes_authorized": false,
+    "production_migrations_authorized": false,
+    "deployment_authorized": false,
+    "inventory_account_mapping_approval_separate": true,
+    "actual_private_review_packet_pending": true
   }
 }
