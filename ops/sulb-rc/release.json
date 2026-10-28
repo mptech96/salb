@@ -390,6 +390,43 @@
     "scope": "offline authenticated encrypted archive and existing private audit only; no SQL/no restore/no migrations",
     "new_synthetic_checks_passed": 17,
     "account_mappings_approved": false,
-    "reason_semantics": "Backfill demands direct item account; existing runtime resolver also supports category parents/group/company setting. Inherited settings are candidates, not historical financial approval."
+    "reason_semantics": "Backfill demands direct item account; existing runtime resolver also supports category parents/group/company setting. Inherited settings are candidates, not historical financial approval.",
+    "operator_result": {
+      "source_commit": "7628151f325cf86e220c36fdca5340c7f34e2de9",
+      "company_id": 3,
+      "candidate_account_id": 180,
+      "source": "COMPANY_SETTING",
+      "direct_item_account_unset_lots": [
+        3,
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "active_same_company_asset_reported": true,
+      "posted_purchase_debit_reported": true,
+      "postable_actual_flags_pending": true,
+      "journal_1_additional_debit_account": 184,
+      "mapping_approved": false
+    },
+    "postable_diagnostic_corrected": "Use allow_posting=1 and is_group=0; is_postable may be absent. Active same-company ASSET and compatible branch also required.",
+    "proposed_account_180_check": {
+      "tool": "php ops/sulb-rc/propose-account-180.php",
+      "new_pure_checks_passed": 25,
+      "affected_diagnostic_checks_passed": 17,
+      "execution_scope": "existing authenticated encrypted snapshot offline, no database connection, restore or migrations",
+      "full_scope": "all snapshot company3 LOTs inheriting account180; per-branch net posted GL; per-source-journal original LOT cost vs account180 debit only; journal balance includes other accounts",
+      "source_journal_ids": [
+        1,
+        107,
+        111,
+        113
+      ],
+      "other_account_184_excluded_from_inventory": true,
+      "approval_record": "private SHA256-bound proposal, not applied; summary contains IDs and equality booleans only",
+      "actual_result_pending": true,
+      "isolated_database_backfill_pending_accountant_approval": true
+    }
   }
 }
