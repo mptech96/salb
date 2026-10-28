@@ -1,0 +1,3253 @@
+{
+  "release": "sulb-complete-rc-20261027",
+  "scope": "FULL_BACKEND_FRONTEND_14_UOM_4_LOT_L3_NO_PARTIAL_RELEASE",
+  "frozen_application_base_commit": "93ea93849bc72584acea613a2ba7378f65aa1c66",
+  "application_files": [
+    {
+      "path": "backend/.editorconfig",
+      "sha256_git_blob": "fe39e0ad06edea8e256e44f1fc4f319a8acfa785a7470af5cf6b9ed12dc34406"
+    },
+    {
+      "path": "backend/.gitattributes",
+      "sha256_git_blob": "a40eb27ee0b545ca5b5542daaf99fec51f84f23b3766a6353864ef2a115bc51c"
+    },
+    {
+      "path": "backend/.gitignore",
+      "sha256_git_blob": "3ee1060a695b64e763d8a438ac1fe87494ff00d92680c3f63ca56bc103ed4142"
+    },
+    {
+      "path": "backend/.npmrc",
+      "sha256_git_blob": "e968d1d336604e9986ea31306a4d9e1442f4312fca262f444384baf928d6560e"
+    },
+    {
+      "path": "backend/README.md",
+      "sha256_git_blob": "1ed7f729d514ddbddaac5944a07298c3c896099ae3cab8667030145cf8ff0e47"
+    },
+    {
+      "path": "backend/Support/TenantScope.php",
+      "sha256_git_blob": "621ee2f1366ef182a6ae7f3a9a4677f1409f2c308daa1a95a68757ce1cea6eea"
+    },
+    {
+      "path": "backend/app/Console/Commands/SulbDemoInstallCommand.php",
+      "sha256_git_blob": "70c1db92e5c8a5dafedaba64d17c3d872630b357e0b09ce8afa54f7561ffce59"
+    },
+    {
+      "path": "backend/app/Console/Commands/SulbDemoStatusCommand.php",
+      "sha256_git_blob": "3b5c1c74d87bcebcdcdde96c3cc016ecc06797d138efd89a6f3255f927c01119"
+    },
+    {
+      "path": "backend/app/Core/ARCHITECTURE.md",
+      "sha256_git_blob": "c1f413409a836b14d5de53ac42bd521f89b329fad9acb34dad94ce0e1e996e7c"
+    },
+    {
+      "path": "backend/app/Core/Business/BusinessEngine.php",
+      "sha256_git_blob": "8815794bd73d130701b02deae01044d44508f34f570351282f16a2e2639e5970"
+    },
+    {
+      "path": "backend/app/Core/Contracts/BusinessEngineInterface.php",
+      "sha256_git_blob": "3be26d0c2027f5a7d5bb4cc68eaf53075d4e5e146c50867bba4c4ceaeb37d524"
+    },
+    {
+      "path": "backend/app/Core/Events/BaseEvent.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Events/ExpenseCreated.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Events/InventoryUpdated.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Events/JournalPosted.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Events/PurchaseCreated.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Events/SalesInvoiceCreated.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Events/ShipmentCostCalculated.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Events/WorkerCommissionApproved.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Events/WorkerLoanCreated.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/AccountingStep.php",
+      "sha256_git_blob": "f493b1aa58d02cd921cdb705acb6a7b789e704d9ef7cf8181c61493e25d978a7"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/AuditStep.php",
+      "sha256_git_blob": "1d0340555c5291e8501e4d6b04355b46535c0ae9ca4c8f8b996c8a13de880442"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/AuthorizationStep.php",
+      "sha256_git_blob": "be066618fe5ddc3cf747267bac94626ab9914c8d1715457ed230367a7f4a94f2"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/BusinessRuleStep.php",
+      "sha256_git_blob": "0e18f3c1c2a030a1a3bfbc4b005709355de8168163d663ac9e2c5ddc0d06b708"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/CostStep.php",
+      "sha256_git_blob": "35ebe1c40299630665b5f80c9c9cc296d5029588d5abff82c76f1c0f25c8ce68"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/EventStep.php",
+      "sha256_git_blob": "35b1a68795b07fd251cf26221df2f4a3ea126d6e95d2da996ea98f76bc6e0961"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/InventoryStep.php",
+      "sha256_git_blob": "99c1d2361996e3f4bdc47320ab576a6c808d3d40b85663c0cd44cec0e79cdfb4"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/NotificationStep.php",
+      "sha256_git_blob": "655569dac2ce9b72d622b98bfeb5dce2f58aa0e00f743ebf5461f4cc5e1a28cb"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/PersistenceStep.php",
+      "sha256_git_blob": "8dc233bb58fd7aae559abb9a6549eff426f60d26bcd11396085d1869305f971c"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/Pipeline.php",
+      "sha256_git_blob": "634d1c7b61c7d6e48d304a168da9245f8f402adab5ec96f8254e2c57877425cf"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/PipelineStep.php",
+      "sha256_git_blob": "f61557c19d2212dc8797cc2b5b34e89327db20fd5a7a63d576ac8a7fcc308519"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/ResponseStep.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/ValidationStep.php",
+      "sha256_git_blob": "2f7a0ce01357c4aa668632d78a16b6c352523fa78eb6bd4c1178a9583c172009"
+    },
+    {
+      "path": "backend/app/Core/Pipeline/WorkflowStep.php",
+      "sha256_git_blob": "3fca7fa7e2a903042153e240872dcfe89ccdfc526e6aa47ed18bbaaebc5876c9"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/DTO/JournalEntryData.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/DTO/JournalLineData.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Enums/AccountNature.php",
+      "sha256_git_blob": "4e9ae8666d27eef4b565d3ab08903fe236410e5d4183c71993c28665451927d8"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Enums/JournalStatus.php",
+      "sha256_git_blob": "4bff5954083222b999c8966da411336374f707b9c041b392fb7418fd8f599809"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Repositories/AccountRepository.php",
+      "sha256_git_blob": "c2e8330e8c68062874394b00042d6d8d727fb0e523a3e13b3a6c057c094896ea"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Repositories/JournalRepository.php",
+      "sha256_git_blob": "695419f54c234bfd2e53f5b860ef9ba124081e513f0676853bd60410772e572c"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Services/AccountService.php",
+      "sha256_git_blob": "4c4c90736a95e4fb4ee6f207ec1c3e4b8fd8100accff45fe0b56346ab619e855"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Services/AccountingBootstrapService.php",
+      "sha256_git_blob": "f443e0c0e12f00b520b64bf8c73c09c1cc9c7496b95b5d81a66005f8fbe3fecd"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Services/AccountingReportService.php",
+      "sha256_git_blob": "017230c8c2821629851c7aee4c7bfa390e5d945a7f99383e9edb1750f75ec36f"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Services/FinancialYearService.php",
+      "sha256_git_blob": "54c6d9f5b79c143edb51d73989a475bdfc12234311e7cafcccdb08126d5a8ff5"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Services/JournalService.php",
+      "sha256_git_blob": "985e7945ef0c9c08749026928f7c3a9fd9e512355d7b4f131ac5942eb44b84f5"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Services/LedgerService.php",
+      "sha256_git_blob": "63b07fc2e8d2ce3a82c12a54bd5407def95b66495eedf883a5cdba53da4c1614"
+    },
+    {
+      "path": "backend/app/Domain/Accounting/Services/TrialBalanceService.php",
+      "sha256_git_blob": "370443b0f99f507a6701fcd68f57ada28dc0706e5de86ab86678ccdd31c5d028"
+    },
+    {
+      "path": "backend/app/Events/ShipmentApproved.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/AccountController.php",
+      "sha256_git_blob": "e72d2907b1b25ce6c4429b2855658e8cf28c1d1c978715a41402fedf412afbee"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/AccountStatementController.php",
+      "sha256_git_blob": "3de5958aaf881218da9b9263456cd9c6e811f4ab490bccb3d507397e75dd1d20"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/AccountingIntegrityController.php",
+      "sha256_git_blob": "43643674f99d9ab2dcd93ffe8f141be55e8868d66646d235e1aad9445981b33a"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/AccountingReportController.php",
+      "sha256_git_blob": "7fc38a4dab1db006d6237256bbe4e970eab6340ed1f16c27035dbd67a5987d17"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/AdvancedReportController.php",
+      "sha256_git_blob": "83ff873adb7d47d0709f750104e232f98d06165dabfc0eece0d7c9ae6bb6f158"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/AuditLogController.php",
+      "sha256_git_blob": "e04b4b22db7b5dcd7eada038627780439a2781e51c9b80929b6274e55591fb33"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/AuthController.php",
+      "sha256_git_blob": "e0ea9a83a93280bc989da79b9ad7930e53e9bc1232ce3db5dc3ca5e8059385e1"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/BaseApiController.php",
+      "sha256_git_blob": "abb0b79d0cec026d378a91939117d20b084e515d5c820ee79662d44345b3dbb8"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/BranchController.php",
+      "sha256_git_blob": "1e2eb7ee83916a99f5853c82191679cf76d166781d7ab49511dc8b83ecdecc6e"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/CarController.php",
+      "sha256_git_blob": "5e976af6b8922f0a38668b4013623d2895906c5540f5ba388f75b71af0734e4c"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/CommercialDocumentController.php",
+      "sha256_git_blob": "ac9bcebd41a565a49d38a9950e7494ed64ec2e87edc845601f94d90048e1e753"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/CommercialReturnController.php",
+      "sha256_git_blob": "aaec8c6ff268c85b505d2f3dd2adc2deb812103d4afff68eb4728a49f8f4eddb"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/CompanyController.php",
+      "sha256_git_blob": "9d58efe2e03e3eacfdfca266fea329f7c1910f0f8192391fa855efb33496308a"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/CompanySettingController.php",
+      "sha256_git_blob": "ef9137947333bdbcdf8aaa5c4613932ca9c5ba543d714e28020e5bbace98781e"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/CustomerController.php",
+      "sha256_git_blob": "8028172b2a89088ee43f93c831681fa69bb4d4874edc822d9ab11202f4db0d14"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/DashboardController.php",
+      "sha256_git_blob": "1373e6a4655ccfb8a1738676c4d88adad9a583e1468a86f123d5fcd6d4af06ac"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/DataImportController.php",
+      "sha256_git_blob": "384132ca4efbe5398c0c8552d611c72ef610a1dfba437afbd6b88f275dcd40fd"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/DriverController.php",
+      "sha256_git_blob": "a160b3ce1c2d1d4d81f1db73d41d229d8cc0db89cf0f29bac9c846296981263f"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/DriverShipmentStatementController.php",
+      "sha256_git_blob": "c2a8ed07881720cab35e922977f028b22472333b24bc73b627acfa8a9af35999"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/EntitlementAdminController.php",
+      "sha256_git_blob": "39f40e98101b5f0b66545c4a7e23e4090f9cfa93aa37b426222ca023bdee6be5"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ExpenseController.php",
+      "sha256_git_blob": "df439155787c078e3ed2d35fedb808aec6c7c131711b2782056231c31634a6e4"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ExpenseTypeController.php",
+      "sha256_git_blob": "dbaa1a60e2495c018299c7d6a0b84df6127293c04cca43b1f0d9d8b45164ec16"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/FinancialAccountController.php",
+      "sha256_git_blob": "82999c331a8fb5dfe64af09e6ac1b58f2ad6fb40667477dd53802493508754ee"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/FinancialSetupController.php",
+      "sha256_git_blob": "46159734f6ae9e5b125ea955ff82fde879beac8d086d52c7ff3211f1d29fa6cc"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/FinancialYearController.php",
+      "sha256_git_blob": "e9daaff54f86c06b9e2975197182bfdfef29ea4f6d3b1fa407157df38e80507b"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/FixedAssetCategoryController.php",
+      "sha256_git_blob": "bc42dec2ab3a316da71ff4e8ca86fdecb38195913b51a184df88483916f22090"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/FixedAssetController.php",
+      "sha256_git_blob": "e8eb2d0f9f77762b556f053c96eeeaf363a36bcecf3a07fe07b3559d2c258bf0"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/InventoryController.php",
+      "sha256_git_blob": "09c622571e47db00f5e8792efd9583a6c553719b1e6c044b8a5453721c0e6683"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/InventoryOperationController.php",
+      "sha256_git_blob": "20e8973306a512007abf3e10cc968297cc10d8fa77cacfe085d2493c807559ac"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ItemController.php",
+      "sha256_git_blob": "e9432b6d76910acb3775ba513ef1b88b85eba27e14b97c890aba4a6dadc0f33b"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ItemUnitController.php",
+      "sha256_git_blob": "23b2f87c25d78e14afd0f4f3243c91fe4792eb33092a884c000ddc9dbb1a5d30"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/JournalEntryController.php",
+      "sha256_git_blob": "2ef5b842600b45941ac3beed2df2824592b7a0c5f10ead3f2fe159d9b95b4820"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/MigrationCenterService.php",
+      "sha256_git_blob": "a5a1be0ff5c0b51cff80aa9ee27a9b391223f63921d3793a70e14911bd6b7c8d"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/OfficialDocumentController.php",
+      "sha256_git_blob": "1e4c160975593679e584375f802264ede0c8f0266587c1451797b4dbbb4daf91"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/OpeningBalanceController.php",
+      "sha256_git_blob": "8627cb70515d1878be2994867d9ec3ff32841c8cf744bf0cb49a3be0ea1e8299"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/PayrollController.php",
+      "sha256_git_blob": "ae6101f7451b5355ea8f6f18d097099abe3899f60065f4a1439251ffcb3af910"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/PermissionMatrixController.php",
+      "sha256_git_blob": "b55fa0e81bc4c3149ecfbe1d4cd511f080d2c6fbb5285f7fd139f966bc4af86a"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/PlanController.php",
+      "sha256_git_blob": "1e8e0afe22d93d01a7a0eef92a3b2655146b8c7d70c447b5e2f3892b63959f42"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ProcessingRecipeController.php",
+      "sha256_git_blob": "8521a8a33065b527a5484fbee66a873ad203707c33b0788332a03bc4ab76201b"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/PublicRegistrationController.php",
+      "sha256_git_blob": "b770be73345bdd7145cf84fa03e2d74f82c23ce9730378e12d16844e761ce7b3"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/PurchaseInvoiceController.php",
+      "sha256_git_blob": "cd5bbc7430c1c99149d0dbcc3ad0ed238651d6516d105d01508028bc4eb9b86c"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/PurchaseOrderController.php",
+      "sha256_git_blob": "8d1355d5b128c3a15ae6b734645c09bb99f6795d19e3fbfa028e3b44fa53fd38"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ReportController.php",
+      "sha256_git_blob": "3ceac5592ce229ed8b7af7d852d39676c0c1a78d342ba047a0b5d1cf1558b744"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/RoadWaybillController.php",
+      "sha256_git_blob": "7897fe9c13e556f46372993764e16ca74d8cd6129a8244ef664043ccd8ff0707"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/RoleController.php",
+      "sha256_git_blob": "a4b6f145378e0e2893845d0542a1ceeae6de29488e08ce82d29eebffcb293b62"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/SalesInvoiceController.php",
+      "sha256_git_blob": "7c5c10b12f251926f1710e531e709289ba02fb6f91ffe25070d8c993af57b272"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/SalesQuotationController.php",
+      "sha256_git_blob": "17a41017aee1e2318d0c29a2a72d0893a95ae3beb026b541a58f8e350308e849"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ShipmentController.php",
+      "sha256_git_blob": "3536ca960a6e3dc63ac8bbdf2cb2efaa48e0082c69d967531ee450f9fa554258"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ShipmentCostController.php",
+      "sha256_git_blob": "778bc746648c7d4796a3250f132efd700b83c6f87e97977758022c2a787932bb"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ShipmentInvoiceController.php",
+      "sha256_git_blob": "c7c6e173b3ec122b9450d1fcdcdec114ea2d099df890c33fc31d5d0adad59dbb"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/ShipmentWeighbridgeAllocationController.php",
+      "sha256_git_blob": "de1e4151a03591c2df326a8f1e49c8eeebf0b75c7d3e727148819bbd49edaecc"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/SubscriptionController.php",
+      "sha256_git_blob": "774ab583a8b99c7e55b49d0ec15dc6358878dc0b9acba8acf7c06c788f8e81a3"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/SubscriptionPaymentController.php",
+      "sha256_git_blob": "1c64333008956b27cf8463908944c20490c5b1fa0fe60e73785b82eb68347601"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/SupplierController.php",
+      "sha256_git_blob": "8476cc6e0dbb52cec421499ce5cd6737bbd7944259f22ffc8694181aae2d562d"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/SystemAdminDashboardController.php",
+      "sha256_git_blob": "a498c38a52737aa1a00665fb133c50e7c29a9595864a23ac02cc4a6a9635fc48"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/TaxReportController.php",
+      "sha256_git_blob": "8267f21153762d559830acdc37228472a683a05c34c3ca2232c578a10c99621e"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/TrialBalanceController.php",
+      "sha256_git_blob": "cbbe835af1542653cd8c9efa28f49c0c5e35ef9970c994abf92a91cf7e84c2d3"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/UserController.php",
+      "sha256_git_blob": "90848784e2f6a5e922b922c04f5ade6a7691bafb3507807634736afbb2cc726a"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/VoucherController.php",
+      "sha256_git_blob": "3cab98d5340b02c546c99fb5b3d04f86a54114f1bd7945f19bbcd21ccdff7f79"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/WeighbridgeController.php",
+      "sha256_git_blob": "88bdf184f4524c6a7b316decd1a919657cc9b63706920035699be3044c543984"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/WorkerController.php",
+      "sha256_git_blob": "f00e7ad1511f264c46cd1f07c0f8aabae9ae6beb1177821c0739e58a791c4978"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Api/\u062b",
+      "sha256_git_blob": "3e5d0ec6df8a262ba6a9762256f417206f9ed90eee5714db30c23393c8c72527"
+    },
+    {
+      "path": "backend/app/Http/Controllers/Controller.php",
+      "sha256_git_blob": "25d1c1ef8e6cc8a376553faacfba2b07d9dfaee9bdbb84f14f77517580e9deb1"
+    },
+    {
+      "path": "backend/app/Http/Middleware/AuditPrivilegedMutation.php",
+      "sha256_git_blob": "f86655e0ac5a9171367d7acf4536f22ccc200d765a5accb3a550981a2fdcbf0e"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnforceTenantScope.php",
+      "sha256_git_blob": "77df9acb772cd460e0a43fd7093be8c1a2c3f7b4fa242fd7bad73559e1bdda6e"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnforceUsageLimit.php",
+      "sha256_git_blob": "01a299504ec3804b2187f786276ab378ed2aec26e5acd50e7e5ef342db30db4a"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnsureCompanyContext.php",
+      "sha256_git_blob": "9b4d7511f0b311000a923d4d8c4268ab8511a9eaa0a658c1bc45860c10b25c81"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnsureFeatureEntitlement.php",
+      "sha256_git_blob": "390289c7efc7dc6cd43a957bcd1132fc2d551fe0aca2ff28320ab5318fd2181e"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnsurePlatformAdmin.php",
+      "sha256_git_blob": "7edaaf49a300b1d9a886f373364f2834e6b6e940991b610a6c9d430b7876bc4f"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnsureRoutePermission.php",
+      "sha256_git_blob": "7b65c4a295c5b49bbe1a8b0954cd6046b33291713263f95d2a8470a88a17910d"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnsureSubscriptionAccess.php",
+      "sha256_git_blob": "632c6d38210870ac8799ca387c561198fb78b9b5b5a4a2495f67d5829a3808df"
+    },
+    {
+      "path": "backend/app/Http/Middleware/EnsureSupportAccess.php",
+      "sha256_git_blob": "f23f2289a9577bc97fc143316ff1cb1fefa67a992d1197d166a5fbd1fd47f941"
+    },
+    {
+      "path": "backend/app/Http/Middleware/ResolveAuthenticatedContext.php",
+      "sha256_git_blob": "48c8421df470a767ded757bea73dee4e76da8fbab555a9b2727dca8995d31092"
+    },
+    {
+      "path": "backend/app/Http/Middleware/StoreRequestContext.php",
+      "sha256_git_blob": "9c7a41084945b44a62baed11b7c16352554e7a2af4fe0dc5aaef7b83b3b9b0f8"
+    },
+    {
+      "path": "backend/app/Http/Requests/StoreShipmentCostRequest.php",
+      "sha256_git_blob": "2c303c400297155853163141324867f1d9b9af0fb2ee51d7b3be4f5c5f9226bb"
+    },
+    {
+      "path": "backend/app/Http/Requests/StoreShipmentRequest.php",
+      "sha256_git_blob": "f02f4b9999ae0257aab4c31cbde2a8a44eca7ce3dc0f92e88ca72892965c35a6"
+    },
+    {
+      "path": "backend/app/Http/Requests/UpdateShipmentCostRequest.php",
+      "sha256_git_blob": "f2d7631652e976d65e434e2e0ace739083399717b7256c1514b8fe6aaad16a82"
+    },
+    {
+      "path": "backend/app/Listeners/AuditListener.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Listeners/CreateInventoryListener.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Listeners/CreatePurchaseInvoiceListener.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Listeners/NotificationListener.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Listeners/PostPurchaseJournalListener.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Models/Branch.php",
+      "sha256_git_blob": "81f8ba7c2c805e5d7931c6bf2031f13a5fb864e6156457a25a95cfef97998df5"
+    },
+    {
+      "path": "backend/app/Models/Car.php",
+      "sha256_git_blob": "f75c1c11d3d06e630d80eb63a35d98f8d99bea7a54bbe68909dd2e819ba15bee"
+    },
+    {
+      "path": "backend/app/Models/Customer.php",
+      "sha256_git_blob": "4dda7def06ec4df305385c6cbbd72ff11f88896e2fc3445ed143f599181ecc2b"
+    },
+    {
+      "path": "backend/app/Models/Driver.php",
+      "sha256_git_blob": "20e8619206936501ac8c8af752e9881b5e6776cfd0306d835ab0a138735c684a"
+    },
+    {
+      "path": "backend/app/Models/FixedAsset.php",
+      "sha256_git_blob": "428e39fc82c890df08f04cb38aaaaf0dd6f4a3bcbc20a39e43771e238065ddf5"
+    },
+    {
+      "path": "backend/app/Models/FixedAssetCategory.php",
+      "sha256_git_blob": "92bbb6d009c76b9555b861225ee71a5d78d10c1e532692c69d7d3a8edf4a7d56"
+    },
+    {
+      "path": "backend/app/Models/FixedAssetDepreciation.php",
+      "sha256_git_blob": "3937d0057ddbb92a835643f4a25b62e271f5f0d5125745ca2550fe5386c86bf1"
+    },
+    {
+      "path": "backend/app/Models/FixedAssetMaintenance.php",
+      "sha256_git_blob": "fb3866e48b93d0b258a920849adb408cd69860bc67ed8805ab0f171efb9e0a15"
+    },
+    {
+      "path": "backend/app/Models/FixedAssetMovement.php",
+      "sha256_git_blob": "b9874abb8a7e17b20f23db78b7fe16a4db22ee3aecfddaa9b7ff37994ab95e59"
+    },
+    {
+      "path": "backend/app/Models/Item.php",
+      "sha256_git_blob": "6720bfe1ee32a0873db2f42a634e9ddb0932358f8bd8ce95d4f67b966b3fc8f5"
+    },
+    {
+      "path": "backend/app/Models/ItemCategory.php",
+      "sha256_git_blob": "79b4078f4493244840c30ab94e399df7534a56fb7048e75e936eeb4aae0ecd97"
+    },
+    {
+      "path": "backend/app/Models/Permission.php",
+      "sha256_git_blob": "36da5046006dfa00fe8057127fe773d1ee49aade079aaf6ae6e525c29032e8bb"
+    },
+    {
+      "path": "backend/app/Models/PurchaseInvoice.php",
+      "sha256_git_blob": "a3c1fc6f9d37358ef69625b3ee9ffc757b3a32c49fa98c2d9f1e9a42498912c8"
+    },
+    {
+      "path": "backend/app/Models/PurchaseInvoiceLine.php",
+      "sha256_git_blob": "1f9f26709d6de2569f4d0dec17aecb743fe692f30bd8d9d6d6ce45835b2919c0"
+    },
+    {
+      "path": "backend/app/Models/Role.php",
+      "sha256_git_blob": "4e6f2de9b8c7a6ce559cd1effef1528109f4ca6904f299454f2ae6e0ab6b876f"
+    },
+    {
+      "path": "backend/app/Models/RolePermission.php",
+      "sha256_git_blob": "1ebf6f76e2640dbc170b2e2ddc26ee0cbe3f97fed13370d74ba5a5ae7da6f48b"
+    },
+    {
+      "path": "backend/app/Models/SalesInvoice.php",
+      "sha256_git_blob": "2deb79fde0e80125dc42f0a0bf283221af1fe91a17a8ed65a4acec4547532c29"
+    },
+    {
+      "path": "backend/app/Models/SalesInvoiceLine.php",
+      "sha256_git_blob": "8c503a7e0a0a16ed6eddbeb5b070817d8bd68721ed09d1fc7bce4276105d860c"
+    },
+    {
+      "path": "backend/app/Models/SalesLineSource.php",
+      "sha256_git_blob": "1dfafc155c6bdc47ab677bad76f06944b8671727b8e75c653dc80b40a2c5819a"
+    },
+    {
+      "path": "backend/app/Models/Shipment.php",
+      "sha256_git_blob": "4f1aca377899e856addd35b821cd8a5c7109b5ffe7c51a3f3e4b53ccb765a521"
+    },
+    {
+      "path": "backend/app/Models/ShipmentCost.php",
+      "sha256_git_blob": "7e79a644147bf9c76b265b0c82ac39fc43ac66ff2924e160338f49553d280e08"
+    },
+    {
+      "path": "backend/app/Models/ShipmentItem.php",
+      "sha256_git_blob": "93d0c4ae18014b9e97be87ca03f1acb1c7aa16caac3f4648f3e9726d2040f779"
+    },
+    {
+      "path": "backend/app/Models/StockMovement.php",
+      "sha256_git_blob": "ab3dc44ad7dc2774be2462f7b2fde64eee530a04db64787a23302b4ff9e2a9f6"
+    },
+    {
+      "path": "backend/app/Models/Supplier.php",
+      "sha256_git_blob": "2a777a00b94ef904dc85ff869671d22ad0205bb0e43583b23044dfa1d9b0d43f"
+    },
+    {
+      "path": "backend/app/Models/User.php",
+      "sha256_git_blob": "72ea47d75951324d3be6fc76c877377c03ba26bd649f24f6a379fa4e2715bc83"
+    },
+    {
+      "path": "backend/app/Models/UserRole.php",
+      "sha256_git_blob": "5c2b74074f81d50b1af5c29c60a2f975ba89311624bd63423ab0406fb514b959"
+    },
+    {
+      "path": "backend/app/Modules/Finance/Application/CreateExpense/CreateExpenseCommand.php",
+      "sha256_git_blob": "2e89424010d86a3535a6be90a30b9bb812996ca4e2b377c92a78d48a659eeea5"
+    },
+    {
+      "path": "backend/app/Modules/Finance/Application/CreateExpense/CreateExpenseHandler.php",
+      "sha256_git_blob": "ccbb996892421dfc279a65b280afdc83b83819c8ec03661713c19a03318a3263"
+    },
+    {
+      "path": "backend/app/Modules/Finance/Infrastructure/Repositories/ExpenseRepository.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Modules/Finance/Presentation/Controllers/ExpenseController.php",
+      "sha256_git_blob": "2d028ba38c5839e604e90244a986a91bb79163d727a481529f363153218c4c94"
+    },
+    {
+      "path": "backend/app/Modules/Shared/Kernel/UseCaseResult.php",
+      "sha256_git_blob": "603ed7821358465f6be93471b670b32cabd53d01da933d1bab32b105fc3ea082"
+    },
+    {
+      "path": "backend/app/Providers/AppServiceProvider.php",
+      "sha256_git_blob": "296716a654b46443e00a8042c43ae01a78171ca3cbe7ed70567d3ac8773e5dff"
+    },
+    {
+      "path": "backend/app/Repositories/Base/BaseRepository.php",
+      "sha256_git_blob": "dfd897754bcf3946e48429d129da94be56988e9ca1f075b84cb7d609d1aeae1b"
+    },
+    {
+      "path": "backend/app/Repositories/ExpenseRepository.php",
+      "sha256_git_blob": "a9bec6116617d03ffb14b36fb6819536f01f21dff6e9bb5dd5acc802e87cb97a"
+    },
+    {
+      "path": "backend/app/Services/Accounting/AccountingContext.php",
+      "sha256_git_blob": "669aeb30c8554bac73e7a947c19f48748078c666d20bc21305d2f033728bd55b"
+    },
+    {
+      "path": "backend/app/Services/Accounting/AccountingEngine.php",
+      "sha256_git_blob": "5f9df00050c63107eec8557de72aa489e098993d1e612e191f723ece83fcac60"
+    },
+    {
+      "path": "backend/app/Services/Accounting/AtomicInvoiceVoucherService.php",
+      "sha256_git_blob": "24b47cf70366ba3af8a51d3c7e3e52b9772a9937a0980d2907b7031a96d43746"
+    },
+    {
+      "path": "backend/app/Services/Accounting/EnterpriseAccountingPostingService.php",
+      "sha256_git_blob": "1e474b889db6cbe63ca6ebbac2894a2f6ac434d4bdf0acfe09a207b7319706bb"
+    },
+    {
+      "path": "backend/app/Services/Accounting/ExpensePosting.php",
+      "sha256_git_blob": "12c6ebeab3fb9b65cd08dd62e2392e9255d04cf4139d9ca2758f63cdad5f88f5"
+    },
+    {
+      "path": "backend/app/Services/Accounting/HistoricalAccountingAuthorization.php",
+      "sha256_git_blob": "fabd603eef9acc1de2796e906845a6c456148940a139a87ec901bed1b809b4d5"
+    },
+    {
+      "path": "backend/app/Services/Accounting/HistoricalDecimal.php",
+      "sha256_git_blob": "d28a25bbf1b9f207db5087747fbfa3f13780ca17edc40a2b80528d23ebb45cda"
+    },
+    {
+      "path": "backend/app/Services/Accounting/HistoricalInvoiceAccountingService.php",
+      "sha256_git_blob": "a3022e2176435dc603dcee22ae18655f90a45ca05f0b984a39dbc33f95e43741"
+    },
+    {
+      "path": "backend/app/Services/Accounting/InventoryCostService.php",
+      "sha256_git_blob": "a1bb84bca93ccdd468b5e6481278e842e5948821ca8e4c3374678133c828dfa0"
+    },
+    {
+      "path": "backend/app/Services/Accounting/InventoryPosting.php",
+      "sha256_git_blob": "f0b58a2368021c92c1eaedd6acb7568857c2dfd0be081c0e0e4a5ecff70c70a5"
+    },
+    {
+      "path": "backend/app/Services/Accounting/InvoiceAllocationService.php",
+      "sha256_git_blob": "9558e02f83707b6829c62203461ee2a2ee29c1ef1ddf18ac46e6002f76bf30ef"
+    },
+    {
+      "path": "backend/app/Services/Accounting/InvoiceSnapshotPostingService.php",
+      "sha256_git_blob": "aeb3907d076c23aa9da676d19722d368765f2e723b97a5c58d0d5edc51376a6f"
+    },
+    {
+      "path": "backend/app/Services/Accounting/IsolatedHistoricalAccountingGate.php",
+      "sha256_git_blob": "1576b55d2bec61e0dfdafb68057558f342b1281cd658e5bea0bc90175c6414fe"
+    },
+    {
+      "path": "backend/app/Services/Accounting/ItemAccountingResolver.php",
+      "sha256_git_blob": "67160bb2a1b5e725cae83d9790005bd91e013ef1eb79e006af5dfc5a6987100e"
+    },
+    {
+      "path": "backend/app/Services/Accounting/PostingResult.php",
+      "sha256_git_blob": "8539b986ad79cabba8c998bf0e1d5e6fef3b6014cf6fbb6a4f1bf6f68c9d2d57"
+    },
+    {
+      "path": "backend/app/Services/Accounting/PostingSupport.php",
+      "sha256_git_blob": "9aa01ba4e2e34fffc0f282ee6bf5b7b3a031c81a120cdfc47030358b83acd6bb"
+    },
+    {
+      "path": "backend/app/Services/Accounting/PurchasePosting.php",
+      "sha256_git_blob": "db693464a902d00f8da5f979999c802311ff2298acb1c631817febdf2f7e181d"
+    },
+    {
+      "path": "backend/app/Services/Accounting/SalesPosting.php",
+      "sha256_git_blob": "742211aeaa1bc5a5a758d636cbbc3c56f8934eafba1f734213085b5f1ad4d831"
+    },
+    {
+      "path": "backend/app/Services/Accounting/SnapshotReturnPostingService.php",
+      "sha256_git_blob": "07df874c46644f856540f2abc1f31523f25b5e5e1963f0c46c95ffa89d7925c4"
+    },
+    {
+      "path": "backend/app/Services/Accounting/VatPosting.php",
+      "sha256_git_blob": "84f0ce7a7c835691c9d3db4e2f2206a829cfe2b6c7114e6d36025330ef6bc609"
+    },
+    {
+      "path": "backend/app/Services/Accounting/VoucherPosting.php",
+      "sha256_git_blob": "1a3d4e2934007f699fc67ab335707cf932446d76af3181ba1a19ed4435000c9c"
+    },
+    {
+      "path": "backend/app/Services/Accounting/WorkerPosting.php",
+      "sha256_git_blob": "f4b5319417543acdb92200bad9859c8aaffc1252d46bbbeb25561f0637402235"
+    },
+    {
+      "path": "backend/app/Services/AccountingService.php",
+      "sha256_git_blob": "106940b46d13d54e20922e644342cd0bdd4d6d6473ef4cc59b440bc28b737d8e"
+    },
+    {
+      "path": "backend/app/Services/ApproveShipmentService.php",
+      "sha256_git_blob": "32c043e2b6d074d8263ff71e2bf948b6cac52c9d22143cd913111ca5d8e56512"
+    },
+    {
+      "path": "backend/app/Services/AuditService.php",
+      "sha256_git_blob": "8bff8fbbd81c284182a2a8a7949c4e6d5148990851dc889ef728e1ba2d5a536f"
+    },
+    {
+      "path": "backend/app/Services/Auth/SessionContextService.php",
+      "sha256_git_blob": "1f5d9ac61b8ffcb1af5724dc526d5581cb139f538bed4310ec406d11271a2071"
+    },
+    {
+      "path": "backend/app/Services/CommercialDocumentService.php",
+      "sha256_git_blob": "d3d159fc247fe945642ef0e5c61ee2c3fc92f109fd13d5ecc2bab19c5d6ecfca"
+    },
+    {
+      "path": "backend/app/Services/CommercialReturnService.php",
+      "sha256_git_blob": "b4cdf18b15edbc082733dc3f77ecd1e9494ac66f4add16d32f32135b00df955b"
+    },
+    {
+      "path": "backend/app/Services/DefaultPartyService.php",
+      "sha256_git_blob": "dd5159ab12b2338feb85b8b547e167a6d021f654b33e07b13d2e00381b60ba28"
+    },
+    {
+      "path": "backend/app/Services/Demo/DemoCompanyInstaller.php",
+      "sha256_git_blob": "1b80af1da547c785d07a74f81753cd4a513b89a6665e324ed78923fbb2c1c1d9"
+    },
+    {
+      "path": "backend/app/Services/Demo/DemoExpenseTypeService.php",
+      "sha256_git_blob": "e876e80d57105bf2d908caee7cb437ae9f883e993fbc4edb20b0f4e27ce4f31a"
+    },
+    {
+      "path": "backend/app/Services/Demo/DemoIntegrityService.php",
+      "sha256_git_blob": "5f8359c6d793ed3c3bbd7ebe2b0479c416d0e883d79d2392906494868fc84ab6"
+    },
+    {
+      "path": "backend/app/Services/DocumentNumberService.php",
+      "sha256_git_blob": "467223946dc01e2897968c898c578c23ec0b99ce95b87d12ee84420ee1e95460"
+    },
+    {
+      "path": "backend/app/Services/DriverCostSettlement.php",
+      "sha256_git_blob": "565e7714d4fd79f34dcd4d42e34047b8d3d2524185e2bd66ec0abeadd33bd79b"
+    },
+    {
+      "path": "backend/app/Services/DriverSettlementIsolation.php",
+      "sha256_git_blob": "f37180e944c718a66c54beb671ef79ffcbffb12223000a9102194619b5e481ef"
+    },
+    {
+      "path": "backend/app/Services/DriverShipmentStatement.php",
+      "sha256_git_blob": "a232ba384f0bc7a4fcec33e3ecc1cc5b679c26546e3920115af2c93d527ebea1"
+    },
+    {
+      "path": "backend/app/Services/EnterpriseInvoiceService.php",
+      "sha256_git_blob": "68dbcdf6bbabe92889605fb409e8230fb1c7e1d70b87a2b04f25017b78b2ba5f"
+    },
+    {
+      "path": "backend/app/Services/Entitlement/EffectiveEntitlementService.php",
+      "sha256_git_blob": "68016cad3ebbaf885890dcfe3965aba0c7fc7073006adb03cf01b4c56daaea0d"
+    },
+    {
+      "path": "backend/app/Services/Entitlement/EntitlementSnapshotService.php",
+      "sha256_git_blob": "b8132183d1ec89ec8fb65f824948f9758b1649d21f93cfebf8027886ab6c4078"
+    },
+    {
+      "path": "backend/app/Services/Entitlement/FeatureCatalogService.php",
+      "sha256_git_blob": "3e705c58d560efadc6c25fcc124bbb8c7d415ddce44aa4eb9b74e7af8e6cf0e9"
+    },
+    {
+      "path": "backend/app/Services/Entitlement/UsageLimitService.php",
+      "sha256_git_blob": "7d1ccfb4df1b78766400354f9360819a3746a3422d89e363f7e85d64a442c71a"
+    },
+    {
+      "path": "backend/app/Services/EntityAddressService.php",
+      "sha256_git_blob": "e0dfc943fbab57b4721e1717c673a8199eb192b338359d5f508327a24de642cc"
+    },
+    {
+      "path": "backend/app/Services/ExistingItemUnitContract.php",
+      "sha256_git_blob": "dce867391a2d981de00b1eabe6ac18350d36aa263abc56da4123e69a7bee5097"
+    },
+    {
+      "path": "backend/app/Services/FinancialAccountService.php",
+      "sha256_git_blob": "7cbec5770bf47bd0c0353c69deed44567f55b8e5cd0fd9b90b73fecc9e1ab4f7"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetDepreciationRunService.php",
+      "sha256_git_blob": "82bc6459220efbc2462e5fda9dc1c32a973c1c99c44e215a8fb3c8d982c666ef"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetDepreciationService.php",
+      "sha256_git_blob": "c4de6fba572962eb1d84a5dce2a42744907665f71320b5fd9d8e1fd7f55a76d4"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetDisposalService.php",
+      "sha256_git_blob": "4739617336509a81fe57a47fa45135321cc876df1142c15a62e023b4ccdfe847"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetMaintenanceService.php",
+      "sha256_git_blob": "68121ea21db221a5e1a66da10b25ad882cf992879b5b945bea3bd31de7507c5e"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetPurchaseService.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetReportService.php",
+      "sha256_git_blob": "8cbe4cb71c78f3c49b2ee2b46ab55ef79d9adaf4fefc57b5768cd51c58b62c4d"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetSaleService.php",
+      "sha256_git_blob": "e926d3c15080d034ff5e9dd3149a416b8f0f15b4e9d574e7b947486a8478a62a"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetService.php",
+      "sha256_git_blob": "0312ecd6468a2d12aa999d6e8aa5016a38563fee12ef5b4996eb5ce4f833e122"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetTransferService.php",
+      "sha256_git_blob": "01d631687a383f8b7acd6506177f55d4f61fd12dc3d7189f51e90c5f0c32dcd3"
+    },
+    {
+      "path": "backend/app/Services/FixedAssets/FixedAssetYearEndService.php",
+      "sha256_git_blob": "32f3317207c5b199d288794ce3debff8e87f56cf888020c8324e746d5dd59af7"
+    },
+    {
+      "path": "backend/app/Services/InventoryLotService.php",
+      "sha256_git_blob": "f2dcdb67ac1d0c0f037a0370e4f0503f5ee99390af7d30bc32f7b7e8c583929e"
+    },
+    {
+      "path": "backend/app/Services/InventoryLotValue.php",
+      "sha256_git_blob": "cbf7767fc44b0471237e6add4c6ba9a4bfe461434ca4905db1a85da3423773ac"
+    },
+    {
+      "path": "backend/app/Services/InventoryOperationService.php",
+      "sha256_git_blob": "1948db40afbdf61c5e2165fb51dbfd67b19fc70b038a94b0828db34ee9385cc0"
+    },
+    {
+      "path": "backend/app/Services/InventoryPostingLocks.php",
+      "sha256_git_blob": "6ebf0f14d6c5d0fe18291843349a2433b6b64dcb9e7dcabb9c12d2bbf60198fe"
+    },
+    {
+      "path": "backend/app/Services/InventoryService.php",
+      "sha256_git_blob": "6605b4c84db6587981036ab6888c3801eec8a4bc8736b940b575983b9fdf2725"
+    },
+    {
+      "path": "backend/app/Services/InventoryTransferTransactionOwner.php",
+      "sha256_git_blob": "20a9b975cfd3c34b98c326cd32bf6bea3e6d2bdeb3e1881a49118d91e4dee985"
+    },
+    {
+      "path": "backend/app/Services/MigrationCenterService.php",
+      "sha256_git_blob": "d6fc5212a96058364cfe9c9483db1603c07dd2503364b9606a70b723424dd12f"
+    },
+    {
+      "path": "backend/app/Services/OpeningBalanceService.php",
+      "sha256_git_blob": "c9837dfb6420ea5ffe8a489ba19a967d1af300b2a27440226c57c47504c2ab93"
+    },
+    {
+      "path": "backend/app/Services/PartyBranchScopeService.php",
+      "sha256_git_blob": "e26c0d4119268fffc34bd1bfd7e00950b87b5f54deb26ca42113191966d91720"
+    },
+    {
+      "path": "backend/app/Services/Payroll/IsolatedWorkerCreationRequest.php",
+      "sha256_git_blob": "eea09c35f0b745de9191c285c222005f361662eb1e6a058db5c39c48b729c457"
+    },
+    {
+      "path": "backend/app/Services/Payroll/IsolatedWorkerLoanSettlement.php",
+      "sha256_git_blob": "bd3633016987811343bfc9c9c76c4d56af4c57381beae9a17f190cc1dca14508"
+    },
+    {
+      "path": "backend/app/Services/Payroll/PayrollApprover.php",
+      "sha256_git_blob": "ae969a8fc5a8de0e76f95551cfdeed09f594dcfd3c0bcaf58a1093e5dc862994"
+    },
+    {
+      "path": "backend/app/Services/Payroll/PayrollJournal.php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/app/Services/Payroll/PayrollJournalCapacity.php",
+      "sha256_git_blob": "f1344dc5b66b63e2e992c3edd9614478c4046e50c132a30d81f132837d4f8032"
+    },
+    {
+      "path": "backend/app/Services/Payroll/PayrollPayment.php",
+      "sha256_git_blob": "002980c1343e2a95dc3fb381b9a8ababd8758a90523b2a9d3df06115cf3ca843"
+    },
+    {
+      "path": "backend/app/Services/Payroll/PayrollService.php",
+      "sha256_git_blob": "e21cabde8effb7e55cec9fba6c4b10981774668887a159c895de2357dc3251cc"
+    },
+    {
+      "path": "backend/app/Services/Payroll/SalaryCalculator.php",
+      "sha256_git_blob": "22fb988f74efdbccdf3f4d81206ec6e7ed4d444e8a69b0a92740444db49c412f"
+    },
+    {
+      "path": "backend/app/Services/Payroll/WorkerAccountingSupport.php",
+      "sha256_git_blob": "5eebe7cc4ab5391b6dcb2e4a084a5664a9ea5bc8e0a49b77ebd1202e815e03e7"
+    },
+    {
+      "path": "backend/app/Services/Platform/PlatformAuthorityService.php",
+      "sha256_git_blob": "8e708ae5003f7e0bfbbb3c1eabf003f0a3e5821e427d4958eac32bfdcd43d0f8"
+    },
+    {
+      "path": "backend/app/Services/Platform/PrivilegedAuditService.php",
+      "sha256_git_blob": "6b0ee575dd1575e46a05fce00556000267ea780b057adbcab0e7ac981fd7b0c0"
+    },
+    {
+      "path": "backend/app/Services/Print/ChromiumPdfRenderer.php",
+      "sha256_git_blob": "9a4c58b6bfc8d4b2e88f8dd0961ba5540d5c301eb8a491762b1dc1f371a8f1a1"
+    },
+    {
+      "path": "backend/app/Services/Provisioning/CompanyProvisioningService.php",
+      "sha256_git_blob": "73bab0da1468b5d922b45a3137ed5e53930c2ee9b9cb4f4cd304e9bc93899817"
+    },
+    {
+      "path": "backend/app/Services/ReportCenterService.php",
+      "sha256_git_blob": "64b93151ebc47ae0a690d7e313d4869e2cf9d9bb53d088359b09b02ec36c593e"
+    },
+    {
+      "path": "backend/app/Services/SellShipmentService.php",
+      "sha256_git_blob": "93c6cb3ddd3ceb054f993f88d113b577120c1cd1f5f3d5ba9bd0f9e699169c6a"
+    },
+    {
+      "path": "backend/app/Services/ShipmentAllocationLedger.php",
+      "sha256_git_blob": "644e96b010b7f23f2654409fde4686eb3e650d5f1065d3c3c9d594a32942cfdb"
+    },
+    {
+      "path": "backend/app/Services/ShipmentAllocationPlan.php",
+      "sha256_git_blob": "4861e8d0a6d62b027ff80d6b80b4d3a0132a8a3e57ae6b29976486bbe1cc21a9"
+    },
+    {
+      "path": "backend/app/Services/ShipmentCostDistributionService.php",
+      "sha256_git_blob": "bf0757de1fa89518a857e2bffb3470352e4e3ef6906d05f3a0be06473c3c67fb"
+    },
+    {
+      "path": "backend/app/Services/ShipmentCostPayee.php",
+      "sha256_git_blob": "3eca71e9387aadc8c3bd26aa2b021a6eb8c2d333d50f5764baa0fc92fbe2de02"
+    },
+    {
+      "path": "backend/app/Services/ShipmentCostReadIsolation.php",
+      "sha256_git_blob": "96bb9303dae9c879ccd7cede9f2dada02483531228c1e8f36836892383d90866"
+    },
+    {
+      "path": "backend/app/Services/ShipmentCostService.php",
+      "sha256_git_blob": "460ede08a83021a3c8611dd94509eb1987ac0209e0fa666e863261093ab50690"
+    },
+    {
+      "path": "backend/app/Services/ShipmentCostVoucherGuard.php",
+      "sha256_git_blob": "932f94c30966166c7b1b2e5104e25287c83a945f0e8435e762d6e607da6ad483"
+    },
+    {
+      "path": "backend/app/Services/ShipmentInventoryLockScope.php",
+      "sha256_git_blob": "c6f8914f7b09742c8cc3a3f0b8f3ab7d7984649a32aaae0a3fadf83a29676e9f"
+    },
+    {
+      "path": "backend/app/Services/ShipmentLargestRemainder.php",
+      "sha256_git_blob": "23273396252d92e474b013b62a653926f9f4d1bf57af2ca92c8e96b164c32d01"
+    },
+    {
+      "path": "backend/app/Services/ShipmentLineIdentity.php",
+      "sha256_git_blob": "69304b5d58da7620ac871fbc281d6d70548c98ae6c24c7814a54494cdc1ec2c2"
+    },
+    {
+      "path": "backend/app/Services/ShipmentPostingFailure.php",
+      "sha256_git_blob": "c8ef8f9462aa724b428824dd06b413fa867c8e00986e2739acd0e1375b1bef7b"
+    },
+    {
+      "path": "backend/app/Services/ShipmentPurchaseCostRead.php",
+      "sha256_git_blob": "47bf8091400be1fc6c0cb9af4f4c257a387f3e75f68b40b11e85585457560d55"
+    },
+    {
+      "path": "backend/app/Services/ShipmentPurchasePostingScope.php",
+      "sha256_git_blob": "ab27380c91228562fb9c8f3512f36f50ca57efe51122b3b24b11b0bc094e6183"
+    },
+    {
+      "path": "backend/app/Services/ShipmentService.php",
+      "sha256_git_blob": "06f4927451a7f4a9e8ed57c440f34fa03c0d29c7e0bdc57182cbd67706369e71"
+    },
+    {
+      "path": "backend/app/Services/ShipmentTransactionOwner.php",
+      "sha256_git_blob": "cd3b7828678417161c0e33ba13fb4453c7ff047f2aa6bc1fced9fd9ac648998c"
+    },
+    {
+      "path": "backend/app/Services/ShipmentWeighbridgeAllocationService.php",
+      "sha256_git_blob": "18819cf81b5cdbcd6eaca934cb22db4e6d346101fa41ae87451db7d162241eed"
+    },
+    {
+      "path": "backend/app/Services/Subscription/SubscriptionAccessModeResolver.php",
+      "sha256_git_blob": "f8f1d37efab67f7d86515a9f4c53482d7beac71655a9aa2132e7056cb2e32fad"
+    },
+    {
+      "path": "backend/app/Services/Subscription/SubscriptionLifecycleService.php",
+      "sha256_git_blob": "4bc6698df892ba146e57bd2e672903e7f6c63c18cc5499aeea73cfe1d65733d0"
+    },
+    {
+      "path": "backend/app/Services/SulbDocumentSequenceService.php",
+      "sha256_git_blob": "1afe8f080e6549f0fc53d636eb739078aa794a7de46086469acb52a53a99fe5d"
+    },
+    {
+      "path": "backend/app/Services/Support/SupportSessionService.php",
+      "sha256_git_blob": "f0cf77a533ce50a3e2cdb1e42c29e5295b06df75ba9e16dc3e39680405c27c75"
+    },
+    {
+      "path": "backend/app/Services/TaxEngineService.php",
+      "sha256_git_blob": "3b9113708948c48d6068f949a929b337d768ab2e671a16b1821e797194445a31"
+    },
+    {
+      "path": "backend/app/Services/Tenant/TenantResourceScopeService.php",
+      "sha256_git_blob": "e27727bdab56fe9becd760dba737eb49b0b9610064d07215a6eddf56629c1005"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseAdjustmentService.php",
+      "sha256_git_blob": "7e0ed4c6aea53171bf7810b9e6f7b1a6244236fd9360b0f828893567304ce2b5"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseCostContract.php",
+      "sha256_git_blob": "0130e15039eda49adc63740f2dd4a27dded04a0718a3ff28d3ec3929b3ffa7d4"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseInventory.php",
+      "sha256_git_blob": "036cc339345039f0292650dcd0ecd8a6f52699efaab48a0feb81aa69379de6cd"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseInvoiceHeaderCost.php",
+      "sha256_git_blob": "7f34e943d9e4398fff1b81971a34bf69207abb451872219c84c7f90518829125"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseLotCapitalization.php",
+      "sha256_git_blob": "8de625251bfa094510e7875c7099e2295e1e7fc65d4fcfa95f3cdcc0b54f7d04"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseOpeningLine.php",
+      "sha256_git_blob": "bcecd800aeb262116996c241145885afae136dcfbc291b43dfc20ecf537de1b7"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseProcessingService.php",
+      "sha256_git_blob": "760a862bd9d85a8b8e896277fb54921133b68eafcf30d62d711dcd2970c1226c"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseReturns.php",
+      "sha256_git_blob": "f9ccfef9f5d78c1457ab2f0e5ca3fdfcd2230269d91e3fbd10dfb41c5d2d38f4"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseShipmentAdmission.php",
+      "sha256_git_blob": "7c633fa33d6fb3eaf458e0d9ee68812e1599a947b25a43db7690cf79be90c4cb"
+    },
+    {
+      "path": "backend/app/Services/Uom/BaseShipmentDistribution.php",
+      "sha256_git_blob": "35e9558975926186fa357ffa01af744f1fdef861b1393a7ceda60084514e161d"
+    },
+    {
+      "path": "backend/app/Services/Uom/CapturedDocumentSnapshot.php",
+      "sha256_git_blob": "28bb7a1cc857155b9f572cddfacdfcdf39c99b472f56ec2ff00ee7d6fc36bf74"
+    },
+    {
+      "path": "backend/app/Services/Uom/ContractTestingGuard.php",
+      "sha256_git_blob": "bac9de6d9bf5b6393485bfb317aa2453f767955aede75010410a28bf0ebbb878"
+    },
+    {
+      "path": "backend/app/Services/Uom/DecimalQuantity.php",
+      "sha256_git_blob": "f1c23f48f69cb8984f491de4026f33d0a01ced1c86cc39c83419b9781ed2c1cf"
+    },
+    {
+      "path": "backend/app/Services/Uom/DocumentSnapshotService.php",
+      "sha256_git_blob": "2d00c72a5bb339c621200f13fc09798ac0021826dc30ef63d8bbc938bcc1daf2"
+    },
+    {
+      "path": "backend/app/Services/Uom/InventoryQuantitySql.php",
+      "sha256_git_blob": "f20680212ee5389bd8ac1269911c28f92627127a0b455ce7ab3e0ef1d1730c38"
+    },
+    {
+      "path": "backend/app/Services/Uom/ItemUnitService.php",
+      "sha256_git_blob": "8ee1f2f511fce8614df1e047a55fe5892cbc9473313b2dab0d9d8373ac6c909f"
+    },
+    {
+      "path": "backend/app/Services/Uom/LegacyCapitalizationEvidence.php",
+      "sha256_git_blob": "0b7dd9a842ca28fac73e94b9cdc2efc3b9ab4d420079ca1f7d92163223b22900"
+    },
+    {
+      "path": "backend/app/Services/Uom/LegacyRecipeInventory.php",
+      "sha256_git_blob": "d3c34b086833157bb9888b117f18460577c04d78859aa70aca705359a0d4a0bb"
+    },
+    {
+      "path": "backend/app/Services/Uom/LegacyWeightGuard.php",
+      "sha256_git_blob": "52bb3d08ada803550527268449654e6829c7c9b4f0a26a12a131ddefd57a600d"
+    },
+    {
+      "path": "backend/app/Services/Uom/OperationalDocument.php",
+      "sha256_git_blob": "d26794677d142cf37988ddb929b22ae66f588d7b239b4b7fc783afb0a9d086c4"
+    },
+    {
+      "path": "backend/app/Services/Uom/OperationalTransactionOwner.php",
+      "sha256_git_blob": "6462d024cfed611a099456e44aefa4e20d5ef4997edbce9e5c906cf6a7a2e254"
+    },
+    {
+      "path": "backend/app/Services/Uom/OperationalWriteGate.php",
+      "sha256_git_blob": "91c5d4563f6d5f27e6f85f9a3f0cc9582585d4ee84587faa3d08191c444f237b"
+    },
+    {
+      "path": "backend/app/Services/Uom/ProcessingExtraCost.php",
+      "sha256_git_blob": "8a26e0c82020ccb553132137a42780830f30bb16440701c7d83cf0dc40e52322"
+    },
+    {
+      "path": "backend/app/Services/Uom/ProcessingRecipeService.php",
+      "sha256_git_blob": "9b2003ea8c9682161b87f1e2ef4931262baac5ff795da4ac13c560b4e037c6f4"
+    },
+    {
+      "path": "backend/app/Services/Uom/ShipmentBaseLine.php",
+      "sha256_git_blob": "5a87c34a8b22fb77b0e3e7eb81e1c1285e1e5d0761cf8185c718f6294784e91f"
+    },
+    {
+      "path": "backend/app/Services/Uom/ShipmentCostBasis.php",
+      "sha256_git_blob": "4959ab30f61d19436279877d8053b1ac03e0c836896efc0b4e4adf81b4aa27ac"
+    },
+    {
+      "path": "backend/app/Services/Uom/UnifiedInventoryReader.php",
+      "sha256_git_blob": "e324bf7144b0f452835b9e35adc47eef2b817bdca44a0ed3630e9f5d397617de"
+    },
+    {
+      "path": "backend/app/Services/Uom/UnitCatalog.php",
+      "sha256_git_blob": "26bab2e0747d2cccda98fb795a07b7cf1fb2635dbc4b847aa6f3ee7d3a01ea4f"
+    },
+    {
+      "path": "backend/app/Services/Uom/UnitPriceQuote.php",
+      "sha256_git_blob": "386b321216f665e5a5a617aaf468cd93891a204ce31c3bd507e9ba053b37c19b"
+    },
+    {
+      "path": "backend/app/Services/Uom/UomAuthorization.php",
+      "sha256_git_blob": "2c1c2a726f4d2eb39e166a682cd093870a40e2b5e9236248df83933b3939874d"
+    },
+    {
+      "path": "backend/app/Services/WeighbridgeService.php",
+      "sha256_git_blob": "06faed5a4163e98f0d54959cc326afa28d33c45ce8d65c1d25d9f2d8bc5fb75d"
+    },
+    {
+      "path": "backend/app/Support/ApiExceptionMessage.php",
+      "sha256_git_blob": "3e5d95d919d520878f8bc23c71d5d40e31ff4ae12c1a0781820fa6f16b149124"
+    },
+    {
+      "path": "backend/app/Support/DatabaseIsolation.php",
+      "sha256_git_blob": "581eb375d45cfd9f0423604f093d5c6f67f440b688b9d3e40b27015aed596b99"
+    },
+    {
+      "path": "backend/app/Support/TenantScope.php",
+      "sha256_git_blob": "74048bda0c824c1f33ff940fa996e69816862c942d45b140f4a94201dc7d16e8"
+    },
+    {
+      "path": "backend/app/Traits/LogsActivity.php",
+      "sha256_git_blob": "915f57235f96c9833794c1cbb7125085dcd4ad4fa88461d5379dd3f17a05d5ff"
+    },
+    {
+      "path": "backend/artisan",
+      "sha256_git_blob": "f91a517c0c5d3a904c3f390933964a5e08ec1fc68146882730daac4aca4ffcec"
+    },
+    {
+      "path": "backend/bootstrap/app.php",
+      "sha256_git_blob": "52ee9ac91f1fc260191b388e0065a07e811e48b1a2af48b7abc1103d3da0ed8f"
+    },
+    {
+      "path": "backend/bootstrap/cache/.gitignore",
+      "sha256_git_blob": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "backend/bootstrap/providers.php",
+      "sha256_git_blob": "f720e185207a343d4c19fc99dbb317a4187efbcd7d38a303a695bbdd77ffb943"
+    },
+    {
+      "path": "backend/composer.json",
+      "sha256_git_blob": "36e9b6bb03c0667cf45465fb179f4906a848ffa240b8a667af1df82e5c403c75"
+    },
+    {
+      "path": "backend/composer.lock",
+      "sha256_git_blob": "afecf70a9e0a9e815cc58267a46ae04eef5c2a1a8147af767029801446469310"
+    },
+    {
+      "path": "backend/config/app.php",
+      "sha256_git_blob": "78dcd36b226fd7b24057cb95f567cb6e96561c2406653892d8aef6dcea8461e4"
+    },
+    {
+      "path": "backend/config/auth.php",
+      "sha256_git_blob": "c7e204e9785c9f596d66fb884b493f658f2327f157646bdb4088efd6b3a7773f"
+    },
+    {
+      "path": "backend/config/cache.php",
+      "sha256_git_blob": "ee4ad2bba1edfcff52e9599f37371f2370d0b167cc226ce72d46cdf6edf2dc55"
+    },
+    {
+      "path": "backend/config/database.php",
+      "sha256_git_blob": "02cd62f589b43d33f9ceac740705dac1dec9740eb2bb9e6e202d4b66a15244cf"
+    },
+    {
+      "path": "backend/config/filesystems.php",
+      "sha256_git_blob": "ba7060d7a23e490c3ce830656f6d24ad3ccf5b868e3293f2a12e411959dc5635"
+    },
+    {
+      "path": "backend/config/inventory_transfer.php",
+      "sha256_git_blob": "2d523453dbcb63869c34586af27ecc2da56e205834ee12fd89744ed3cdcad385"
+    },
+    {
+      "path": "backend/config/inventory_value.php",
+      "sha256_git_blob": "1d0b5efc11c6b809fcf16dafa583a2b4d60a1b5d73a6ed7959cf5d1fd3151160"
+    },
+    {
+      "path": "backend/config/logging.php",
+      "sha256_git_blob": "299ec1ba5b5a803c8e20f666ae7628e442e856cc2ff7ac9e2adb17b97e8ad63b"
+    },
+    {
+      "path": "backend/config/mail.php",
+      "sha256_git_blob": "c43ff49a31c5f32ce21eb7159f2a4b3cd2f4074eaed5838d265646dbfedd3474"
+    },
+    {
+      "path": "backend/config/manual_journal.php",
+      "sha256_git_blob": "95dbdb5bc594e6e1614fd5f2bf867e673781318790e126f4e9a0242a69e6b363"
+    },
+    {
+      "path": "backend/config/queue.php",
+      "sha256_git_blob": "6101774da7c8b79af46d0028f2b8b31a484c3f7eda10b76e5b27b6093ad364a4"
+    },
+    {
+      "path": "backend/config/release_write_permissions.php",
+      "sha256_git_blob": "a5b69517d4ad703b481039ec632e7ea5abba321eb767f5a46a724e4cfb86bce1"
+    },
+    {
+      "path": "backend/config/sanctum.php",
+      "sha256_git_blob": "f8ae35944312702e9004765c753e16ec8b0cb0a7bcc3f379efa250bfd7a53753"
+    },
+    {
+      "path": "backend/config/services.php",
+      "sha256_git_blob": "8258c4487eb1d73a97e569eb0e411e3f25368044812df4cba807860432be1d92"
+    },
+    {
+      "path": "backend/config/session.php",
+      "sha256_git_blob": "64272cfbef6f47c65bf857f1c5b1e853700c0d0278de46b86663fd83ef4aeed8"
+    },
+    {
+      "path": "backend/config/shipment_allocation.php",
+      "sha256_git_blob": "b62ce490b86dd842616dfa499e16b60cbbbcf2bc852fde870fcbe83f6d76bd05"
+    },
+    {
+      "path": "backend/config/shipment_cost_read.php",
+      "sha256_git_blob": "6e3cdda9611642275cb72819d71a5819d375a68ae8de70cc07f5a351ac54770d"
+    },
+    {
+      "path": "backend/config/sulb_features.php",
+      "sha256_git_blob": "dc371790e644ff22b3c0b9bf1b78afaea0d0413b9622cc2583501c3b8a3b8c30"
+    },
+    {
+      "path": "backend/config/uom.php",
+      "sha256_git_blob": "592637817d3a7d80c9f5d85b2ad1f584197ae92c41efa069e4b2cf6582098969"
+    },
+    {
+      "path": "backend/database/.gitignore",
+      "sha256_git_blob": "e758642d95e83e907e010b6e46b07b3f953c7cef11fe5ebefc2a77b9d7b4d5f7"
+    },
+    {
+      "path": "backend/database/factories/UserFactory.php",
+      "sha256_git_blob": "50bdc543f1b09d1a57260be55ad0e1a68aee4b34f63e1109dc94d9bcd3080526"
+    },
+    {
+      "path": "backend/database/migrations/0001_01_01_000000_create_users_table.php",
+      "sha256_git_blob": "10d79883bc08ce46510f9ad8b1830b4d06d586dc56ae2c8bac3b3e491f69a90f"
+    },
+    {
+      "path": "backend/database/migrations/0001_01_01_000001_create_cache_table.php",
+      "sha256_git_blob": "fbb4665e5a977e71df4e74ec75b3c06ca4f17ad0de7138fe9786639189978e77"
+    },
+    {
+      "path": "backend/database/migrations/0001_01_01_000002_create_jobs_table.php",
+      "sha256_git_blob": "df4910687180313a14a3f96a8bddd808ae145ed1b107cd772caf865c0dc2b746"
+    },
+    {
+      "path": "backend/database/migrations/2026_06_11_153129_create_personal_access_tokens_table.php",
+      "sha256_git_blob": "c81ecde85ea5072188c468dcaf79776728b6eb8f684d63fc0d88a4908484ca75"
+    },
+    {
+      "path": "backend/database/migrations/2026_06_20_163416_create_shipments_table.php",
+      "sha256_git_blob": "ba40833ec9f261af531bf23f65dcdbc19fde4b8726fcb4ba3e720060d6121338"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_12_140407_create_fixed_asset_categories_table.php",
+      "sha256_git_blob": "bac22a409f42dc1aaaae3de690c46ccfe7ec7326fc5c208cf02dce7209940554"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_12_140417_create_fixed_assets_table.php",
+      "sha256_git_blob": "00162192d9694f2aec8503165618f70d9b81cfd6ffff590dc9eb4d089c7b7973"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_12_140425_create_fixed_asset_movements_table.php",
+      "sha256_git_blob": "a2ebceb349326c29d41886daa39063a4d321799c21938a8766f4a9f73f358577"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_12_140431_create_fixed_asset_depreciation_table.php",
+      "sha256_git_blob": "7dcae23b3a8b97cf74cd1c1ee7439b416c1cd8404130052c92861f75ed368393"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_12_140437_create_fixed_asset_maintenance_table.php",
+      "sha256_git_blob": "a1a8e1fb8724456c9e1b35e1b73efeca5d5830258915b01f07fa918c742736ae"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_22_205130_create_subscription_invoices_table.php",
+      "sha256_git_blob": "46cc8efb1f481f41805ef2d0a35d3e3d70fdabb77c08bb503161308ccd8a48f7"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_22_205139_create_subscription_payments_table.php",
+      "sha256_git_blob": "885b67e7c9870a5a9a0de69bb9abfa5ad4124020b0c732c99c955f267bec5e5d"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_23_103759_add_yearly_price_to_plans_table.php",
+      "sha256_git_blob": "23a44aa6ae561a65b560a503ef3c58880cb7cb763166578a9d5430094c34d067"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_29_000001_create_financial_years_table.php",
+      "sha256_git_blob": "ca4abc48e5ae603ab9bddabf44445844d08ea6e870c8091b546149e4f226e82f"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_29_000002_create_cost_centers_table.php",
+      "sha256_git_blob": "40d6d9af0467d32c9331ca278cfb338fd060fe418f9812550c5c86dcc02f8550"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_29_000003_extend_journals_for_dimensions.php",
+      "sha256_git_blob": "8960a50e546a0531e5114cb21f1bf103012a9176cd551d2bdc3cd1850a7185b8"
+    },
+    {
+      "path": "backend/database/migrations/2026_07_29_000004_fix_branch_code_unique_per_company.php",
+      "sha256_git_blob": "f29eb0cd366e3264f93767e9b19590963b419ad58db42e3233e4ef58038589b8"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_06_000005_fix_roles_branch_permissions.php",
+      "sha256_git_blob": "2c10c84b085c9f884681b20da78c46a9008a778e8abacd8043889e9e0544c9aa"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_12_000007_final_rbac_tenant_branch_hardening.php",
+      "sha256_git_blob": "af5aa7f8b324233cbc94f6e7b54db430f7c9b12b23261ccc832099405e4feac2"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_12_000008_fix_store_inventory_permission.php",
+      "sha256_git_blob": "27e97bef28fe9e09344268bf9199fb90cb68d0bbd4946580f614f164c434e233"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_13_000009_complete_accounting_core.php",
+      "sha256_git_blob": "a9ec21029e8d83589fbba169ccefdbc10b4b4305fb3394d57d19375851ce5c6d"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_13_000010_journal_entry_guardrails.php",
+      "sha256_git_blob": "99abc642efb0318c1b8060d06c65a879e34f94aa35b45fc4d89922e0c3446e8f"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_13_000011_inventory_lots_weighbridge_core.php",
+      "sha256_git_blob": "d28060f4ea01081a1a0df1b18e517ef4feb5141668eed03d876e115fcbac9eb8"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_13_000012_inventory_operations_reports_imports.php",
+      "sha256_git_blob": "22cb67898766971ed1cfbfc56185938dd53875725cdd8ebe1a192bd0358d7c15"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_13_000013_global_erp_financial_architecture.php",
+      "sha256_git_blob": "e54254836656d2c64a6884d842c9e9ed4259001690f37fa3e3417d6583d670cd"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_15_000014_flexible_logistics_weighbridge_invoicing.php",
+      "sha256_git_blob": "7a04eb3ad7bbba0eaa5b7e13da586ba54704438a4bf3f859df1498328ec790e1"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_16_000014_sulb_scrap_enterprise_core.php",
+      "sha256_git_blob": "6e0571470b5cde37eed3cde3c79e558dcd8c6ec01f74439cf051ff815e44581f"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_17_000015_sulb_enterprise_accounting_completion.php",
+      "sha256_git_blob": "9c9fb0c9054e683da306a587f8c57e7cf23ea09f609b0a0beb75a882761b7eb3"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_17_000016_sulb_migration_center.php",
+      "sha256_git_blob": "7d8dc42f1f1c49cb002ebcdeb16e62c27b263ee1ea0dd76322b8e82f8b03424a"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_17_000017_sulb_weighbridge_material_workflow.php",
+      "sha256_git_blob": "738f3f14ac901c301d3f869125bd12a65cdd38bd288cdb8ad8ab2ab56480de31"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_24_000018_add_wave0b_query_indexes.php",
+      "sha256_git_blob": "bb55d8ccd052f7cc9e4aaa3303970bd67479673612cdbbfb4c8427addb1d61ed"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_24_000019_create_missing_session_and_queue_runtime_tables.php",
+      "sha256_git_blob": "2e8692d41deb192dc4076b8e9895cfbe179e7697a32a448a4574cf09aa0709dd"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_24_000020_add_subscription_lifecycle_lookup_index.php",
+      "sha256_git_blob": "23917ec7724ed8eae0bfe0c95c5a838b17f93faa681802a3b266ebad495424f6"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_24_000021_create_entitlement_control_plane.php",
+      "sha256_git_blob": "186ba793530b70bf4e752ca829798485b5cfec90efe188dafa636e632ad5577e"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_24_000022_create_company_provisioning_requests.php",
+      "sha256_git_blob": "29b82cef4d115897eaea7b3811c5f2300a495dfb9604ff8208cdaba48312e989"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_24_000023_harden_platform_support_and_privileged_audit.php",
+      "sha256_git_blob": "4fcfa9d8b909e38ebd4be2e07fae9a9b47b191801291cce15159925149a38ee8"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_25_000024_ensure_company_owner_role_baseline.php",
+      "sha256_git_blob": "8fd3379d54231783de452329222eea674d5ff0a0b1545917f2eee7c854f0ac53"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_29_000025_create_sales_quotations_and_purchase_orders.php",
+      "sha256_git_blob": "b22eeba39ef9039a9a6d4120605436f1a688cba2d09e7868a0197af2d5b6eb23"
+    },
+    {
+      "path": "backend/database/migrations/2026_08_31_000026_add_print_branding_profile_to_company_settings.php",
+      "sha256_git_blob": "c9b0df18712b30e4b898284d041d1c95e65498cafe575bbd222a63157f38796e"
+    },
+    {
+      "path": "backend/database/migrations/2026_09_21_000027_create_central_print_documents.php",
+      "sha256_git_blob": "73d551f42711e7d5e0b5f1f0d4099a701aacc92a70749a26b0e06083d3a2a343"
+    },
+    {
+      "path": "backend/database/schema/mysql-schema.sql",
+      "sha256_git_blob": "2c9a06539b08b5dd838c24061c0e07a33dfa8414d323533bc22b0b3d461a00f3"
+    },
+    {
+      "path": "backend/database/seeders/DatabaseSeeder.php",
+      "sha256_git_blob": "70af526196903339e0043f549f3130006fb2947111791eec5f1db8f2b95a915b"
+    },
+    {
+      "path": "backend/database/seeders/SystemBaselineSeeder.php",
+      "sha256_git_blob": "9bdfdcb7584d74c9e595098aa51a869d97132df0e39319c4c2cd828bae864513"
+    },
+    {
+      "path": "backend/database/seeders/data/system-baseline.json",
+      "sha256_git_blob": "241f6284e89fb066aaff7b97c9da2b89c21ba54687b77c823aabafbb584f451a"
+    },
+    {
+      "path": "backend/database/sql/01_core.sql",
+      "sha256_git_blob": "3d3457859d21f1816af3260786d87b617a395e5a6817e8e8898a7ea8f9eb5a65"
+    },
+    {
+      "path": "backend/database/sql/02_parties.sql",
+      "sha256_git_blob": "9dc13569d2093dc65ad5b16741123f26b2a67315a7bf068cde8c963a01d2a17f"
+    },
+    {
+      "path": "backend/database/sql/03_items_cars.sql",
+      "sha256_git_blob": "64be08b00ba48aab9f4d5cc956a15625190af5884ee1b95557f75cdf0c2cb373"
+    },
+    {
+      "path": "backend/database/sql/04_purchases.sql",
+      "sha256_git_blob": "2c7ebf9bc9ba1f9027f499f1d3c45651057903650d31cd10cd07a166df8fc05e"
+    },
+    {
+      "path": "backend/database/sql/05_sales.sql",
+      "sha256_git_blob": "eff5360dd6701b9efbd0cb5fc254cf7070c0c3340c1a4c6580379cabb21a561e"
+    },
+    {
+      "path": "backend/database/sql/06_stock.sql",
+      "sha256_git_blob": "f4c43a8eb1d43c2305a40759b10cc05ab842cb9cc38a973e86d7bdf52846e9f5"
+    },
+    {
+      "path": "backend/database/sql/07_reports_views.sql",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_13_000001_uom_foundation.php",
+      "sha256_git_blob": "fe1c46fda192480f8c6c82272c04132aa9bf8d81843967b49f7f62fd8d544096"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_14_000002_uom_contracts.php",
+      "sha256_git_blob": "ecf680139ad45e5431e586752c147f6f54562f759b4a9dd0e29ff7b18e0007c9"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_24_000003_uom_operational.php",
+      "sha256_git_blob": "986ad1b537f9bcc08e64b497f4ef002cb755efd66575648481a46f99d1cfd6dc"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_25_000004_commercial_snapshots.php",
+      "sha256_git_blob": "9693a42115c69934259f9e6209187e8f427ef0a8fb456905d38f99117d57ee32"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_25_000005_opening_snapshots.php",
+      "sha256_git_blob": "63853538e9b6585ceec65096954fc09942a1d0359bb52dcd8b6d1cc423f50dcf"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_25_000006_base_adjustments.php",
+      "sha256_git_blob": "3f5f48ddb9318c35a8bc42a7eb7268943ceb027df5aa045549cdb5cba45fcfe0"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_25_000007_shipment_snapshots.php",
+      "sha256_git_blob": "2e8e450618fbd79425bfa29f675170ad989b465394a487b1be1c3286e7663119"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_25_000008_processing_recipes.php",
+      "sha256_git_blob": "ac7465982aa962156336aeff2821431474f47e5cdd0142ee2411fdfffdee40fc"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_25_000009_processing_commands.php",
+      "sha256_git_blob": "7f251e5ef1c4a5c9eb6e7997b658f4a41f8ec34329db2fe3c37d05501a801ca9"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_26_000010_base_capitalization.php",
+      "sha256_git_blob": "ae2e057d1be633f5ff7213f23ed80401043e98644ffc068c5be8ae7eb1726648"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_26_000011_invoice_header_cost.php",
+      "sha256_git_blob": "c15c8f79685d187c6a1d65ea351d6bcb42f989d5831d9e9e95f7faa1d58b878b"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_26_000012_processing_cost_sources.php",
+      "sha256_git_blob": "03ce488d3cb7093697ac3a67e5a20a609f30f137eb7b669d8731d352afc36b7c"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_26_000013_manual_journal_permissions.php",
+      "sha256_git_blob": "99bfd1983fed73253cc9b13fb23dbfeb5b4ac595093865c924a2ad966696914e"
+    },
+    {
+      "path": "backend/database/uom-migrations/2026_10_26_000014_resource_write_permissions.php",
+      "sha256_git_blob": "fee50a376de8f1037b0c58b5b1bc9f4212e22f826071a1a6cc600e9ebc237706"
+    },
+    {
+      "path": "backend/database/uom-schema/foundation.sql",
+      "sha256_git_blob": "3704362577aeec444a5332addf2869016180cfcda9fe7f8d56d581b10f298f79"
+    },
+    {
+      "path": "backend/getPdo()",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/package.json",
+      "sha256_git_blob": "10a54d6736b26384ac68636e11f958360e6d18fb9c41e91e05707a918ad58622"
+    },
+    {
+      "path": "backend/php",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/phpunit.xml",
+      "sha256_git_blob": "493369cfb7feea104da4bec214c2cc6526ca2f1b9d937c50a2961fc59cb61aaf"
+    },
+    {
+      "path": "backend/public/.htaccess",
+      "sha256_git_blob": "b7e379c77639fd56144947dbae84c84eb466d9c686ea81f2f013ae85421da923"
+    },
+    {
+      "path": "backend/public/favicon.ico",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/public/index.php",
+      "sha256_git_blob": "eba77cba39695b6bd091fe5211d481f7ebb2ce2d8d26230b5a609465d0a4aff9"
+    },
+    {
+      "path": "backend/public/robots.txt",
+      "sha256_git_blob": "e5c4b84484ee4216e9373be99380320c25dd94805f99f0a805846f087636553f"
+    },
+    {
+      "path": "backend/resources/css/app.css",
+      "sha256_git_blob": "02db84e827e06d8349293e9797eb8d81465e109e91976775964c4bf873b6fab5"
+    },
+    {
+      "path": "backend/resources/js/app.js",
+      "sha256_git_blob": "101ead936a2281d53dcc064b7e2a2ab0d53b92ef3ef7b34b668673007895c860"
+    },
+    {
+      "path": "backend/resources/views/welcome.blade.php",
+      "sha256_git_blob": "bdb9bb7d2eecceb3581e429545b6ec96014ccab6d0ae83d4c52930e9a15f7d65"
+    },
+    {
+      "path": "backend/routes/api.php",
+      "sha256_git_blob": "215718e7d50e840298efa4af1a77eea83edf063770c79709c43708a99e462c03"
+    },
+    {
+      "path": "backend/routes/console.php",
+      "sha256_git_blob": "80539639c7b01ca35f2f68dd751deb32638d68883ba597cc5fed752519281078"
+    },
+    {
+      "path": "backend/routes/web.php",
+      "sha256_git_blob": "248c7eeeb43bb61ee4fb6603e52b44843c64f72a841d671bcd41871aab23f970"
+    },
+    {
+      "path": "backend/scripts/batch_three_producer_worker.php",
+      "sha256_git_blob": "a01b962015c2778fc006eec14877f4f79c57d862d3e92db8ec8ee7b32f0b58b3"
+    },
+    {
+      "path": "backend/scripts/batch_two_integration_worker.php",
+      "sha256_git_blob": "fb0e6c0c0bf401bd8787b0e2c26d5a123ef213afb7820b3f3b76027941e15bdb"
+    },
+    {
+      "path": "backend/scripts/batch_two_support_sale_probe.php",
+      "sha256_git_blob": "3f82c46754a3df09b0af1c9ad72de1216cddfc022b8db2f5e71670fe1acd6f20"
+    },
+    {
+      "path": "backend/scripts/batch_two_support_void_probe.php",
+      "sha256_git_blob": "3de25f3c942d3e15524d8398da284ed1b99b011166b24d5464b5f208cca383c2"
+    },
+    {
+      "path": "backend/scripts/batch_two_void_cost_probe.php",
+      "sha256_git_blob": "c7e71b16c718b87d07356231157002c3a74b3c66e7f4403ad7ab7e6b33453a77"
+    },
+    {
+      "path": "backend/scripts/compare_release_metadata.php",
+      "sha256_git_blob": "f48ef4c7b1f0b568726f2009b5adbfe033e9ba073edcae66793f81068105747e"
+    },
+    {
+      "path": "backend/scripts/cost_protocol_probe.php",
+      "sha256_git_blob": "6e1e69281ce4eb95874597cc55b41cfc6a0daf2cecb6e1c58db34b53dccdbccc"
+    },
+    {
+      "path": "backend/scripts/driver_gateway_worker.php",
+      "sha256_git_blob": "41a7420858e7964b780967add2c89fc350fa095debf208ce54119763cb007e39"
+    },
+    {
+      "path": "backend/scripts/driver_gl_guard_probe.php",
+      "sha256_git_blob": "54cfda39204a45fbcab1f3294fb7a16531594be5dee676acde101068536c6de7"
+    },
+    {
+      "path": "backend/scripts/driver_settlement_race_worker.php",
+      "sha256_git_blob": "ad162652b4323a7717798c916b0118cb6ee7393a2621b79306649279f2e2c7ae"
+    },
+    {
+      "path": "backend/scripts/driver_settlement_test_cleanup.php",
+      "sha256_git_blob": "48b9b3bca53740ab0cf754ecfbae58a8359a3c468538d6b792eefe365e4e14f8"
+    },
+    {
+      "path": "backend/scripts/historical_accounting_atomic_http_cases.php",
+      "sha256_git_blob": "d8f1b4bdb108112ef1f1fb54fc0e975bb425382a198ea9352c34ff9b841b39dc"
+    },
+    {
+      "path": "backend/scripts/historical_accounting_corrective_http_cases.php",
+      "sha256_git_blob": "57e8eb74ba0eb6156a2a1364fea3d939a860441801c373a6fbf4dcc5fb4d220a"
+    },
+    {
+      "path": "backend/scripts/historical_accounting_full_http_cases.php",
+      "sha256_git_blob": "570965b246ca752f93cc89db184902e8adf56dcd87082dcf646862f39874139a"
+    },
+    {
+      "path": "backend/scripts/historical_accounting_gap_cases.php",
+      "sha256_git_blob": "4532c2454c18ddd15187f589bdc4fc9b40bae5550d68ba71298ac495e776f77e"
+    },
+    {
+      "path": "backend/scripts/historical_accounting_http_cases.php",
+      "sha256_git_blob": "1b08642271cfe52e5ceece1061fd4d39d43a336231605fbac21636a587f70fd4"
+    },
+    {
+      "path": "backend/scripts/historical_accounting_http_limit_cases.php",
+      "sha256_git_blob": "9e3b51724fc9ab0c722bd54e95a66aa76948f0bc205f8be1fbf076c4c6a2d1a6"
+    },
+    {
+      "path": "backend/scripts/historical_accounting_lifecycle_cases.php",
+      "sha256_git_blob": "205fc83211b253c4535edce9ccd081563f89ec6a21fdbb1116d4fdf92c0e8dd2"
+    },
+    {
+      "path": "backend/scripts/historical_accounting_numbering_cases.php",
+      "sha256_git_blob": "29c835c250084fa3d874ef2929c79240ab99a117511ab2e4fa02ccd0444b81e2"
+    },
+    {
+      "path": "backend/scripts/isolated_commit_packet_proxy.php",
+      "sha256_git_blob": "12526235814aac464ead27bd4f77dc0524ba17e8a892897fe02a0c5f50ccabb4"
+    },
+    {
+      "path": "backend/scripts/isolated_commit_post_worker.php",
+      "sha256_git_blob": "f29d072aeb3f8befe091aa75b37ac44f4ec16d9b9c5e24d9e83d0224f31b0904"
+    },
+    {
+      "path": "backend/scripts/isolated_financial_uat.php",
+      "sha256_git_blob": "e8d2a4423e53d3abf9bedfe937a8f516b8538b568e9d379e438927cc45920bfa"
+    },
+    {
+      "path": "backend/scripts/isolated_stock_index_worker.php",
+      "sha256_git_blob": "ee21fe832baeb2bcc39b665d8244321a4bcb2b034b79bf60ef5f71587939a4ad"
+    },
+    {
+      "path": "backend/scripts/official_document_reconciliation_dry_run.php",
+      "sha256_git_blob": "1f46ff54c26656311819bb036c562db374163adfe80a1a6313e65818a2aed828"
+    },
+    {
+      "path": "backend/scripts/prepare_historical_schema_source.php",
+      "sha256_git_blob": "22a7c1c5285c332dc7ad783c6c20251f439b20320f280892a8ce5e6e08cc3f04"
+    },
+    {
+      "path": "backend/scripts/qa_base_adapter_worker.php",
+      "sha256_git_blob": "77f7b45400e79dc3c80f028dee26c9763adcbb3b60bd2003544646d6355e9ce0"
+    },
+    {
+      "path": "backend/scripts/qa_engine_shutdown.php",
+      "sha256_git_blob": "59ba6e65677fcc80efb20127137c4be384d115a117916cb11a217270cfed8174"
+    },
+    {
+      "path": "backend/scripts/qa_lot_upgrade_dry_run.php",
+      "sha256_git_blob": "e50f0d623cd9eec5612597ad117d42f5211ac78835f766b839bc259c4d623673"
+    },
+    {
+      "path": "backend/scripts/qa_metadata_engine_acceptance.php",
+      "sha256_git_blob": "07994b189be05c2bd4fb7a7ab81b2419135f47d62577bbcb742343e097184c1e"
+    },
+    {
+      "path": "backend/scripts/qa_release_baseline_probe.php",
+      "sha256_git_blob": "b96ff3a26a59c92736055567c3d955c2626c01233eb4c867f3fa65ece438738b"
+    },
+    {
+      "path": "backend/scripts/qa_uom_browser_seed.php",
+      "sha256_git_blob": "fb490695b91ed260027a29fabf0c047af4ea6e8d1425bba0f470b6299ca94b72"
+    },
+    {
+      "path": "backend/scripts/release_metadata_collect.php",
+      "sha256_git_blob": "685aa43fd4670c2e893b013b9c9b816e8c12bfa07b8c7b06c95b0ec498ae9e79"
+    },
+    {
+      "path": "backend/scripts/release_runtime_baseline.php",
+      "sha256_git_blob": "59675bbcdd92987e0709ebbf2d9867d1c9002d6f4543ebc9abe8a7a77d587e92"
+    },
+    {
+      "path": "backend/scripts/release_schema_baseline_readonly.sql",
+      "sha256_git_blob": "6032e307c86a49084faf182cc65d3599dfa0fcbfd5ebf4c7b9ea656ceb98b9f0"
+    },
+    {
+      "path": "backend/scripts/release_transfer_support_probe.php",
+      "sha256_git_blob": "1f6f740c6c4c4916d9cf4c06960be79af63fda28938769773f8d1d35d0e882d7"
+    },
+    {
+      "path": "backend/scripts/schema_baseline_audit.php",
+      "sha256_git_blob": "7b9c29fd2a4a1b4ef17ad83fe4c8b4dc6af801c0d3e3f4c4e8974fd228117764"
+    },
+    {
+      "path": "backend/scripts/shipment_cost_read_worker.php",
+      "sha256_git_blob": "0fde79e2b65a72574793bffaac4b0bd956a02d6cf6e807154ac10061705f64df"
+    },
+    {
+      "path": "backend/scripts/shipment_purchase_lock_worker.php",
+      "sha256_git_blob": "41e5514cd783ccd1931e3c5ddca05941f3030c9b70cb33a8649b71ab46c09b1d"
+    },
+    {
+      "path": "backend/scripts/shipment_race_worker.php",
+      "sha256_git_blob": "51d6e1ce4f090a4f43dcc147875e6c44cbd0b39ead6ba9f25a223ff52766ed74"
+    },
+    {
+      "path": "backend/scripts/stock_scope_lock_probe.php",
+      "sha256_git_blob": "722d0cc31603b046ede777abdd656f955465f1cefbc9368eb5d693d227c0738f"
+    },
+    {
+      "path": "backend/scripts/test_historical_accounting_isolated.php",
+      "sha256_git_blob": "6eae56f99d6881b1dfc0e06c285542165523666d62c436a06b324d26fb8f6380"
+    },
+    {
+      "path": "backend/scripts/test_shipment_stage_one.php",
+      "sha256_git_blob": "1cea8f216779425a3e90335cba6794f512bb3ec139c048d1bb40a5942193cbd5"
+    },
+    {
+      "path": "backend/scripts/uom_contract_race_worker.php",
+      "sha256_git_blob": "98347765d761cadd1a2248d167e1719bf4338cc090c41a7d7db4d19b4d71561a"
+    },
+    {
+      "path": "backend/scripts/uom_operational_lock_worker.php",
+      "sha256_git_blob": "f84a6c93d93d2422c0b8e804efde3ce8688085f743460cc7ae27869ed96ca245"
+    },
+    {
+      "path": "backend/scripts/wave0a_readonly_preflight.php",
+      "sha256_git_blob": "476ffc38ec33a1ed26ed6af660c8be230e6cf9a251668e68e0c87ae4a3907a2f"
+    },
+    {
+      "path": "backend/scripts/wave6_financial_year_reconciliation.php",
+      "sha256_git_blob": "22eb9b6819bd86bc10f4edc0c3f602e6e3252e6659149f4d9791926aa6f5ca9f"
+    },
+    {
+      "path": "backend/scripts/wave6_historical_reconciliation_discovery.php",
+      "sha256_git_blob": "7f6cf9c4c17a7d8b786f700c500bff26ea10db93fb3ff120f28fd1cbcae706da"
+    },
+    {
+      "path": "backend/scripts/wave6_historical_reconciliation_repair.php",
+      "sha256_git_blob": "b7c92dd3d2f42a75af4701cab79b76c61ab9644486e5c9e75cd37d6e1efd3635"
+    },
+    {
+      "path": "backend/scripts/wave6_readonly_integrity_audit.php",
+      "sha256_git_blob": "e69928a0a72882af1ac37d19d59cfa764fdb86f7778f6c4b859d01efa8d5395e"
+    },
+    {
+      "path": "backend/scripts/worker_accounting_isolated_cases.php",
+      "sha256_git_blob": "59a48ba79d12142437ee073f151daff74d741c75f9741a4e05efa6c8fcee87ed"
+    },
+    {
+      "path": "backend/scripts/worker_payroll_capacity_cases.php",
+      "sha256_git_blob": "c5ceea9233bf43b89e5e53b2b8629e9b3e385febe9468ad058eed9a622ac1f6d"
+    },
+    {
+      "path": "backend/scripts/worker_request_isolated_cases.php",
+      "sha256_git_blob": "f56b59821478cfd794c07b61bea92c7616059690d01877c80620dfb02beb2099"
+    },
+    {
+      "path": "backend/scripts/worker_settlement_isolated_cases.php",
+      "sha256_git_blob": "590d76fe2167185a79f121ab2d76ec701d89070f5ecf2cece8fc0135b9adcac4"
+    },
+    {
+      "path": "backend/tests/Feature/CommercialDocuments/CommercialDocumentSafetyTest.php",
+      "sha256_git_blob": "aa0d7e013b651492deebdf22715adc960538df3a1853e305aff75315da04d035"
+    },
+    {
+      "path": "backend/tests/Feature/DataExchange/InvoiceImportSafetyGateTest.php",
+      "sha256_git_blob": "5174d65c4de2395ec4a47e4e919a6a118fce7eecf43a9771cc553d40ea300030"
+    },
+    {
+      "path": "backend/tests/Feature/Demo/DemoExpenseTypeServiceTest.php",
+      "sha256_git_blob": "9f01f01ee5a8fd0cf681b3f114a215e2a04842ebfef68a0e758e585cc4d262e3"
+    },
+    {
+      "path": "backend/tests/Feature/Demo/DemoInstallerSafetyTest.php",
+      "sha256_git_blob": "635340477a59b465d684aa3eb6c0299845d1f84a6341871e69ce766a86dc65f0"
+    },
+    {
+      "path": "backend/tests/Feature/Demo/DemoIntegrityJournalBalanceTest.php",
+      "sha256_git_blob": "e66d9023985ffd29a9ac80747f3b1ed776064c3106f49f580516fe34dd18e8f1"
+    },
+    {
+      "path": "backend/tests/Feature/ExampleTest.php",
+      "sha256_git_blob": "aaa4a192fb4aa96d4e81eda06a29968da3d9a73b71026b87a67297e66dd985b8"
+    },
+    {
+      "path": "backend/tests/Feature/ItemUnitsSafetyTest.php",
+      "sha256_git_blob": "25490b6723befa3793ece43e3a9c3a17275494cd7ed478517f35b0088ba78fb2"
+    },
+    {
+      "path": "backend/tests/Feature/PayrollDevRouteSafetyTest.php",
+      "sha256_git_blob": "9b53f91140d0c4815f7c399546be136fbfdd46e66112eb68edb4861ad2bd088a"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseA/ExpenseTypesAndVehicleBranchIsolationTest.php",
+      "sha256_git_blob": "9974f88f43edcfe5ad6e7defe289aca0463b1a763232801e0792f8f26b486096"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseB/PrintBrandingSecurityTest.php",
+      "sha256_git_blob": "915d064ebec86faf2c762c18394f3b46428023ce4aacb77fb9a30e3ff994a3c2"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseC/AccountMappingSelectionTest.php",
+      "sha256_git_blob": "54a39fbd0b39899b4b4ee2669233960460e48bbd40d032734391949802e3a1dc"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseC/DailyFinancePaginationTest.php",
+      "sha256_git_blob": "f7a4e20d38239cfb274550c5f7060865d512b3cb0c2e1094753cf9983b6e54a4"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseD/AccountingReconciliationTest.php",
+      "sha256_git_blob": "116fb3293baedb8c1ac437146b3bb125206b1f2c40a975387aa3b3314f8346de"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseE/P0AccountingCorrectnessTest.php",
+      "sha256_git_blob": "9063d82aa9db7fc9b06f9a5c51039a65acd9e55dcae587b342605200e3dbb716"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseE/P1GovernanceBehaviorTest.php",
+      "sha256_git_blob": "f49ca39a7a6221cff2b7ff3a10fd47ecc3abacd58886daa5783dbddcaa1e672a"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseE/P1OpeningReconciliationTest.php",
+      "sha256_git_blob": "fc4527250ba171c2fcd66fd990a79a429774e43831af6e6705fb83b69e69609f"
+    },
+    {
+      "path": "backend/tests/Feature/PhaseE/P1OperationalReadinessTest.php",
+      "sha256_git_blob": "e1196f64e6e316ae43d10390c2ec54a3e7f6ba0706f7238b3c51d5bbafba4c4e"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/AccountOrganizationSafetyTest.php",
+      "sha256_git_blob": "114f5e4edb50bb0eeef7c043c7bc4a2439fd4c631fe26c68bcbee7f18d60c7d7"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/CompanyOnboardingTest.php",
+      "sha256_git_blob": "73d2e50e072280b97af8d2fa648d44427727574143e9162984ac93fd57abdce2"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/CompanyOwnerUserAdministrationTest.php",
+      "sha256_git_blob": "b87a8997bbc70a9090c02cfca43431f5add529c2d78ae78c45f4cae1e21ab489"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/DowngradeDataRetentionTest.php",
+      "sha256_git_blob": "ee8e17f5eaf3308d0ddef083299db6d4d64f283f8ee6b998ff6482b6ba3ad1e6"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/EntitlementEnforcementTest.php",
+      "sha256_git_blob": "155688544adbe1475a7c6a62f89484315f990185a322b5079839bdf2170b1590"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/ExpiredSubscriptionReadOnlyTest.php",
+      "sha256_git_blob": "492b09d6a71c1d98d734fe5392d80b9f7876a1636d308d5794dd93dd532316e1"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/PlatformAuditTest.php",
+      "sha256_git_blob": "0a84317351a467ca40e39ceb928a7be9f58033925562579b984129e1e820ecb9"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/PlatformRoleIsolationTest.php",
+      "sha256_git_blob": "b462006b4ced9df2d8677bc3f9cc06b8dffd31485a1e900d866887999da2b6a7"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/RoutePermissionNormalizationTest.php",
+      "sha256_git_blob": "1010b9e3ad7b0ebd5bfa280991792320f57ef8090b0c33c3e20f7800fe2155cd"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/SubscriptionLifecycleTest.php",
+      "sha256_git_blob": "e163e2549079f595d53b82d36d4c752a9459b3ac3a3d9ce707eb50a2e4fee2dc"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/SupportAccessTest.php",
+      "sha256_git_blob": "b795d5c093bb85af0e623b135e7ddd02de34d3b0c2b7722f9e4d793eda9898c2"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/SystemBaselineSeederTest.php",
+      "sha256_git_blob": "bfc8a48698bacb84b16e4313645fdf595ba6d154bb835d7f51d9e10a337442ab"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/TenantIsolationTest.php",
+      "sha256_git_blob": "f453844cf935a682de42842f1a323ab0ef9ab0168b96a4434b7159ce69ed7547"
+    },
+    {
+      "path": "backend/tests/Feature/Platform/UsageLimitsTest.php",
+      "sha256_git_blob": "e6d6e05fbe140957cb4accb971100c5c44189aa500b6d6843d22e8fba87d7075"
+    },
+    {
+      "path": "backend/tests/Feature/Print/RoadWaybillScopeTest.php",
+      "sha256_git_blob": "75b9719bc52e487c4b0534727c2f486b6dab82e51cbe67f8094beb6f29bb5968"
+    },
+    {
+      "path": "backend/tests/Feature/Shipments/DriverShipmentStatementTest.php",
+      "sha256_git_blob": "04a73c8fa6c4ba9f4d00081632c1ebb9472cb99c9197ca703467383ad4167b69"
+    },
+    {
+      "path": "backend/tests/Feature/Shipments/ShipmentStageOneSafetyTest.php",
+      "sha256_git_blob": "0788cf045cdacdbed277d334534aee3d83bfbfaff14c161e4bc0d298bc0d70b9"
+    },
+    {
+      "path": "backend/tests/Feature/Wave6/OperationalAccountingFlowTest.php",
+      "sha256_git_blob": "24dcfc16fb4f171895918a03ea6c7207f4a2d77e27e827d2a6d16f8db8139ba2"
+    },
+    {
+      "path": "backend/tests/Integration/HistoricalAccounting/HistoricalMariaDbTest.php",
+      "sha256_git_blob": "5e28eb68cc667c6a0bc8ed5972aac7969f2c0872e602b5f8e790c8a9f6b4dd2b"
+    },
+    {
+      "path": "backend/tests/Integration/Shipments/DriverCostSettlementTest.php",
+      "sha256_git_blob": "ed2a5975a56ac55fcf81d64950d961a28613aa0b5cfd82a0243dd07e65646658"
+    },
+    {
+      "path": "backend/tests/Integration/Shipments/DriverGatewayArchitectureTest.php",
+      "sha256_git_blob": "3aa67525a483e247f889ce9953d0e7fb840050087f2146a5376488b28c9df2ed"
+    },
+    {
+      "path": "backend/tests/Integration/Shipments/DriverGatewayAtomicBoundaryTest.php",
+      "sha256_git_blob": "2d6f8e0f0af0598ce83a735850e88a4ea13eff5900144aa512a455c96265b435"
+    },
+    {
+      "path": "backend/tests/Integration/Shipments/DriverGatewayLoadTest.php",
+      "sha256_git_blob": "b479cb21cfd425550393a52c4b8d716529cfc69e0073b552b4229fd44d2c2e26"
+    },
+    {
+      "path": "backend/tests/Integration/Shipments/DriverPurchaseGatewayTest.php",
+      "sha256_git_blob": "392c75a6443d335ca7d8515085199c5a0eec7181f6caf2973af0307deb9c9aab"
+    },
+    {
+      "path": "backend/tests/Integration/Shipments/ShipmentDeletionRaceTest.php",
+      "sha256_git_blob": "fb0185df3c295685db0e7f3239f6e300fb362142361a60f824877a12e04160a0"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BaseAdjustmentAdapterTest.php",
+      "sha256_git_blob": "a9710edee8bd07f927db3f2f9b55336ab013cc768205fec5d997852fd6686b0a"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BaseOpeningAdapterTest.php",
+      "sha256_git_blob": "7b82011d61e834f0ec212ccb334112931525b06a47569a7edc2081d2afdd38fe"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BaseProcessingTest.php",
+      "sha256_git_blob": "f087026417a0eccec7e8514b8711dafd48b05b1db359dcd4a8e27dd60c56519a"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchThreeAGroupingDesignTest.php",
+      "sha256_git_blob": "92344c7cbf96906f753e3652481296f0c3392136a6f67b31ecb451e9fa50e013"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchThreeARoundingAcceptanceTest.php",
+      "sha256_git_blob": "c30262cb9752f9b9ccadde77e386ac4c662eb14e0d6c0952ed43fddc38766ebe"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchThreeProducerAuditTest.php",
+      "sha256_git_blob": "6f7a79589e525905009dd5b04ce5e6c61561bd239296e411a6820db0bf121335"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchThreeR0PolicyProofTest.php",
+      "sha256_git_blob": "af4269a3677486cae9f0550f084b0fa914df0cea7ebe91ed5c15eed247147d7b"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchThreeRCurrentReadTest.php",
+      "sha256_git_blob": "f637a44c3eafc7da4168aee6dadef7cf8ad611b7ada3e342bda21c3a0d1ec728"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchThreeRPreflightPlacementTest.php",
+      "sha256_git_blob": "3082a250b006d8e74e2256f407a7041e87980bba45b3516357418d4c7e3a8972"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchTwoExternalLockBoundaryTest.php",
+      "sha256_git_blob": "7c5543ede3c4581f0d96e3f292b4dde4fffe0de47e354babd46c60908aced2e6"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchTwoLockIntegrationTest.php",
+      "sha256_git_blob": "4dc548bd82327d59f92d5e7358c079915db66a73c8bbf34300fb11fa6991dff4"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchTwoSaleSupportBoundaryTest.php",
+      "sha256_git_blob": "0a21112d2b467e484c4c613ba775fe49672853997fbd2be58bc8033336a063a2"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/BatchTwoVoidSupportBoundaryTest.php",
+      "sha256_git_blob": "1b32e91c505eb9c2308912ce8c36a5f259395d6cbcef492e8dd4be771eef0345"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/CommercialBaseAdapterTest.php",
+      "sha256_git_blob": "c7cd286cfdc00fea55da2736854f91443f0c01d7e508dd23daad58325a345e21"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/CostLockProtocolDecisionTest.php",
+      "sha256_git_blob": "62e1417ccc6a5a7ac2bfcd6879d5f5f765eee38b17081f2a0208809e62a32f87"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/HistoricalLotBackfillTest.php",
+      "sha256_git_blob": "2d00f19ce09bf3a47020538c40c86909e0b1f70ffc847c8933367cec44414d2a"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/InventoryBatchTwoSafetyGateTest.php",
+      "sha256_git_blob": "7d562101a0ffb73de6a007579a2636b78c5171dc1d691e1fb081715a5d7f214d"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/InventoryLotValueAcceptanceTest.php",
+      "sha256_git_blob": "fdcbd1fa62905378f1ef99421bd3de115e00921b209140f430de2f06cbf41246"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ItemUnitHttpTest.php",
+      "sha256_git_blob": "1dab437dea8644ef230acd05aff61054fd39b8c695d7a90d4c161b0d03843d45"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/LotCrossYearConcurrencyTest.php",
+      "sha256_git_blob": "662376a71edced0b6083f1d68ab258c6cbef2f0ed894715be50017f5b290f550"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/LotForcedDeadlockTest.php",
+      "sha256_git_blob": "8a41ef7b99824f035ac799a3a44450dd7f060c0ef2816e0d7ce8bb79383a3877"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/LotSequencePreparationTest.php",
+      "sha256_git_blob": "27b6928e6b5c4e85fcf781d52c2c283532c0dc342e14506e74d8f6644743ce76"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/LotUpgradeDryRunTest.php",
+      "sha256_git_blob": "9ef26d49b10515f7142c337142033bf1c57d8797d31f8d112d2e15cbe21666e3"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/MixedLotUpgradeTest.php",
+      "sha256_git_blob": "b363dc6d40d8e1e5ba6b3659bd6a62fbca8862062e6798f07e6634e1ce8fad03"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/OperationalCycleTest.php",
+      "sha256_git_blob": "8def2336060a39579096964086576f95528609a3e29bc9c36b18a99f473105ea"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/OperationalPdfTest.php",
+      "sha256_git_blob": "7542fefb8b8639d8e2d1be9990f9c00c0909680819f368f2dd746137094d4519"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/OperationalReadTest.php",
+      "sha256_git_blob": "ab0a48a52e0a739be8b3de3f966a8fd2b4f55ebb72c2e994e186ef13c1d22bb8"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/OperationalSupportTest.php",
+      "sha256_git_blob": "c85c12f4485ee0980709280a78a1f88a60fceb2978da30cee0589e2dcc1bc732"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/OperationalSurfaceTest.php",
+      "sha256_git_blob": "1b67bcf2958122029c7eacdc1ce2ef7ebe7b13af0928190a681eaf21a5753e4a"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/PrivateSchemaMigrationRehearsalTest.php",
+      "sha256_git_blob": "aecd07014422a162040a751a4a7396cf6f89eed2e9630d283e5bff859fcf1d95"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ProcessingRecipeTest.php",
+      "sha256_git_blob": "da81560996b675c9fd6ed268464c61c3f76cd70f42dd1c3917ecbd4a5783c96c"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/PurchaseVoidRollbackClosureTest.php",
+      "sha256_git_blob": "32ae2bf74a29d871a25a0a006e85b9dae8567e744ac9d1aadf67e0d4b96dc0d9"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ReleaseCandidateReadinessTest.php",
+      "sha256_git_blob": "5b3a4c25d9c8a85d48e4edbd7bbadc57215df041a2f10556d495ad622109092b"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ReleaseSecurityClosureTest.php",
+      "sha256_git_blob": "250b753470a96f658b7956341c9b41a741ecee5e6b0a9ee4c400003237bc46f0"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ReleaseTransferLockAcceptanceTest.php",
+      "sha256_git_blob": "98c973f4ffc462e51ea718c922df891f20816920154c2e8071fd316f3045e45d"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ScopedShipmentLockBatchOneTest.php",
+      "sha256_git_blob": "37aa25881c98c4dc2b522fd446cbbf91a934f382d32a1b9f00de9790709e20a0"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentAllocationReceiptSchemaTest.php",
+      "sha256_git_blob": "3b98a969d0fe521ce149555a622bfea5463529861a83320170a682bcdd22138a"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentBaseCycleTest.php",
+      "sha256_git_blob": "cb4e95922956f444474ced29a53516b13a907d53e9b4e6854d4b539d83761a3d"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentBaseDraftTest.php",
+      "sha256_git_blob": "2929488aa81bd6cc6aa4899155894fdeb70eea793e701663c970fc73466a538d"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentCostReadIsolationTest.php",
+      "sha256_git_blob": "18ba0d7f363f7de7a4372bfd5fa194a9a8722918cbfce9d5982c906ad75f7861"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentFreshCostReadTest.php",
+      "sha256_git_blob": "a58108f73225e8d7ae287480a102e976f337cc76f21ad9ec7a1cf749bb90d390"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentLineIdentityTest.php",
+      "sha256_git_blob": "cad7c74111c1bac6bdc383a1be8f347bd15f5800964c3b50b54e37241d1f650d"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentPurchaseLockGateTest.php",
+      "sha256_git_blob": "06dbb2cfcc844dbf20ced649af24bc437f0b8060a1787403edfe804b88d172de"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentRollbackIntegrityTest.php",
+      "sha256_git_blob": "b669d851bd97e5ed28b9dd9673074b17b4a7e9dbc89b4150c3412666ea397419"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentTransactionOwnershipTest.php",
+      "sha256_git_blob": "d381cf51f6c5e46118542369f2f7c01b6e2079f1c6a9d4a4919c24468b5fddb8"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/ShipmentWriterIdentityTest.php",
+      "sha256_git_blob": "b9d17cbceffac248ebe451c9e1bd9e57eec256b000386189167d05dd146fdf3d"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/StockIndexMetadataLockTest.php",
+      "sha256_git_blob": "ccaea97d79a3bcc7cdf797b2368b19ed8d19bbe116b58bb739dc0f4af8f9debf"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/StockMovementSourceIndexProofTest.php",
+      "sha256_git_blob": "46f0caed1cc9507ba8c054d44bcded7a096a70fcabf804dc652e8bb1ecf4daf1"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/TransferSupportBoundaryTest.php",
+      "sha256_git_blob": "cf7955ec9232aacec5f503aa292fcec49c4bdadae9c6a323d6d873692d086808"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/TrustedSupportShipmentOwnershipTest.php",
+      "sha256_git_blob": "b0fa629005b1f67018f4978511e94042fb88dfab901518e61ea09f45149bf5bc"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/UomClosureTest.php",
+      "sha256_git_blob": "c946ed893d4b30358c9ce3045260288139d8e088f2d1be05670550471095aaf3"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/UomFoundationTest.php",
+      "sha256_git_blob": "4fd3b6a378ab2aafafaf22ef124912bfc7f30de5115b78bfdcd69878ed520b38"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/UomLockOrderTest.php",
+      "sha256_git_blob": "c81dd769750f48e3265d2a838c7cfed499aa92fb401523545e56a9fadf6d3ab0"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/UomOperationalLockClosureTest.php",
+      "sha256_git_blob": "dea9bb9c4fc373bc10502c9653de3a07555489a5ce92e45b9d050361fb9a2541"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/UomSeparationClosureTest.php",
+      "sha256_git_blob": "11bf0587a7b8cdbdd719269957c711184caf7ec4b6333b87f72c37d11c067e51"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/UomStageASchemaTest.php",
+      "sha256_git_blob": "9c8ca4bf3bc546fefc841f457b642ea143a733426a2fc933f2f438fef1f37972"
+    },
+    {
+      "path": "backend/tests/Integration/Uom/UomUnifiedReaderTest.php",
+      "sha256_git_blob": "acc0a4bbee513dd5b6956b98b233083c46bc7c4397ca396e4449fcce68eb30c4"
+    },
+    {
+      "path": "backend/tests/Support/BaseAdapterRace.php",
+      "sha256_git_blob": "ff2e668ac82167d920ffd5f6814d711e4cb596f7f5fcc21788e3aefef50bc883"
+    },
+    {
+      "path": "backend/tests/Support/DriverGatewayPrototype.php",
+      "sha256_git_blob": "e3635ec1fde83c3ee1993dc9682e9e371ca9e4bf837b3d9465fc84c739ad5b6e"
+    },
+    {
+      "path": "backend/tests/Support/HistoricalLotBackfill.php",
+      "sha256_git_blob": "8a9e7c010e83aef1525c006e8d089ffbb157886be73ed14ed476f1e8b73918fc"
+    },
+    {
+      "path": "backend/tests/Support/InventorySequenceFixture.php",
+      "sha256_git_blob": "a140ecb3003c316df5afa0ba81ce0b811d7882a157cb3c066563fc8042f6df5e"
+    },
+    {
+      "path": "backend/tests/Support/LegacyCapitalizedLotEvidence.php",
+      "sha256_git_blob": "f6088d275ea4f99270956d9bbafce47eb122ffebd41d79dce03a395cde3faffb"
+    },
+    {
+      "path": "backend/tests/Support/LotSequencePreparationProof.php",
+      "sha256_git_blob": "889305494dcdae6e1438f2902b9d68ca6ca95abf6a466b9e08d4aab42cf4bd65"
+    },
+    {
+      "path": "backend/tests/Support/LotUpgradeDryRun.php",
+      "sha256_git_blob": "3cb36a9450e079eae35b06dcc6fe26bed379f2f391b7aed5ad962890a5b0e79a"
+    },
+    {
+      "path": "backend/tests/Support/OperationalUomFixture.php",
+      "sha256_git_blob": "3e3142ece3153e373060a242fb19a6abd49fc38e842481d81f4569081be20ac9"
+    },
+    {
+      "path": "backend/tests/Support/PlatformControlPlaneTestCase.php",
+      "sha256_git_blob": "91c331c5ddc6cc78205f3118907729e68ed62a19bbd5ca56f8ab636da3d23249"
+    },
+    {
+      "path": "backend/tests/Support/QaEngineSchema.php",
+      "sha256_git_blob": "269a6d72bdb94bb1e343a006e2bd8ef6715d80ea9d0ccbaa31a715f57b4fc806"
+    },
+    {
+      "path": "backend/tests/Support/ShipmentLineIdentityPrototype.php",
+      "sha256_git_blob": "42b2853c8ad15fbb9af6b96da4d641d352d314d713f1059227a3266fa127ffbd"
+    },
+    {
+      "path": "backend/tests/Support/ShipmentPostingControllerProbe.php",
+      "sha256_git_blob": "ff44df185889a8616c7e4e96b216c431e56d6f0304f7c9af29f96e5e40140666"
+    },
+    {
+      "path": "backend/tests/Support/ShipmentPurchaseLockFixture.php",
+      "sha256_git_blob": "5b8c5a83fce1c62d65da9e35bc221ead5ef42c083fcb19e9f541bae01fcd0aec"
+    },
+    {
+      "path": "backend/tests/Support/UomActorFixture.php",
+      "sha256_git_blob": "ee578629bbb4abfef2dbd4394e38a3c452776af2043a400f14dd40c4bf0cb755"
+    },
+    {
+      "path": "backend/tests/Support/UomDesignDecimalProof.php",
+      "sha256_git_blob": "dfffcb63ecb1d27ddd4622efc40e0af53eb8ae346a264f06638c12519da2b440"
+    },
+    {
+      "path": "backend/tests/Support/UomItemSeparationProof.php",
+      "sha256_git_blob": "6f518ca5457f59b8071d29972d8c827a5ca76cbaeb91772ab4119ee707d6e778"
+    },
+    {
+      "path": "backend/tests/Support/UomOperationalLockFixture.php",
+      "sha256_git_blob": "f34f37a7187712d4c1a85b5be4b6cba0ae2507f2c6f27f14c998c49ed87191af"
+    },
+    {
+      "path": "backend/tests/Support/UomPostingCoordinatorProof.php",
+      "sha256_git_blob": "1624bebf51e0c88711b562827df66280df65e166a3358409efdabd15ef26df17"
+    },
+    {
+      "path": "backend/tests/Support/UomStageAProof.php",
+      "sha256_git_blob": "a007f0b98b2f188a793b0d259ea0514e0790207d31c864155a260f07f7109afa"
+    },
+    {
+      "path": "backend/tests/Support/UomSupportActor.php",
+      "sha256_git_blob": "c299f62c316d3d33e26bbe5ca68380497e9cc3b7d582844bb0b9d5e8c774fc3b"
+    },
+    {
+      "path": "backend/tests/Support/UomUnifiedInventoryReader.php",
+      "sha256_git_blob": "b619c8b30e3bb06bc42a9597f559b04fd4fdcac9cd344e539a716ac88b462389"
+    },
+    {
+      "path": "backend/tests/Support/Wave1SubscriptionTestCase.php",
+      "sha256_git_blob": "82c730f420820da910ae2abd0510d676cde12c8fa2dec81dba969f694759e250"
+    },
+    {
+      "path": "backend/tests/Support/driver_gateway_schema.sql",
+      "sha256_git_blob": "0bcea43b0c3a7a134b701ea750711131fad1e0e4e9c8dff3603a14d3fbb09e28"
+    },
+    {
+      "path": "backend/tests/Support/fresh_schema_provisioning_validation.php",
+      "sha256_git_blob": "b3d6229fad8032f1a770a3deaaa893d09ff85c13707d2cf575865881efb1a18d"
+    },
+    {
+      "path": "backend/tests/TestCase.php",
+      "sha256_git_blob": "c7c209f5579c42647c1f7b2a79ac828e8b54ac62a98442045a6e94fa2c0d0ebc"
+    },
+    {
+      "path": "backend/tests/Unit/ApiExceptionMessageTest.php",
+      "sha256_git_blob": "f73e1a88cb34b32a179aedb51488b1da775f6fe0c9c1f3189005f597dcdb8e35"
+    },
+    {
+      "path": "backend/tests/Unit/ApiExceptionPrivacyTest.php",
+      "sha256_git_blob": "11592cd612305b3c50bd5a8291b1af4730846b937bbcaf44c8d5a99dfcc3c63b"
+    },
+    {
+      "path": "backend/tests/Unit/ChromiumPdfRendererDiagnosticTest.php",
+      "sha256_git_blob": "0f7f866d826a1a0b42b1d3c8e6602ff1877c6a982f2c9e7b520b9316a9e906a4"
+    },
+    {
+      "path": "backend/tests/Unit/ExampleTest.php",
+      "sha256_git_blob": "ffacae5c1a2a44c809420af5b3b404910da1b12167d58764dac6d10b8ba8cfaf"
+    },
+    {
+      "path": "backend/tests/Unit/ExistingItemUnitContractTest.php",
+      "sha256_git_blob": "e6b9b079514473d084873a6deefdc7525df1c7d5be87957138b2d065e47fa7c0"
+    },
+    {
+      "path": "backend/tests/Unit/PayrollJournalCapacityTest.php",
+      "sha256_git_blob": "f3e8cd3f81ed9992876556f8f07a29c76a05b6b666254ab6bab9be56b02a69ad"
+    },
+    {
+      "path": "backend/tests/Unit/ShipmentLargestRemainderTest.php",
+      "sha256_git_blob": "82f2c0b39cf12accb32fa336f1a3dcf07b598638d7c8ba4aa04a3def0cf7e44a"
+    },
+    {
+      "path": "backend/tests/Unit/UomContractGateTest.php",
+      "sha256_git_blob": "370b3fd3748a2e1594c6bae4f5a400f14d79ec7dc4be4d2a1b967f543f24a29b"
+    },
+    {
+      "path": "backend/tests/Unit/UomDesignProofTest.php",
+      "sha256_git_blob": "855c8693968adda702140f8f3a3a1c44fea2b41338a95496eddb4b05f3b4bb7a"
+    },
+    {
+      "path": "backend/tests/Unit/UomReadonlyAuditProofTest.php",
+      "sha256_git_blob": "a7bd5a1713fa28b16c5f589f2abc47f190c1de2539db5e2d76e5a2ccbe496dc8"
+    },
+    {
+      "path": "backend/vite.config.js",
+      "sha256_git_blob": "f413e14379e2db8b200c63a6326b925f6d47cc0df458c77bfe188cfc23e8081f"
+    },
+    {
+      "path": "frontend/.gitignore",
+      "sha256_git_blob": "4af98e76ad8a07b46cd09b2a3706c51344b729dc9bd6cba6a37fd4ff54d88b37"
+    },
+    {
+      "path": "frontend/AGENTS.md",
+      "sha256_git_blob": "e3447d84251880fb34cfae09131cb4c57471529bbfe60976a3245793cf621627"
+    },
+    {
+      "path": "frontend/CLAUDE.md",
+      "sha256_git_blob": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+    },
+    {
+      "path": "frontend/README.md",
+      "sha256_git_blob": "60b55ff7df79af72590f9524208e46642bc32bdc175cdad41349681c0e2f958f"
+    },
+    {
+      "path": "frontend/app/accounting-integrity/page.tsx",
+      "sha256_git_blob": "dc53e2cbca6bcd4191ec5a1f208ffacb63ac83ce4e308477d28fcf64afca6e81"
+    },
+    {
+      "path": "frontend/app/accounting-reports/page.tsx",
+      "sha256_git_blob": "b767e0742d3014c568696c4229119f2993c68603f4937c706ba738023762b533"
+    },
+    {
+      "path": "frontend/app/accounting/page.tsx",
+      "sha256_git_blob": "7ee19387c345c655617eaa79a185f4a5e25d17222e597a569c5662eb485fb0a0"
+    },
+    {
+      "path": "frontend/app/accounts/AccountForm.tsx",
+      "sha256_git_blob": "40fdbb8784fb390d703eef0bdf4063accd0879b261a34ce551ec1ec572bf778a"
+    },
+    {
+      "path": "frontend/app/accounts/AccountService.ts",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/accounts/AccountToolbar.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/accounts/AccountTree.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/accounts/page.tsx",
+      "sha256_git_blob": "03b3d08068f80f39d0b34744f409e42e4a051d8ed1de20d9d0657cf03dcaf6f3"
+    },
+    {
+      "path": "frontend/app/api.ts",
+      "sha256_git_blob": "d10a6d90a6e3ca87039880cd2bfd3b18d93c245d81c3a8613fd5563cc3346427"
+    },
+    {
+      "path": "frontend/app/audit-logs/page.tsx",
+      "sha256_git_blob": "37a0f6fdc0912be340584a3de54390075857afa7b8301921a490f50f2d35c2b3"
+    },
+    {
+      "path": "frontend/app/branches/page.tsx",
+      "sha256_git_blob": "9310b7ebdc30efe9ea6cba023cf15f1bf91b95b6ea1fee78d2d9b8f5116ec02b"
+    },
+    {
+      "path": "frontend/app/cars/page.tsx",
+      "sha256_git_blob": "d1dad5e65d8b6edc51005af47fe4d90c1f0933ed88728d7a5aa4630cd929f002"
+    },
+    {
+      "path": "frontend/app/commercial-returns/page.tsx",
+      "sha256_git_blob": "216761c57826be9fb0968aa5d0632187b090d819c460c4c3d2cba6da244b5564"
+    },
+    {
+      "path": "frontend/app/companies/page.tsx",
+      "sha256_git_blob": "ef0c60d570338a3b700d561a21a083f94122b16e62263ec33b73a896fa8ccbbf"
+    },
+    {
+      "path": "frontend/app/customers/page.tsx",
+      "sha256_git_blob": "e19a84962a66667cc788c71b7b771a544df1c903a705e238a315531126a17625"
+    },
+    {
+      "path": "frontend/app/drivers/page.tsx",
+      "sha256_git_blob": "a0253ea322ac4b0981ba55d2789b73292866ebeee8fe402d8fc39909b9cc6793"
+    },
+    {
+      "path": "frontend/app/expense-types/page.tsx",
+      "sha256_git_blob": "4bd13a417844d8d1a94af79a1462b7315b7afdd910dcc4b2fcb501344f789fc6"
+    },
+    {
+      "path": "frontend/app/expenses/page.tsx",
+      "sha256_git_blob": "f43670b692c32b8217ae1857b3da067fad3e76c80d6eb5817d4b337de7d49fe3"
+    },
+    {
+      "path": "frontend/app/favicon.ico",
+      "sha256_git_blob": "2b8ad2d33455a8f736fc3a8ebf8f0bdea8848ad4c0db48a2833bd0f9cd775932"
+    },
+    {
+      "path": "frontend/app/financial-accounts/page.tsx",
+      "sha256_git_blob": "312417507b0698b6b67b87696d3a96819beb41795b7091523b00846f03c52e06"
+    },
+    {
+      "path": "frontend/app/financial-setup/page.tsx",
+      "sha256_git_blob": "fca2881adc7595702480dcdba26aeedb491adf51b566838a52b758859a56d48e"
+    },
+    {
+      "path": "frontend/app/financial-years/page.tsx",
+      "sha256_git_blob": "a818f895369f1bc96f1504464f0bf741cb62254efb0ea62a7cf852e710eb8d08"
+    },
+    {
+      "path": "frontend/app/fixed-assets/assets/components/AssetCard.tsx",
+      "sha256_git_blob": "6079cc5e99e7a1393d94e1c86fa917a23f138dbc49df574bfeb128cebe2dbb8d"
+    },
+    {
+      "path": "frontend/app/fixed-assets/assets/components/AssetDialog.tsx",
+      "sha256_git_blob": "5f885f0f7050e7acd5be0b8e73892468d7d95f6c204da00e48323b2525d673ee"
+    },
+    {
+      "path": "frontend/app/fixed-assets/assets/components/AssetStats.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/fixed-assets/assets/components/AssetTable.tsx",
+      "sha256_git_blob": "79e99cede86f191eb4c34477a0db3dd86f9c7d4486ae7ca6cc66b5854f10c849"
+    },
+    {
+      "path": "frontend/app/fixed-assets/assets/page.tsx",
+      "sha256_git_blob": "10ecce2000c5a7ca4d23e3ad8ac11ee090c405630b1f952f4b2cdc8f09a0c578"
+    },
+    {
+      "path": "frontend/app/fixed-assets/categories/page.tsx",
+      "sha256_git_blob": "701cf8602cca7b1f6bb44531f8be0d53c0ce019bdc06178ddc8bfd70a51660ff"
+    },
+    {
+      "path": "frontend/app/fixed-assets/components/CategoryCard.tsx",
+      "sha256_git_blob": "8c4f8c9faa12dde61718d76aa2ddb1ae484dba19a30504e3dd955fc560f2261a"
+    },
+    {
+      "path": "frontend/app/fixed-assets/components/CategoryDialog.tsx",
+      "sha256_git_blob": "568d41cbc4fb560e761d578c0cc7a73fc6ee48f7dfd8740a39a94893c7cbf029"
+    },
+    {
+      "path": "frontend/app/fixed-assets/components/CategoryTable.tsx",
+      "sha256_git_blob": "2b741b06cff15f89051b2b0402678241430b11510c53165fb8dff86e0e5bbaab"
+    },
+    {
+      "path": "frontend/app/fixed-assets/page.tsx",
+      "sha256_git_blob": "7b2bdb39d8b6b3f15be8697f09710da211cd617438856e03194880dee957aa68"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/ActionMenu.tsx",
+      "sha256_git_blob": "058c0714184666971e491ea667c2f3150f3e7f6e3cdb7cecd46d709ae0c013d8"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/AssetCard.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/AssetCards.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/AssetDetailsDrawer.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/AssetFilters.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/AssetFormDrawer.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/AssetTable.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/DepreciationDialog.tsx",
+      "sha256_git_blob": "61f0e2a7f0872a8ad0ee1d4d0674a7dad7ea48abb1b0edc019514ace9586d4b3"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/DisposeDialog.tsx",
+      "sha256_git_blob": "710f8061eb95f3b302b935bde6a75ab47ce326daad254fcb6c9f0e8009424949"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/MaintenanceDialog.tsx",
+      "sha256_git_blob": "4aa674404487243ece5705bf5772a21959de7b2dea99617c9ff2feb4e77e061e"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/ReportsDrawer.tsx",
+      "sha256_git_blob": "7bb3e5965a86a8db98c4a88822a936560d4babff7e632f4ff9c358085e236c1f"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/SellDialog.tsx",
+      "sha256_git_blob": "e920a774cc88d76a3592354eb6b07a71b9e403d1521d3a6bfa1ae46107e3d9c0"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/components/TransferDialog.tsx",
+      "sha256_git_blob": "f73b523031f9bbe1e78108422e75088125f746962ec743ead2bd89bb5f31f417"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/page.tsx",
+      "sha256_git_blob": "579fa56934a617ffecaf2e5dedae530c81bff06eb55bf27fbc6a26ea38bcecb5"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/services/fixedAssets.ts",
+      "sha256_git_blob": "69afc2ff3d88c2648a9ed98d7b75cf1bd0d12a56576c4c06a9956361d1a26c76"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/types.ts",
+      "sha256_git_blob": "764a6ffd1d554791afb9cad260010dc9958c735ba77aab864a816993a51b61b3"
+    },
+    {
+      "path": "frontend/app/fixed-assets/workspace/validation.ts",
+      "sha256_git_blob": "ffc2db5b60a1d1da5c241030a5fa5d22786dfcf741114024984f723a0a9cdf73"
+    },
+    {
+      "path": "frontend/app/globals.css",
+      "sha256_git_blob": "ce816623b8cfd46fb2c7b867702a821686b6f72960bceb423b7116a924ba0860"
+    },
+    {
+      "path": "frontend/app/help/page.tsx",
+      "sha256_git_blob": "addc5de68e14d3af63bdc6e407dcedc5acf3db986badcfdda623b5d1f2424b90"
+    },
+    {
+      "path": "frontend/app/imports/page.tsx",
+      "sha256_git_blob": "8f7c1fe2ab1aa2b421504625863afb0f6903a0ec7629c25337dfc33a07b1e973"
+    },
+    {
+      "path": "frontend/app/inventory-operations/page.tsx",
+      "sha256_git_blob": "f136269d4046f937885b60228ff04c28c93b763fa5eb289a82262725bb0df38c"
+    },
+    {
+      "path": "frontend/app/inventory-operations/recipes/page.tsx",
+      "sha256_git_blob": "9f89b6e4198150f5fa7a1b9fbb0b1cebcc6e10aad0494c0b3244a98fd433a289"
+    },
+    {
+      "path": "frontend/app/inventory/page.tsx",
+      "sha256_git_blob": "f8d96ecff970fd22039803df003815592898fc3785ed624bde74c6d002c0b2c5"
+    },
+    {
+      "path": "frontend/app/items/page.tsx",
+      "sha256_git_blob": "0f6084b9ee285ce39926bfa6770a52e144fcf9dc10da93e678d2a60b6f7b66c0"
+    },
+    {
+      "path": "frontend/app/journal-entries/page.tsx",
+      "sha256_git_blob": "4664e1fb18753cab92869eb375f4435df44e4be28008f6b27453474a556755e1"
+    },
+    {
+      "path": "frontend/app/layout.tsx",
+      "sha256_git_blob": "864c5012ae38a87d9de69b3e27b22933ced1f9168976351591ebd347f8f39c89"
+    },
+    {
+      "path": "frontend/app/legal/page.tsx",
+      "sha256_git_blob": "f92f1a026c4f600096aabd6686239f05242f760256b5170af28fbbed5fb502ee"
+    },
+    {
+      "path": "frontend/app/login/page.tsx",
+      "sha256_git_blob": "cc6b84253aaf7f226be13a5db145cd371bcf9f07566aa746da69c91dd7e64eb6"
+    },
+    {
+      "path": "frontend/app/no-access/page.tsx",
+      "sha256_git_blob": "b5cbd98f55e94b8b574c81d8ffcb86ec30daeca2faf559f1c6cc49f9c5957bb4"
+    },
+    {
+      "path": "frontend/app/official-documents/page.tsx",
+      "sha256_git_blob": "fd059da9c3dc64302fde797529feb5d319d86ecaff8590a9c0a531addef0ad2d"
+    },
+    {
+      "path": "frontend/app/opening-balances/page.tsx",
+      "sha256_git_blob": "cf9fcf19e5ae650f6ec253ec82b8a431e3762aca2d12210d320c40caf8c7e1ec"
+    },
+    {
+      "path": "frontend/app/page.tsx",
+      "sha256_git_blob": "c08464d214f7d2f2463129553b9710c22a6f87384940454325866827a3a9dcc8"
+    },
+    {
+      "path": "frontend/app/payroll/PayrollDetails.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/payroll/PayrollGenerateForm.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/payroll/PayrollPaymentDialog.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/app/payroll/[runId]/salary-slip/[workerId]/page.tsx",
+      "sha256_git_blob": "8ccd05d858bacf128b753c40142f1b57c1a9a49a9c683f0d8212c9ffd1005a9e"
+    },
+    {
+      "path": "frontend/app/payroll/page.tsx",
+      "sha256_git_blob": "aad9e756386f1cdee36c16703e795a0615c623e6946540f483cbb421d6d9e8df"
+    },
+    {
+      "path": "frontend/app/permissions-center/page.tsx",
+      "sha256_git_blob": "497ed1ce53a8f20695871ebb9126586fa6b4131d3f4018245b58c44449a9cdfd"
+    },
+    {
+      "path": "frontend/app/print/[type]/[id]/page.tsx",
+      "sha256_git_blob": "8992305e7a7c09b27650562221f9417d1f8d3f2c250e7a6c394d947814dc7326"
+    },
+    {
+      "path": "frontend/app/profile/security/page.tsx",
+      "sha256_git_blob": "ca286d46dfc608de44b92e7729e64d7e8062cdcfeafd0328ced163174971fb83"
+    },
+    {
+      "path": "frontend/app/purchase-orders/page.tsx",
+      "sha256_git_blob": "439366e9d3f03e61aac8eacd1f73297770e58e8e2e470bd45442d2ce3c54ac09"
+    },
+    {
+      "path": "frontend/app/purchases/page.tsx",
+      "sha256_git_blob": "8bc642f2f2d0c260dad7d944bd2d672aea38798a40a30580cd8969a9b58213dc"
+    },
+    {
+      "path": "frontend/app/quotations/page.tsx",
+      "sha256_git_blob": "ee9e7f662228341493daf6244de10350959cf09c7071a4cd0ad9c6e82de33950"
+    },
+    {
+      "path": "frontend/app/register/page.tsx",
+      "sha256_git_blob": "b5a3480647bd0d0ca3165455036bd39176446bad7d00f0ce540bafc465b18352"
+    },
+    {
+      "path": "frontend/app/reports/page.tsx",
+      "sha256_git_blob": "6729a7248548aceb8c36f89011fc593e60af9b26f5db49e31e611e9a1f6b656a"
+    },
+    {
+      "path": "frontend/app/road-waybills/page.tsx",
+      "sha256_git_blob": "28ac82c22b8e5d14e87b11d28421046e239117de71ffa62b7efca8a2e7e825de"
+    },
+    {
+      "path": "frontend/app/sales/page.tsx",
+      "sha256_git_blob": "8eec4a550eff6369c9fdf9e604c164f93d548c2fd076d07c3c32bb1c7e66af1f"
+    },
+    {
+      "path": "frontend/app/settings/page.tsx",
+      "sha256_git_blob": "207517dffdc1f0d8742d5e05e353e21b7fd30f55f4b105da8b857a79a7ae7a2b"
+    },
+    {
+      "path": "frontend/app/settings/print-branding/page.tsx",
+      "sha256_git_blob": "305dc9d54f628c0409f05ef5aeceb888a8c0c192888a79f99c73c8eb3b1744a7"
+    },
+    {
+      "path": "frontend/app/settings/print-branding/preview/page.tsx",
+      "sha256_git_blob": "e085b89142233594cb9870c9c84391822ef168b66cad33ef82ef390883190861"
+    },
+    {
+      "path": "frontend/app/shipments/page.tsx",
+      "sha256_git_blob": "8fd3fd8cb23f087ad7ea17f8d5ff374c6c55e6461f594f4001bdef3663c05905"
+    },
+    {
+      "path": "frontend/app/statements/page.tsx",
+      "sha256_git_blob": "9d47facac3bb3fc2aaaf45efcee8de0764951968781aac8231a41c9bf983b14a"
+    },
+    {
+      "path": "frontend/app/suppliers/page.tsx",
+      "sha256_git_blob": "59010907258a31d0be605c9526048255aa2d4069927ad15384dc8e480feb5adf"
+    },
+    {
+      "path": "frontend/app/system-center/companies/page.tsx",
+      "sha256_git_blob": "e0261896222dcac95227f2a0f6be03dbd4bc9fc0a9dda47bb5ba8ac6d708f16e"
+    },
+    {
+      "path": "frontend/app/system-center/page.tsx",
+      "sha256_git_blob": "0e2dc9c870109da8c1dfb7d91001c45010d698ba88c0ca89bd36b18ba2d2691b"
+    },
+    {
+      "path": "frontend/app/system-center/payments/page.tsx",
+      "sha256_git_blob": "ecfc39d06843521f8b754df41ef0ffbc924a42cffee7aa1d9ef909de40dfecb1"
+    },
+    {
+      "path": "frontend/app/system-center/plans/page.tsx",
+      "sha256_git_blob": "4a4a3b07ffc9889e9e2ebef115850e2376201468798e7e4bd316a44cf8396f43"
+    },
+    {
+      "path": "frontend/app/system-center/subscriptions/page.tsx",
+      "sha256_git_blob": "9016f934bfa43fcad9c1a38d3e3175eeb4aa80856be37161f55a1f3bde3a9a78"
+    },
+    {
+      "path": "frontend/app/tax-reports/page.tsx",
+      "sha256_git_blob": "8feb5742fdfb3d0135a9ca61f4e62d386cdeac8d9532ef3f55ad516f761c32be"
+    },
+    {
+      "path": "frontend/app/users/page.tsx",
+      "sha256_git_blob": "8537477d7311c08bb85adc61afb4466d75a2dd61f4e898a0dae75f36864d317d"
+    },
+    {
+      "path": "frontend/app/vouchers/page.tsx",
+      "sha256_git_blob": "0d0b7bad206cc35246d7e1e20c475a630990ad3f12ff05678eec457ae2bc75d7"
+    },
+    {
+      "path": "frontend/app/weighing/page.tsx",
+      "sha256_git_blob": "0e73559ec0b1b7c4ed70c1b93d78d4958f4bfd947fdaaed193519af020c9e074"
+    },
+    {
+      "path": "frontend/app/workers/page.tsx",
+      "sha256_git_blob": "462f4234975856686d483d50b7a18abddc25cbdb7da14835e993c99f9b45977a"
+    },
+    {
+      "path": "frontend/components/common/SystemDialog.tsx",
+      "sha256_git_blob": "4495b3df56d344a54e5fca4d56301f42b2d7f2ff3ee6f3c099d53ca447cdbb34"
+    },
+    {
+      "path": "frontend/components/common/useSystemFeedback.tsx",
+      "sha256_git_blob": "eeb717e2fd1bbf96ad700a99f73fd71d163a148971a5c8a43c097ba3f8a49613"
+    },
+    {
+      "path": "frontend/components/design-system/AccountingWorkspace.tsx",
+      "sha256_git_blob": "df996eb533db058e5d2080e7db893a5ec9ac5190e47aa4846207f2163dff39b8"
+    },
+    {
+      "path": "frontend/components/design-system/DocumentWorkspace.tsx",
+      "sha256_git_blob": "1c5bc5aa1606f094e6c491ab52e9e401e94135080c551f653afefd06044f28da"
+    },
+    {
+      "path": "frontend/components/design-system/EnterpriseWorkspace.tsx",
+      "sha256_git_blob": "15d86c4c8e60cb27e48c684a3a25cdd938711f617a68a07adf777ed7b029a6ac"
+    },
+    {
+      "path": "frontend/components/design-system/LifecycleWorkspace.tsx",
+      "sha256_git_blob": "97ad329eae9d799c06bb28daf6f955b53ecd8ab76522014c0422f0e87dacb198"
+    },
+    {
+      "path": "frontend/components/design-system/OperationalWorkspace.tsx",
+      "sha256_git_blob": "b5137e09fa888095281dfd36fe5a837ba9c120e65ff232b038c863367bf9424d"
+    },
+    {
+      "path": "frontend/components/erp/CommercialDocumentMasterPage.tsx",
+      "sha256_git_blob": "54b2d4cc97a632ba822422f88380f3634c249a6e921b030496e103224481f8b8"
+    },
+    {
+      "path": "frontend/components/erp/ERPCard.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/components/erp/ERPMessage.tsx",
+      "sha256_git_blob": "8296bc5df861f5171486bcb2206b48a46eaea394ba346388cee32862ea544cc1"
+    },
+    {
+      "path": "frontend/components/erp/ERPSelect.tsx",
+      "sha256_git_blob": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend/components/erp/InvoiceMasterPage.tsx",
+      "sha256_git_blob": "8cde72f196f91c8d4ee9790d3a874ffcef2d537765aa7dcf27ee5b267c8f4182"
+    },
+    {
+      "path": "frontend/components/erp/PartyMasterPage.tsx",
+      "sha256_git_blob": "17aaca98c41efc9bdc44436954482b5f0f42d9a1c2821113e39a0583fafe035b"
+    },
+    {
+      "path": "frontend/components/erp/buttons/ERPButton.tsx",
+      "sha256_git_blob": "088902b857e9d6a092245cef769746f03c718fb5fd007921c5576bff6ad4d2b0"
+    },
+    {
+      "path": "frontend/components/erp/cards/ERPCard.tsx",
+      "sha256_git_blob": "10166e7a28ed5d1ae3543b140b372e44914b105834aebd69399b0288ede1a0b6"
+    },
+    {
+      "path": "frontend/components/erp/cards/ERPEmpty.tsx",
+      "sha256_git_blob": "342a6da5e33176e0d1d230fa9030522a8437676bacc911b1aff0b7e56964a5f4"
+    },
+    {
+      "path": "frontend/components/erp/cards/ERPStatCard.tsx",
+      "sha256_git_blob": "3c6c58c244585437bdcd5c7c7fd536aa1a211939549ef890cd3d411a62490693"
+    },
+    {
+      "path": "frontend/components/erp/dialog/ERPConfirm.tsx",
+      "sha256_git_blob": "a5532bd630c581456e7c155c2e2ae82df1629b7e738b3700febbc865cb6b411e"
+    },
+    {
+      "path": "frontend/components/erp/dialog/ERPMessage.tsx",
+      "sha256_git_blob": "8296bc5df861f5171486bcb2206b48a46eaea394ba346388cee32862ea544cc1"
+    },
+    {
+      "path": "frontend/components/erp/form/ERPInput.tsx",
+      "sha256_git_blob": "930da071210d9207477e1fe442cbc643f8ac77f897c785f80008187a52fc6db1"
+    },
+    {
+      "path": "frontend/components/erp/form/ERPSelect.tsx",
+      "sha256_git_blob": "903951adf4738a5cdcfe18e3130f8ef8fa12cc47dcb1bce51110564bb7685bd5"
+    },
+    {
+      "path": "frontend/components/erp/form/ERPTextarea.tsx",
+      "sha256_git_blob": "723d4984e10528f2d0419d5ac00fc1555f4c615774d545af96086936d74883e9"
+    },
+    {
+      "path": "frontend/components/erp/layout/ERPHeader.tsx",
+      "sha256_git_blob": "61ba7392c4dc867458e7f94457a8e67874a8940992a3bcc9321ba2ca17b40b80"
+    },
+    {
+      "path": "frontend/components/erp/layout/ERPPage.tsx",
+      "sha256_git_blob": "a763f66c4a710fd5bbeb2e7258df5d810ac317e115a9631e0284493831c54e17"
+    },
+    {
+      "path": "frontend/components/erp/layout/ERPToolbar.tsx",
+      "sha256_git_blob": "d1150a8e79c3cfbd42a3c7f54e6f4d2a60817bcfe1913c56c811f46e4ee37582"
+    },
+    {
+      "path": "frontend/components/erp/table/ERPTable.tsx",
+      "sha256_git_blob": "bed701c7c3b4d1d47c0213270d557f27098f9882e224538bc51a27a2253b7d14"
+    },
+    {
+      "path": "frontend/components/erp/tree/ERPTree.tsx",
+      "sha256_git_blob": "99ca36e3ac751a3fac446586b44e44eaced89aeb2bbaf849554aa797a4736d41"
+    },
+    {
+      "path": "frontend/components/experience/EnterpriseExperience.tsx",
+      "sha256_git_blob": "f68bbd4a2eca6a96d3956ee546a5e07a9bef60af12bb07dc7c89307fabae86df"
+    },
+    {
+      "path": "frontend/components/finance/AccountSearchSelect.tsx",
+      "sha256_git_blob": "579ace9cdb2ce73d18df7e45561f56d637fd6d219cf81ec95fb16b55cb7508c1"
+    },
+    {
+      "path": "frontend/components/finance/DriverShipmentStatement.tsx",
+      "sha256_git_blob": "d90309141c7ed6558bc60390507f31270441258438ad89987bf65e56eac0c014"
+    },
+    {
+      "path": "frontend/components/finance/OpeningLookup.tsx",
+      "sha256_git_blob": "c79ef4d507d2e10d9257117c420a86c3835cbb661197a68af522631535e8473a"
+    },
+    {
+      "path": "frontend/components/finance/ServerPagination.tsx",
+      "sha256_git_blob": "11746183da949401145398e8c05caf7206216f39dff1dd1b0a73c1d873e0e690"
+    },
+    {
+      "path": "frontend/components/inventory/ItemUnitManager.tsx",
+      "sha256_git_blob": "2e5f01ef034fff6c593e122d314bcce3cef011ac7d446fef79dc276e8787a721"
+    },
+    {
+      "path": "frontend/components/inventory/NewBaseItem.tsx",
+      "sha256_git_blob": "f52654f6baefcc0d013f1ab0fc86a658a7070784e4bd1f89a6c9028abde5113e"
+    },
+    {
+      "path": "frontend/components/inventory/ProcessingCostEditor.tsx",
+      "sha256_git_blob": "be1b9b29b1db6be2aca4a1a73c6fb4705c62342a015d66d5ccc896e2df147a9f"
+    },
+    {
+      "path": "frontend/components/layout/AppShell.tsx",
+      "sha256_git_blob": "a5a58f947e3bedb4810bf46d9b706d385962fcb122186f0b885139ecfd81382b"
+    },
+    {
+      "path": "frontend/components/layout/EnterpriseSidebar.tsx",
+      "sha256_git_blob": "a27f81a0b20c9c2bdb129e137d1432ada9475bb2eae86fa40d5101920e1c209d"
+    },
+    {
+      "path": "frontend/components/layout/EnterpriseTopbar.tsx",
+      "sha256_git_blob": "a95355ac93d665b7f6a76417ea222b147041522c5530fc3091a522b475923514"
+    },
+    {
+      "path": "frontend/components/layout/SupportReadOnlyGuard.tsx",
+      "sha256_git_blob": "e7d5f966de080e7366d778932f22f58db90bd4205a9d987c8cb9d27702ead40f"
+    },
+    {
+      "path": "frontend/components/navigation/AppSaidbar.tsx",
+      "sha256_git_blob": "26ad701dc2bd0cf52b6a1e635c62933f4189dee9f5b177d7d5dd92a00377839c"
+    },
+    {
+      "path": "frontend/components/navigation/access.ts",
+      "sha256_git_blob": "50dd87d42eaf7b14bef751834560b6aaaaafea86e42d1d61fd211a0477fdfab0"
+    },
+    {
+      "path": "frontend/components/navigation/menu.ts",
+      "sha256_git_blob": "b39f5c927d22c38f06ed26b6f4db4cae4817d6dea61271b571a53379675dd858"
+    },
+    {
+      "path": "frontend/components/print/BrandingAssetImage.tsx",
+      "sha256_git_blob": "15be34a7f5bdbf6e2895f5966175018dbf4e0f847c984273cbb7c536dbf43ea1"
+    },
+    {
+      "path": "frontend/components/print/PrintApprovalBoxes.tsx",
+      "sha256_git_blob": "c90da5f7db3e336569e37786a6c0fe7f19e256a66ec97d3de0dab45444a63386"
+    },
+    {
+      "path": "frontend/components/print/PrintWatermark.tsx",
+      "sha256_git_blob": "e27f731981cf4a6e3ce1bce220b621bc840f45b7fd08e59b922b6dbe99c9e9b0"
+    },
+    {
+      "path": "frontend/components/print/TaxInvoicePrint.tsx",
+      "sha256_git_blob": "bed0e34da4cd76f32b449224afa0b0fee61560e384a5f9a7bf8a343a00b1f9c0"
+    },
+    {
+      "path": "frontend/components/reports/PrintFooter.tsx",
+      "sha256_git_blob": "1614d172f0074a3e09389bd12b7e4207e13adb20edecf2335640aef04c16d587"
+    },
+    {
+      "path": "frontend/components/reports/PrintHeader.tsx",
+      "sha256_git_blob": "48ecaf140942f02154423ac702ef590b82085bc59cd3d74bdfaaaaa83b196789"
+    },
+    {
+      "path": "frontend/components/sulb/EnterpriseUI.tsx",
+      "sha256_git_blob": "5d3f4ee749b0f1dc220a6cf98473cb6c3807e2f13d9d07cd242b662eb24e0f73"
+    },
+    {
+      "path": "frontend/components/sulb/ListUX.tsx",
+      "sha256_git_blob": "66679aeb9d9d977b168129d79afb06a90afbf2f4dd8998cee521e6b7704f9595"
+    },
+    {
+      "path": "frontend/components/sulb/SearchSelect.tsx",
+      "sha256_git_blob": "42e1dcf4ec22b2e8ec8df43d44a8277170332e07fe50b7a9a3406a8728a34498"
+    },
+    {
+      "path": "frontend/components/ui/enterprise.tsx",
+      "sha256_git_blob": "95cfbf0d63c1c4eceff6eac9b121f08c8b261431caf4f0cd2dfef00a12db7001"
+    },
+    {
+      "path": "frontend/eslint.config.mjs",
+      "sha256_git_blob": "870f1adccecf3051cbcd9fd307cef51d7633cf510979c181a81f4b1797273493"
+    },
+    {
+      "path": "frontend/lib/commercial-uom.ts",
+      "sha256_git_blob": "19f5ce769c2e6e3346b2a777df788a1f5153d58df360176694e3aa327727ef78"
+    },
+    {
+      "path": "frontend/lib/expense-meta.ts",
+      "sha256_git_blob": "fa593069fcd437aebd1a23ce6bbf25f59e7cacfaaa078a7ffa78fedb4dd4b3f9"
+    },
+    {
+      "path": "frontend/lib/formatters.ts",
+      "sha256_git_blob": "35501b65712d549ffd2c0a12c0d94f9fe73efba6763d689a8f913c2369719fa1"
+    },
+    {
+      "path": "frontend/lib/help-content.ts",
+      "sha256_git_blob": "2bfa7a853e1c837a08311e556c3efb34da1d997c0b4ead6ac010fdf4668fb2aa"
+    },
+    {
+      "path": "frontend/lib/inventory-uom.ts",
+      "sha256_git_blob": "a8f167dcfe88626af600f7a86c1ac4abf7fb4376be4feb9c0e7f072b370a36a7"
+    },
+    {
+      "path": "frontend/lib/invoice-uom.ts",
+      "sha256_git_blob": "1741e44c1b7dfb14d3fa22959db61220484fab9c3575503cfbc8af7bb5c2731e"
+    },
+    {
+      "path": "frontend/lib/manual-journal.ts",
+      "sha256_git_blob": "4635bee05ea52682227bf61248e269f0a5c2b0e013dd1069a861f8d1c8dcb3c0"
+    },
+    {
+      "path": "frontend/lib/opening-uom.ts",
+      "sha256_git_blob": "3ee4776cbb9f1f9902d482533102baead5ceabd6034dff42d432a62f243fa847"
+    },
+    {
+      "path": "frontend/lib/print-branding.ts",
+      "sha256_git_blob": "b436eb88f9b75b203c57a99dab22bce51a43a3acef11d031138e9ab9c0890571"
+    },
+    {
+      "path": "frontend/lib/processing-recipe.ts",
+      "sha256_git_blob": "b549fa66791ff5f9e91df893fa4a3fe2f631d9c4e3a952d9b34eae8da1feadd3"
+    },
+    {
+      "path": "frontend/lib/session.ts",
+      "sha256_git_blob": "7725a9610e578a263d78154b2a381f8efca79a8a02ebe3c85f09864ff711b0ec"
+    },
+    {
+      "path": "frontend/lib/shipment-print.ts",
+      "sha256_git_blob": "6fd6acfebd802e2d5f63fa63b432809228e9d608ee2a2e25690a70b403ee9686"
+    },
+    {
+      "path": "frontend/lib/shipment-uom.ts",
+      "sha256_git_blob": "0910cd254d0945a0563ddb011034d1584fa651d5ebd5cddd13db059e2f92bbb0"
+    },
+    {
+      "path": "frontend/next.config.ts",
+      "sha256_git_blob": "f345db7f20cf9af494fdcd169323c368862a571cdea29b79bd8bf6f59a0d86ab"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "sha256_git_blob": "e290da5a2b35af2d2e60afa4fe72ab5441a31d5673dead68cf7b69c0507ee7d9"
+    },
+    {
+      "path": "frontend/package.json",
+      "sha256_git_blob": "8ce7540a79e79755f5691a217829fb86f7dff35c91e8fc4a33d1b22af0e82dcc"
+    },
+    {
+      "path": "frontend/postcss.config.mjs",
+      "sha256_git_blob": "dfac7ac2d86d326a0e5adb024e7943c181393ed17a5fcb8f0315b24c7da6ddde"
+    },
+    {
+      "path": "frontend/public/file.svg",
+      "sha256_git_blob": "2b67812c325c199a02536cdbeea0c593a72f707d323b72ee3e08dbab06753bd4"
+    },
+    {
+      "path": "frontend/public/globe.svg",
+      "sha256_git_blob": "b614b9bf183925957661ac851498fe1d8029fd43a62fbfed86f9e2624a57e7cf"
+    },
+    {
+      "path": "frontend/public/next.svg",
+      "sha256_git_blob": "55995dfad6ecb4945a1e856ddca03c5e16aa5bf13fd21b4df6a74ae79357bcfc"
+    },
+    {
+      "path": "frontend/public/sulb-logo.png",
+      "sha256_git_blob": "06a6bc9ebfc2b46073c16045ceac395cb4aee34b6f3065fec17a9b296993705f"
+    },
+    {
+      "path": "frontend/public/vercel.svg",
+      "sha256_git_blob": "f081337b2fee635b455b63275406a3e7f39d6a014e25ad90dab5a67e62a12ac4"
+    },
+    {
+      "path": "frontend/public/window.svg",
+      "sha256_git_blob": "644768c4aaeb4767bce293344eeb0c125fb804a94d801440424072202d85e3a1"
+    },
+    {
+      "path": "frontend/tests/account-options.test.mjs",
+      "sha256_git_blob": "cd53268258bde8aea6088fd559bd8d6c94bc38631e05c243ba7be8bb047e6b3c"
+    },
+    {
+      "path": "frontend/tests/commercial-uom.test.mjs",
+      "sha256_git_blob": "5e399d3c8188bc997703e9579290444a47ca020688fa6546186bcc21e94310f8"
+    },
+    {
+      "path": "frontend/tests/driver-shipment-statement.test.mjs",
+      "sha256_git_blob": "42521984c80ed06c39a56a2e1479efd725a190263335b88862dd8e403cbc629e"
+    },
+    {
+      "path": "frontend/tests/expense-meta.test.mjs",
+      "sha256_git_blob": "0e8f2e8dd377c989c240965062d767342ec37b262f9c9bb7a2ee1ce0a6257418"
+    },
+    {
+      "path": "frontend/tests/expenses-page.test.mjs",
+      "sha256_git_blob": "2045eecda7537fbe0a9bfc24a1fc195e46210a6c185e24a62a1dc9e91e89df3c"
+    },
+    {
+      "path": "frontend/tests/finance-selection-pages.test.mjs",
+      "sha256_git_blob": "3ebc315d08a346030146e2d9dddd8d0de7f1d91e8afa9f77a0341658fa2e62c5"
+    },
+    {
+      "path": "frontend/tests/inventory-uom-read.test.mjs",
+      "sha256_git_blob": "c6cad7f2130b189220538995f9cdea6f5801a57418a21902c8146d2a282637d4"
+    },
+    {
+      "path": "frontend/tests/invoice-uom.test.mjs",
+      "sha256_git_blob": "73f10392938ff2fb8df487cbe7187d5947e3c1fb0ad0b533e51bc6865fa2b84c"
+    },
+    {
+      "path": "frontend/tests/item-unit-manager.test.mjs",
+      "sha256_git_blob": "1b27fa57f1257906b1332468c51b1f90c1314dc2289705a9b09a778cd73549b1"
+    },
+    {
+      "path": "frontend/tests/manual-journal.test.mjs",
+      "sha256_git_blob": "cc81840fe7649d2cc67c2f486cb1e9c5bbc63f8d16bd1c18d08b06c5bb1ef3c3"
+    },
+    {
+      "path": "frontend/tests/new-base-item.test.mjs",
+      "sha256_git_blob": "c369dc0575dfdd0813b4d41fe8ede497339f239177f1c949eb676f1bc6cd2a9b"
+    },
+    {
+      "path": "frontend/tests/opening-uom.test.mjs",
+      "sha256_git_blob": "1d91c949d79cb1e91da70c394799987afbd731de1b57e049d39ded9a3a57ee26"
+    },
+    {
+      "path": "frontend/tests/processing-recipe.test.mjs",
+      "sha256_git_blob": "e30b56eba86fc496060ea2426716f7efb32ad14c9e3a5a34382362afe4c74e56"
+    },
+    {
+      "path": "frontend/tests/shipment-print.test.mjs",
+      "sha256_git_blob": "380354fffeeb416f7946c22bd050eff56fe3670bd01c0a5b1c360ac1e77eb05f"
+    },
+    {
+      "path": "frontend/tests/shipment-uom.test.mjs",
+      "sha256_git_blob": "8397af5e03eb42b9cac5763a1b2073f33972b95ab3ebd35c6685ed5027dda567"
+    },
+    {
+      "path": "frontend/tests/uom-return-surfaces.test.mjs",
+      "sha256_git_blob": "11d890ba7988d807dd19d08ddb738730e4494729337cd5ba687188bc4f283638"
+    },
+    {
+      "path": "frontend/tsconfig.json",
+      "sha256_git_blob": "52e449c103173c58157048c856f5a339802efad2e4733bb18861e7d84832e4bd"
+    }
+  ],
+  "ordered_migrations": [
+    {
+      "sequence": 1,
+      "path": "backend/database/uom-migrations/2026_10_13_000001_uom_foundation.php",
+      "sha256": "fe1c46fda192480f8c6c82272c04132aa9bf8d81843967b49f7f62fd8d544096"
+    },
+    {
+      "sequence": 2,
+      "path": "backend/database/uom-migrations/2026_10_14_000002_uom_contracts.php",
+      "sha256": "ecf680139ad45e5431e586752c147f6f54562f759b4a9dd0e29ff7b18e0007c9"
+    },
+    {
+      "sequence": 3,
+      "path": "backend/database/uom-migrations/2026_10_24_000003_uom_operational.php",
+      "sha256": "986ad1b537f9bcc08e64b497f4ef002cb755efd66575648481a46f99d1cfd6dc"
+    },
+    {
+      "sequence": 4,
+      "path": "backend/database/uom-migrations/2026_10_25_000004_commercial_snapshots.php",
+      "sha256": "9693a42115c69934259f9e6209187e8f427ef0a8fb456905d38f99117d57ee32"
+    },
+    {
+      "sequence": 5,
+      "path": "backend/database/uom-migrations/2026_10_25_000005_opening_snapshots.php",
+      "sha256": "63853538e9b6585ceec65096954fc09942a1d0359bb52dcd8b6d1cc423f50dcf"
+    },
+    {
+      "sequence": 6,
+      "path": "backend/database/uom-migrations/2026_10_25_000006_base_adjustments.php",
+      "sha256": "3f5f48ddb9318c35a8bc42a7eb7268943ceb027df5aa045549cdb5cba45fcfe0"
+    },
+    {
+      "sequence": 7,
+      "path": "backend/database/uom-migrations/2026_10_25_000007_shipment_snapshots.php",
+      "sha256": "2e8e450618fbd79425bfa29f675170ad989b465394a487b1be1c3286e7663119"
+    },
+    {
+      "sequence": 8,
+      "path": "backend/database/uom-migrations/2026_10_25_000008_processing_recipes.php",
+      "sha256": "ac7465982aa962156336aeff2821431474f47e5cdd0142ee2411fdfffdee40fc"
+    },
+    {
+      "sequence": 9,
+      "path": "backend/database/uom-migrations/2026_10_25_000009_processing_commands.php",
+      "sha256": "7f251e5ef1c4a5c9eb6e7997b658f4a41f8ec34329db2fe3c37d05501a801ca9"
+    },
+    {
+      "sequence": 10,
+      "path": "docs/erp-baseline/proposed-migrations/stock_movements_company_source_index.php",
+      "sha256": "d41a9465b7f84e49d3617c513be4ab847a23eb6639aa75fd9e2ae3da6cc0a5ab"
+    },
+    {
+      "sequence": 11,
+      "path": "docs/erp-baseline/proposed-migrations/shipment_cost_parent_fk.php",
+      "sha256": "aecf0e13f7999ceea69780b1be27a1ae78789ad40b89b35e35267cb7267c4acd"
+    },
+    {
+      "sequence": 12,
+      "path": "docs/erp-baseline/proposed-migrations/shipment_cost_allocation_receipts.php",
+      "sha256": "c20be2dbc8d9f03f4f6171d153d3d0d1e2eca69fef25750a5864dc324b3ef001"
+    },
+    {
+      "sequence": 13,
+      "path": "docs/erp-baseline/proposed-migrations/inventory_lot_value_balances.php",
+      "sha256": "85882059834c01e24475e15437d55924961198d69f25d3c9d59c9af246a1f1d6"
+    },
+    {
+      "sequence": 14,
+      "path": "backend/database/uom-migrations/2026_10_26_000010_base_capitalization.php",
+      "sha256": "ae2e057d1be633f5ff7213f23ed80401043e98644ffc068c5be8ae7eb1726648"
+    },
+    {
+      "sequence": 15,
+      "path": "backend/database/uom-migrations/2026_10_26_000011_invoice_header_cost.php",
+      "sha256": "c15c8f79685d187c6a1d65ea351d6bcb42f989d5831d9e9e95f7faa1d58b878b"
+    },
+    {
+      "sequence": 16,
+      "path": "backend/database/uom-migrations/2026_10_26_000012_processing_cost_sources.php",
+      "sha256": "03ce488d3cb7093697ac3a67e5a20a609f30f137eb7b669d8731d352afc36b7c"
+    },
+    {
+      "sequence": 17,
+      "path": "backend/database/uom-migrations/2026_10_26_000013_manual_journal_permissions.php",
+      "sha256": "99bfd1983fed73253cc9b13fb23dbfeb5b4ac595093865c924a2ad966696914e"
+    },
+    {
+      "sequence": 18,
+      "path": "backend/database/uom-migrations/2026_10_26_000014_resource_write_permissions.php",
+      "sha256": "fee50a376de8f1037b0c58b5b1bc9f4212e22f826071a1a6cc600e9ebc237706"
+    }
+  ],
+  "preserve_live": [
+    ".env*",
+    "storage",
+    "uploads",
+    "private data",
+    "live-only frontend/next-env.d.ts"
+  ],
+  "production_executor_qualified": false,
+  "deployment_authorized": false,
+  "release_decision": "NO-GO"
+}

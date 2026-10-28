@@ -526,6 +526,53 @@
     "production_migrations_authorized": false,
     "deployment_authorized": false,
     "inventory_account_mapping_approval_separate": true,
-    "actual_private_review_packet_pending": true
+    "actual_private_review_packet_pending": false,
+    "prepared_packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
+    "prepared_packet_status": "AWAITING_EXPLICIT_ACCOUNTING_ATTESTATION",
+    "packet_blocking_reasons": []
+  },
+  "production_executor_qualified": false,
+  "write_fence_qualified": false,
+  "deployment_backup_restore_qualified": false,
+  "final_closure": {
+    "scope_manifest": "ops/sulb-rc/full-release-scope.json",
+    "scope_sha256": "de938dd6f114d95d2c42c5cdb8f032924b98a1b5607a8c1ee47889f523a2c280",
+    "full_release_only": true,
+    "tenant_account180_scope": {
+      "company_id": 3,
+      "automatic_other_company_mapping": false,
+      "accounting_approval_pending": true
+    },
+    "mandatory_remaining": [
+      "Explicit SHA-bound accounting attestation and separate account mapping approval",
+      "Isolated approved Backfill/LOT=GL/idempotency on existing snapshot",
+      "Qualified production migration executor preserving SaaS tenant safety and QA guards",
+      "Final security closure plus live write-fence, exact pre-upgrade consistent backup/restore qualification and failure recovery",
+      "Independent deployment approval"
+    ],
+    "accepted_evidence_not_rerun": [
+      "native isolation/AppArmor/cgroup",
+      "schema-only14+4",
+      "actual encrypted consistent snapshot and two restores",
+      "actual FIFO"
+    ],
+    "cleanup_inventory_entry": "bash ops/sulb-rc/deploy-reviewed-release.sh --inventory",
+    "cleanup_authorized": false,
+    "vps_reclaim_bytes_not_measured": true,
+    "build_and_deploy_not_performed": true,
+    "source_files_frozen": 786,
+    "ordered_migrations_frozen": 18,
+    "new_inventory_tests": {
+      "passed": 5,
+      "skipped": 1,
+      "skip_reason": "Windows symlink creation privilege unavailable; no VPS runtime claim"
+    },
+    "new_deployment_guard_tests_passed": 3,
+    "bash_syntax_passed": true,
+    "production_executor_specific_blockers": [
+      "Current check-approval accepts database/migrations paths only; reviewed schedule uses database/uom-migrations and docs proposed dependencies",
+      "UOM migrations require QA-only guard; production executor must be explicitly qualified without removing guards",
+      "Current deploy script does not execute approved historical Backfill; final security/write-fence/deployment backup recovery remain unqualified"
+    ]
   }
 }
