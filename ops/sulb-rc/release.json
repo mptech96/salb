@@ -456,6 +456,39 @@
       "actual_fifo_reused_only_if_prior_private_proposal_matches_archive_sha256": true,
       "actual_reconciliation_result_pending": true,
       "production_connections": 0
+    },
+    "operator_purchase_cost_result": {
+      "source_commit": "e305aef6bde8248b25348b7060a55ecc39cf9f54",
+      "company_id": 3,
+      "account_id": 180,
+      "postable": true,
+      "six_cases_present": true,
+      "lot3_source_accepted": true,
+      "lots_with_line_base_vs_total_and_allocated_cost_exceptions": [
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "qty_matches_for_five": true,
+      "fifo_ready": true,
+      "mapping_approved": false,
+      "historical_validation_passed": false
+    },
+    "capitalization_contract_correction": {
+      "tool": "php ops/sulb-rc/propose-account-180.php",
+      "new_cost_evidence_checks_passed": 34,
+      "affected_diagnostic_checks_passed": 22,
+      "affected_proposal_checks_passed": 25,
+      "rule": "purchase line base_total_before_vat matches LOT base_cost, not capitalized total_cost; base+allocated=total; capitalized amount separately proven by source documents, hashed recipients and posted GL",
+      "missing_immutable_recipient_proof_is_not_declared_data_corruption": true,
+      "legacy_shipment_record_and_cost_gl_aggregate_equality_not_auto_approval": true,
+      "no_share_recalculation": true,
+      "partially_issued_capitalized_history_requires_issue_order_evidence": true,
+      "actual_archive_capitalization_result_pending": true,
+      "mapping_approved": false,
+      "production_extraction_authorized": false
     }
   }
 }
