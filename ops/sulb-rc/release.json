@@ -780,6 +780,11 @@
     "account_or_service_changes": false,
     "release_decision": "NO-GO",
     "bounded_surface_tests": 2,
-    "alternate_connection_tests": 3
+    "alternate_connection_tests": 3,
+    "tested_code_commit": "705b5a2a0302f3b93a982ac9567ad1c1a7e62b9e",
+    "ci_result": "PASS",
+    "ci_run": "https://github.com/mptech96/salb/actions/runs/40925185595",
+    "new_linkage_checks_total": 32,
+    "private_review_rows_remain_unsigned": true
   }
 }
