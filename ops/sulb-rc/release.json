@@ -661,7 +661,7 @@
   "technical_closure_20261029": {
     "reference_commit": "ab741beaac1623a757a336de725312ed45315394",
     "approval_policy_new_checks": 22,
-    "exclusive_audit_new_checks": "PENDING_LINUX_CI",
+    "exclusive_audit_new_checks": 6,
     "actual_human_approvals": "BLOCKED_HUMAN_APPROVAL",
     "source_writer_inventory": "ops/sulb-rc/source-writer-scope.json",
     "candidate_source_writer_files": 115,
@@ -671,6 +671,9 @@
     "actual_history_backfill": "BLOCKED_HUMAN_APPROVAL_AND_PRIVATE_VPS_ACCESS",
     "backup_lifecycle": "BLOCKED_NOT_INTEGRATED",
     "production_derived_balances": "BLOCKED_NOT_QUALIFIED",
-    "release_decision": "NO-GO"
+    "release_decision": "NO-GO",
+    "new_ci_result": "PASS",
+    "new_ci_run": "https://github.com/mptech96/salb/actions/runs/40863828725",
+    "tested_code_commit": "f5982301cdc71e11aeff3793fd14505c5317c342"
   }
 }
