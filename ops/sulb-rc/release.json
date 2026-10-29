@@ -736,5 +736,22 @@
     "actual_approved_history_run": "NOT_RUN_PENDING_TWO_HUMAN_APPROVALS",
     "all_tenant_live_writer_exclusion": "NOT_OPERATIONALLY_PROVEN",
     "new_commit_does_not_authorize_deployment": true
+  },
+  "operational_review_preparation": {
+    "base_commit": "e3fbe330e8772a5ed0095faabda4feb6d0513f68",
+    "vps_access_performed": false,
+    "live_writers_reviewed": false,
+    "readonly_entry": "php ops/sulb-rc/release-fence.php --review-profile",
+    "session_readonly_transaction": true,
+    "accounting_forms": [
+      "ops/sulb-rc/accounting-cost-unsigned.json",
+      "ops/sulb-rc/accounting-mapping-unsigned.json"
+    ],
+    "forms_signed": false,
+    "new_local_context_checks": 13,
+    "new_attestation_date_hash_checks": 4,
+    "backfill_executed": false,
+    "production_changes": false,
+    "release_decision": "NO-GO"
   }
 }

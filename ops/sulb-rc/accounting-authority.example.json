@@ -4,13 +4,17 @@
     "reviewer": null,
     "review_reference": null,
     "role": "AUTHORIZED_ACCOUNTANT",
-    "decision": "APPROVE_RECORDED_LOT_ALLOCATIONS"
+    "decision": "APPROVE_RECORDED_LOT_ALLOCATIONS",
+    "attested_at_utc": null,
+    "signed_document_sha256": null
   },
   "mapping": {
     "packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
     "reviewer": null,
     "review_reference": null,
     "role": "AUTHORIZED_ACCOUNTANT",
-    "decision": "APPROVE_COMPANY3_ACCOUNT180_MAPPING"
+    "decision": "APPROVE_COMPANY3_ACCOUNT180_MAPPING",
+    "attested_at_utc": null,
+    "signed_document_sha256": null
   }
 }

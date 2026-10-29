@@ -1,0 +1,24 @@
+{
+  "format": "SULB_UNSIGNED_ACCOUNTING_FORM_V1",
+  "scope": "cost",
+  "packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
+  "company_id": 3,
+  "account_id": 180,
+  "lot_ids": [
+    34,
+    35,
+    36,
+    37,
+    38
+  ],
+  "reviewer": null,
+  "role": null,
+  "attested_at_utc": null,
+  "review_reference": null,
+  "signed_document_sha256": null,
+  "decision": null,
+  "required_decision_if_approved": "APPROVE_RECORDED_LOT_ALLOCATIONS",
+  "approval_recorded": false,
+  "production_authorized": false,
+  "no_historical_recalculation": true
+}
