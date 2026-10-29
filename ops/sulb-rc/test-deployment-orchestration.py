@@ -33,7 +33,9 @@ elif cmd=='python3':
  if pathlib.Path(args[0]).name!='history-stage.py':raise RuntimeError('UNMODELED_PYTHON')
  event('restore')
 elif cmd=='runuser':
- args=args[args.index('--')+1:];raise SystemExit(subprocess.run(args).returncode)
+ args=args[args.index('--')+1:]
+ if args[:2]==['test','-x']:inside(args[2]);raise SystemExit(0)
+ raise SystemExit(subprocess.run(args).returncode)
 elif cmd=='env':
  clean={}if args and args[0]=='-i'else dict(os.environ)
  if args and args[0]=='-i':args=args[1:]
