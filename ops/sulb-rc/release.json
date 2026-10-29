@@ -779,6 +779,7 @@
     "allowlist_authorized": false,
     "account_or_service_changes": false,
     "release_decision": "NO-GO",
-    "bounded_surface_tests": 2
+    "bounded_surface_tests": 2,
+    "alternate_connection_tests": 3
   }
 }
