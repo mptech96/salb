@@ -786,5 +786,18 @@
     "ci_run": "https://github.com/mptech96/salb/actions/runs/40925185595",
     "new_linkage_checks_total": 32,
     "private_review_rows_remain_unsigned": true
+  },
+  "offline_writer_signoff_preparation": {
+    "base_commit": "996fde0610e707594a56fc88a8b88c80e4df8a0f",
+    "private_profile_available_locally": false,
+    "operator_reported_accounts": 9,
+    "operator_reported_service_candidates": 1,
+    "missing_proof_categories": 5,
+    "entry": "python3 ops/sulb-rc/prepare-writer-signoff.py --prepare",
+    "database_connections_required": 0,
+    "new_live_scan_required": false,
+    "approval_recorded": false,
+    "production_changes_authorized": false,
+    "release_decision": "NO-GO"
   }
 }

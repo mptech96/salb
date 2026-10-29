@@ -1,0 +1,19 @@
+name: SULB offline writer signoff packet
+on:
+  push:
+    branches: [codex/sulb-complete-rc-20261027]
+    paths:
+      - 'ops/sulb-rc/*prepare-writer-signoff.py'
+      - '.github/workflows/sulb-writer-signoff-qa.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline packet and root-private file tests only
+        run: sudo --preserve-env=GITHUB_ACTIONS python3 ops/sulb-rc/test-prepare-writer-signoff.py
