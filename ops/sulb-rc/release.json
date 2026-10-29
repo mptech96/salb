@@ -759,5 +759,25 @@
     "source_scheduler": "subscriptions:expire dailyAt 00:05 withoutOverlapping(30)",
     "custom_jobs_directory_present": false,
     "live_runtime_checked": false
+  },
+  "writer_linkage_closure": {
+    "base_commit": "14c4349929a1aafe18c80bf276866668c4bcc4e0",
+    "operator_reported_counts": {
+      "accounts": 9,
+      "source_write_capable": 5,
+      "privileged": 4,
+      "locked": 4,
+      "source_files_match": 115,
+      "surface_files": 324
+    },
+    "operator_report_is_not_an_approval": true,
+    "assistant_vps_access": false,
+    "literal_cache_and_linkage_tests": 27,
+    "fresh_private_linkage_result": "PENDING_OPERATOR_RUN",
+    "effective_configuration_verified": false,
+    "external_writers_and_schedules_reviewed": false,
+    "allowlist_authorized": false,
+    "account_or_service_changes": false,
+    "release_decision": "NO-GO"
   }
 }
