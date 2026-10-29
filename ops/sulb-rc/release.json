@@ -752,6 +752,12 @@
     "new_attestation_date_hash_checks": 4,
     "backfill_executed": false,
     "production_changes": false,
-    "release_decision": "NO-GO"
+    "release_decision": "NO-GO",
+    "tested_code_commit": "8426419c8fba3b9932533176f0553d04f07a1125",
+    "ci_result": "PASS",
+    "ci_run": "https://github.com/mptech96/salb/actions/runs/40918442913",
+    "source_scheduler": "subscriptions:expire dailyAt 00:05 withoutOverlapping(30)",
+    "custom_jobs_directory_present": false,
+    "live_runtime_checked": false
   }
 }
