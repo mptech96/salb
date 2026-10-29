@@ -25,5 +25,6 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Event::listen(\Illuminate\Database\Events\ConnectionEstablished::class,static function($event){\App\Support\ReleaseWriteFence::attach($event->connection);});
         foreach(\Illuminate\Support\Facades\DB::getConnections()as$connection)\App\Support\ReleaseWriteFence::attach($connection);
         if($this->app->runningInConsole())\App\Support\ReleaseWriteFence::assertDatabaseAccess();
+        \App\Support\ReleaseRuntimeConfig::apply();
     }
 }

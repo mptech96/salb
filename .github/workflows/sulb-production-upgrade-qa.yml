@@ -12,6 +12,18 @@ on:
       - 'ops/sulb-rc/*write-fence*'
       - 'ops/sulb-rc/*release-fence*'
       - 'ops/sulb-rc/release-process-fence.php'
+      - 'backend/app/Support/ReleaseRuntimeConfig.php'
+      - 'ops/sulb-rc/*backup*'
+      - 'ops/sulb-rc/*receipt*'
+      - 'ops/sulb-rc/*derived*'
+      - 'ops/sulb-rc/*runtime*'
+      - 'ops/sulb-rc/release-activate.php'
+      - 'ops/sulb-rc/release-postcheck.php'
+      - 'ops/sulb-rc/rollback-policy.php'
+      - 'ops/sulb-rc/test-recovery-policy.php'
+      - 'ops/sulb-rc/test-writer-profile.php'
+      - 'ops/sulb-rc/test-fence-account-qa.php'
+      - 'ops/sulb-rc/deploy-reviewed-release.sh'
       - 'ops/sulb-rc/production-upgrade*'
       - 'ops/sulb-rc/production-upgrade/**'
       - 'ops/sulb-rc/test-production-upgrade*'
@@ -44,6 +56,14 @@ jobs:
           php ops/sulb-rc/test-write-fence-integration.php
           php ops/sulb-rc/test-release-fence-evidence.php
           python3 ops/sulb-rc/test-history-stage.py
+          php ops/sulb-rc/test-runtime-config.php
+          php ops/sulb-rc/test-recovery-policy.php
+          sudo php ops/sulb-rc/test-writer-profile.php
+          php ops/sulb-rc/test-release-backup-contract.php
+          php ops/sulb-rc/test-backup-receipt.php
+          php ops/sulb-rc/test-asset-backup.php
+          bash -n ops/sulb-rc/deploy-reviewed-release.sh
+          python3 ops/sulb-rc/test-deployment-orchestration.py
       - name: Owned Percona for NEW executor only
         run: |
           set -euo pipefail
@@ -58,10 +78,23 @@ jobs:
             sleep 2
           done
           exit 1
+      - name: NEW owned-server account lock and existing-session semantics
+        run: php ops/sulb-rc/test-fence-account-qa.php
       - name: NEW production executor 18 adapters, original row preservation and tenant FK
         run: php -d memory_limit=512M ops/sulb-rc/test-production-upgrade.php
       - name: New approved history engine with independent company4
         run: php -d memory_limit=512M ops/sulb-rc/test-approved-backfill.php
+      - name: Revised unprivileged full frontend build with build-time dev tools
+        working-directory: frontend
+        env:
+          NODE_ENV: production
+          SULB_QA_UOM: '0'
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:9/api
+          NODE_OPTIONS: --max-old-space-size=2048
+        run: |
+          node -e 'const [a,b]=process.versions.node.split(".").map(Number);if(a<20||(a===20&&b<9))process.exit(78)'
+          npm ci --include=dev --no-audit --no-fund
+          npm run build
       - name: Stop owned QA container only
         if: always()
         run: docker rm -f sulb-upgrade-qa >/dev/null 2>&1 || true

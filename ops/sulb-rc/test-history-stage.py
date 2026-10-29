@@ -6,6 +6,10 @@ spec=importlib.util.spec_from_file_location('history',pathlib.Path(__file__).wit
 h=importlib.util.module_from_spec(spec);spec.loader.exec_module(h)
 FIX=pathlib.Path(__file__).resolve().parents[2]/'backend/storage/framework/testing/history-stage-contracts';FIX.mkdir(parents=True,exist_ok=True)
 class HistorySafety(unittest.TestCase):
+    def test_fresh_deployment_restore_requires_separate_go_before_resources(self):
+        with mock.patch.object(h.pathlib.Path,'read_text',return_value='{}'),mock.patch.object(h,'OwnedGroup') as group,contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(h.main(['--verify-release-backup','unused']),78)
+        group.assert_not_called();self.assertEqual(json.loads(out.getvalue())['reason'],'RELEASE_BACKUP_RESTORE_NOT_AUTHORIZED')
     def test_new_backfill_requires_two_decisions_before_any_resources(self):
         for policy in [{},{'legacy_allocation_accounting_approval':{'authorized':True}}]:
             with mock.patch.object(h.pathlib.Path,'read_text',return_value=json.dumps(policy)),mock.patch.object(h,'OwnedGroup') as group,contextlib.redirect_stdout(io.StringIO()) as out:

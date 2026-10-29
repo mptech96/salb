@@ -536,7 +536,7 @@
   "deployment_backup_restore_qualified": false,
   "final_closure": {
     "scope_manifest": "ops/sulb-rc/full-release-scope.json",
-    "scope_sha256": "d30086a0b0b028c3442cf6092b45208d51ce718ff800a8b927cff6763296aac4",
+    "scope_sha256": "a5b9326155e77e075acadf16e3a2e3138cd33429bf179f806940a19b7ec19116",
     "full_release_only": true,
     "tenant_account180_scope": {
       "company_id": 3,
@@ -561,7 +561,7 @@
     "cleanup_authorized": false,
     "vps_reclaim_bytes_not_measured": true,
     "build_and_deploy_not_performed": true,
-    "source_files_frozen": 788,
+    "source_files_frozen": 789,
     "ordered_migrations_frozen": 18,
     "new_inventory_tests": {
       "passed": 5,
@@ -600,7 +600,9 @@
     "tenant_cross_link_rejected_in_new_executor_test": true,
     "unproven_write_fence_backup_or_accounting_blocks_before_production_actions": true,
     "original_qa_guards_unchanged": true,
-    "original_application_files_retained": 786
+    "original_application_files_retained": 786,
+    "qualified_backup_issuer_sha256": "5d1fc54fb73af054ccca36b63ed281b17461a19b28ad338f9bfe2b18e29ed440",
+    "derived_artifact_sha256": null
   },
   "inventory_account_mapping_approval": {
     "authorized": false,
@@ -629,7 +631,11 @@
     "site_uid": null,
     "php_fpm_unit": null,
     "worker_units": [],
-    "account_or_service_changes_authorized": false
+    "account_or_service_changes_authorized": false,
+    "profile_authorized": false,
+    "profile_file": null,
+    "profile_sha256": null,
+    "temporary_account_lock_authorized": false
   },
   "one_shot_closure_20261029": {
     "reference_commit": "e5416f46d75348ab8bbc8c60e002b773d7d34607",
@@ -675,5 +681,31 @@
     "new_ci_result": "PASS",
     "new_ci_run": "https://github.com/mptech96/salb/actions/runs/40863828725",
     "tested_code_commit": "f5982301cdc71e11aeff3793fd14505c5317c342"
+  },
+  "rollback_strategy_qualified": false,
+  "rollback_strategy": {
+    "mode": "FORWARD_REPAIR_ONLY",
+    "automatic_database_restore": false,
+    "automatic_migration_down": false,
+    "failure_retains_write_fence": true,
+    "partial_ddl_requires_forward_repair": true,
+    "code_rollback_authorized": false
+  },
+  "production_backup": {
+    "creation_authorized": false
+  },
+  "technical_pipeline_closure": {
+    "code_implemented": true,
+    "actual_human_approvals_recorded": false,
+    "actual_private_history_backfill": "BLOCKED_TWO_APPROVALS",
+    "actual_live_writer_profile": "NOT_REVIEWED",
+    "temporary_account_locks_authorized": false,
+    "same_run_production_backup_and_restore": "NOT_EXECUTED",
+    "production_deployment": "NOT_AUTHORIZED",
+    "original_files_retained": 786,
+    "guard_additions": 3,
+    "application_files": 789,
+    "new_ci_result": "PENDING",
+    "release_decision": "NO-GO"
   }
 }

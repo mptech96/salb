@@ -100,52 +100,82 @@ if [ "${1:---plan}" = --plan ]; then
   exit 78
 fi
 [ "${1:-}" = --execute ] || exit 2
-# This candidate ALWAYS stops here. Only a separately reviewed approval commit
-# with all evidence, exact production baseline and migration executor may proceed.
+# No production bootstrap or side effect is reachable before independent GO.
 php "$tools/check-approval.php"
-# Capture the approved list in the parent shell: process-substitution failures
-# must not turn into an empty successful migration loop.
-approved_migrations=$(php "$tools/check-approval.php" --migrations)
-test -n "$approved_migrations"
+test "$(id -u)" = 0
+test "$(uname -s)" = Linux
 test "$(pwd -P)" = /home/sulb-release
-test "$(git rev-parse HEAD)" = "${SULB_APPROVED_COMMIT:?Pinned approved commit required}"
+test "$(stat -c %u /home/sulb-release)" = 0
+php -r 'if((fileperms("/home/sulb-release")&0022)!==0)exit(78);'
+test "$(git rev-parse HEAD)" = "${SULB_APPROVED_COMMIT:?Exact final approved commit required}"
 test -z "$(git status --porcelain)"
-: "${SULB_BACKUP_CNF:?Protected dedicated backup-client config required}"
-: "${SULB_UPGRADE_AUTHORIZATION_FILE:?Qualified source-bound upgrade receipt required}"
-: "${SULB_WRITE_FENCE_RECEIPT:?Reviewed web/queue/import write-fence evidence required}"
-test -s "$SULB_WRITE_FENCE_RECEIPT"
-test "$(stat -c %a "$SULB_BACKUP_CNF")" = 600
-test "$(stat -c %u "$SULB_BACKUP_CNF")" = "$(id -u)"
-# Use the explicitly approved existing account in the private client file;
-# never assume that a new sulb_backup_ro account has been created.
-php -d display_errors=0 -d log_errors=0 -r '$c=@parse_ini_file($argv[1],true,INI_SCANNER_RAW);$u=$c["mysqldump"]["user"]??$c["client"]["user"]??null;if(!is_string($u)||trim($u)==="")exit(78);' "$SULB_BACKUP_CNF"
+: "${SULB_APPROVED_DERIVED_ARTIFACT:?Private SHA-bound historical plan required}"
 backend=/home/mgye-api-sulb/htdocs/api.sulb.mgye.tech
 frontend=/home/mgye-sulb/htdocs/sulb.mgye.tech
-backup=$(mktemp -d /home/mgye-api-sulb/sulb-release-backup.XXXXXXXX)
-php "$tools/preflight.php" > "$backup/preflight.json"
-php -r '$m=json_decode(file_get_contents($argv[1]),true);if(($m["schema_matches_approved_baseline"]??false)!==true)exit(78);' "$backup/preflight.json"
-dump=mysqldump
-command -v "$dump" >/dev/null || { printf 'STOP: matching MySQL/Percona8.4 dump client required.\n' >&2; exit 78; }
-dump_version=$("$dump" --version)
-[[ "$dump_version" =~ Ver[[:space:]]8\.4\. ]] || { printf 'STOP: dump client is not qualified for Percona8.4.\n' >&2; exit 78; }
-"$dump" --defaults-extra-file="$SULB_BACKUP_CNF" --single-transaction --no-tablespaces --set-gtid-purged=OFF --routines --triggers --events --hex-blob sulbprod > "$backup/database.sql"
-test -s "$backup/database.sql"
-tar -czf "$backup/backend.tar.gz" -C "$backend" .
-tar -czf "$backup/frontend.tar.gz" -C "$frontend" .
-(cd "$backup" && sha256sum database.sql backend.tar.gz frontend.tar.gz > SHA256SUMS)
-(cd "$backup" && sha256sum --check SHA256SUMS)
-printf 'BACKUP_DIR=%s\n' "$backup"
-trap 'echo "STOP: retain write fence; do not restore database over live transactions. Reviewed forward repair or compatible code-only rollback required." >&2' ERR
-php "$backend/artisan" down --retry=60
-rsync -a --exclude='.git/' --exclude='.env*' --exclude='storage/' --exclude='bootstrap/cache/' --exclude='vendor/' --exclude='tests/' --exclude='public/storage' --exclude='public/uploads/' backend/ "$backend/"
-rsync -a --exclude='.git/' --exclude='.env*' --exclude='.next*/' --exclude='node_modules/' --exclude='public/uploads/' frontend/ "$frontend/"
-(cd "$backend" && composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader)
-php "$backend/artisan" config:clear
+id mgye-api-sulb >/dev/null
+id mgye-sulb >/dev/null
+backend_group=$(id -gn mgye-api-sulb)
+frontend_group=$(id -gn mgye-sulb)
+for command in php composer node npm rsync systemctl tar python3 runuser realpath find; do command -v "$command" >/dev/null; done
+# Hashes cover the entire application; binary assets are never newline-normalized.
+php <<'SULB_SCOPE_PHP'
+<?php
+$r=json_decode(file_get_contents('ops/sulb-rc/release.json'),true,512,JSON_THROW_ON_ERROR);$f='ops/sulb-rc/full-release-scope.json';if(($r['final_closure']['scope_sha256']??null)!==hash_file('sha256',$f))exit(78);$scope=json_decode(file_get_contents($f),true,512,JSON_THROW_ON_ERROR);foreach($scope['application_files']as$row)if(!is_file($row['path'])||is_link($row['path'])||!hash_equals($row['sha256_git_blob'],hash_file('sha256',$row['path'])))exit(78);
+SULB_SCOPE_PHP
+backup=/home/mgye-api-sulb/sulb-release-backup.$(php -r 'echo bin2hex(random_bytes(8));')
+mkdir -m 700 "$backup"
 export SULB_CURRENT_BACKUP_DIR="$backup"
-php "$tools/production-upgrade.php" --execute
-(cd "$frontend" && npm ci && npm run build)
+export LOG_CHANNEL=null
+# Backend and privileged tools must remain root-owned and not writable by site users.
+php -r '$roots=["backend","ops/sulb-rc"];foreach($roots as$root){$it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::SELF_FIRST);foreach($it as$f){if(str_contains($f->getPathname(),"/storage/")||str_contains($f->getPathname(),"/vendor/"))continue;if($f->isLink()||fileowner($f->getPathname())!==0||(fileperms($f->getPathname())&0022)!==0)exit(78);}}'
+if [ -d .git ]; then chmod 700 .git; else chmod 600 .git; fi
+test "$(systemctl show sulb-frontend.service --property=User --value)" = mgye-sulb
+# Install build-time frontend tools explicitly; do not run npm as root.
+node -e 'const [a,b]=process.versions.node.split(".").map(Number);if(a<20||(a===20&&b<9))process.exit(78)'
+test "$(awk '/MemAvailable:/{print $2}' /proc/meminfo)" -ge 4194304
+test "$(df -Pk /home/mgye-api-sulb | awk 'NR==2{print $4}')" -ge 12582912
+chown -R --no-dereference "mgye-sulb:$frontend_group" frontend
+runuser -u mgye-sulb -- test -x /home/sulb-release/frontend
+unset COMPOSER_VENDOR_DIR COMPOSER
+# Composer never executes plugins/scripts; frontend tooling runs as the frontend site user.
+# No live .env/storage is copied or modified by these candidate builds.
+(cd backend && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-plugins) > "$backup/candidate-backend-build-private.log" 2>&1
+(cd frontend && runuser -u mgye-sulb -- env -i PATH="$PATH" HOME=/home/mgye-sulb NODE_ENV=production SULB_QA_UOM=0 NEXT_PUBLIC_API_URL=https://api.sulb.mgye.tech/api NODE_OPTIONS=--max-old-space-size=2048 npm ci --include=dev --no-audit --no-fund && runuser -u mgye-sulb -- env -i PATH="$PATH" HOME=/home/mgye-sulb NODE_ENV=production SULB_QA_UOM=0 NEXT_PUBLIC_API_URL=https://api.sulb.mgye.tech/api NODE_OPTIONS=--max-old-space-size=2048 npm run build) > "$backup/candidate-frontend-build-private.log" 2>&1
+test -z "$(git status --porcelain)"
+php "$tools/release-app-control.php" --prepare-candidate > "$backup/candidate-manifest-private.json"
+trap 'if [ -d /run/sulb-release.fence ]; then printf "%s\n" "BLOCKED: write fence retained; preserve all private evidence and obtain reviewed forward repair." >&2; else printf "%s\n" "BLOCKED after fence release or before acquisition: customer writes may be active. Preserve evidence; never restore an older database or run down()." >&2; fi' ERR
+php "$tools/release-fence.php" --acquire "$backup" > "$backup/fence-summary.json"
+export SULB_RELEASE_PERMIT_SHA256=$(sha256sum /run/sulb-release.fence/permit.json | cut -d ' ' -f1)
+# Password comes only from /dev/tty. Source reader is SELECT-only sulbmetadata.
+php "$tools/release-backup.php" --capture "$backup" > "$backup/backup-summary.json"
+python3 "$tools/history-stage.py" --verify-release-backup "$backup" > "$backup/restore-summary.json"
+php "$tools/release-backup.php" --issue-upgrade-receipt "$backup" > "$backup/receipt-summary.json"
+export SULB_UPGRADE_AUTHORIZATION_FILE="$backup/upgrade-authorization.json"
+for dir in "$backend" "$frontend" "$backend/bootstrap/cache"; do test ! -L "$dir"; test "$(realpath -m "$dir")" = "$dir"; done
+# No application copy occurs until the actual backup has been restored and financial drift rejected.
+php -r '$f=fopen($argv[1],"xb");if(!$f||!fwrite($f,"COPY_STARTED\n")||!fflush($f)||!fsync($f))exit(78);fclose($f);' "$backup/application-copy-started"
+rsync -a --chown="mgye-api-sulb:$backend_group" --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX --exclude='.git/' --exclude='.env*' --exclude='storage/' --exclude='bootstrap/cache/' --exclude='vendor/' --exclude='tests/' --exclude='public/storage' --exclude='public/uploads/' backend/ "$backend/"
+rsync -a --chown="mgye-sulb:$frontend_group" --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX --exclude='.git/' --exclude='.env*' --exclude='.next*/' --exclude='node_modules/' --exclude='next-env.d.ts' --exclude='public/uploads/' frontend/ "$frontend/"
+# --delete is restricted to exact generated dependency/build directories, never application data.
+for dir in "$backend/vendor" "$frontend/node_modules" "$frontend/.next"; do
+  test ! -L "$dir"
+  test "$(realpath -m "$dir")" = "$dir"
+done
+rsync -a --delete --chown="mgye-api-sulb:$backend_group" --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX backend/vendor/ "$backend/vendor/"
+rsync -a --delete --chown="mgye-sulb:$frontend_group" --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX frontend/node_modules/ "$frontend/node_modules/"
+rsync -a --delete --chown="mgye-sulb:$frontend_group" --chmod=Du=rwx,Dgo=rx,Fu=rwX,Fgo=rX frontend/.next/ "$frontend/.next/"
+php "$tools/release-app-control.php" --publish-cache > "$backup/cache-publish-private.json"
+chown -R "mgye-api-sulb:$backend_group" "$backend/bootstrap/cache"
+find "$backend/bootstrap/cache" -type d -exec chmod 755 {} +
+find "$backend/bootstrap/cache" -type f -exec chmod 644 {} +
+php "$tools/release-fence.php" --refresh-workers "$backup" > "$backup/refresh-summary.json"
+php "$tools/production-upgrade.php" --execute > "$backup/migration-summary.json"
+php "$tools/release-postcheck.php" > "$backup/postcheck-summary.json"
+php "$tools/release-activate.php" > "$backup/activation-summary.json"
+php "$tools/release-fence.php" --refresh-workers "$backup" > "$backup/activated-workers-summary.json"
+php "$tools/release-fence.php" --release "$backup" > "$backup/release-summary.json"
+php "$tools/release-fence.php" --resume-workers "$backup" > "$backup/resume-workers-summary.json"
 systemctl restart sulb-frontend.service
-php "$backend/artisan" up
 curl --fail --silent --show-error https://api.sulb.mgye.tech/up >/dev/null
 curl --fail --silent --show-error https://sulb.mgye.tech/ >/dev/null
-printf 'HTTP smoke passed; business UAT and authorized write-fence release still required.\n'
+printf '%s\n' "Full Backend+Frontend+18 migrations completed. Private backup/evidence: $backup"
