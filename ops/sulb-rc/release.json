@@ -778,6 +778,7 @@
     "external_writers_and_schedules_reviewed": false,
     "allowlist_authorized": false,
     "account_or_service_changes": false,
-    "release_decision": "NO-GO"
+    "release_decision": "NO-GO",
+    "bounded_surface_tests": 2
   }
 }

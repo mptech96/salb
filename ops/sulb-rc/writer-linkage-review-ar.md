@@ -32,3 +32,5 @@
 ## المشاركة الآمنة
 
 أرسل ملخص Terminal فقط: linkage_status، config_binding_status، account_review_rows، service_schedule_candidates، missing_proof_categories، source_writer_hash_mismatches، profile_sha256 والحالة العامة. هذه عدادات وحالات دون أسماء الحسابات أو قيم الإعدادات. لا ترسل profile-private.json أو config.php أو .env أو نصوص Cron أو بيانات الاعتماد. لا يحتوي الأمر على Backfill أو Migration أو Deploy أو إيقاف خدمة.
+
+لتقليل حجم الملف الخاص، تُحفظ بصمة كل ملف سطح تشغيل كاملة، وتُفصّل الأسطر ذات قرائن الكتابة أو الموقع فقط. يُسجّل عدد الأسطر الأخرى في unclassified_entry_count، وتبقى full_file_content_reviewed=false. حذف النص الخام من التقرير ليس اعتمادًا لتلك الأسطر؛ يلزم فحص محتوى الملفات والبرامج المتفرعة داخليًا. بصمات المصدر الـ115 تخص ملفات المرشح ولا تثبت مطابقة كل كود الإنتاج أو غياب كود خارج الجرد.
