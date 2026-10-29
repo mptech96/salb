@@ -571,13 +571,20 @@
     "new_deployment_guard_tests_passed": 3,
     "bash_syntax_passed": true,
     "production_executor_specific_blockers": [
-      "Code path/order/QA-runtime-dependency defects resolved by separate guarded production adapters; operational approval remains false",
-      "Actual accounting attestation and separate company3 account mapping approval pending; no legacy value may be changed",
-      "Approved isolated historical Backfill/LOT=GL/idempotency pending",
-      "Exact current-backup/upgrade-receipt lifecycle and all-tenant write-fence/final security qualification remain required before deploy GO"
+      "18-adapter and derived executor code passed owned Percona 8.4.8-8; actual reviewed financial artifact and operational gates remain pending",
+      "No accounting attestation or company3 mapping approval has been issued",
+      "Actual private approved-history Backfill/LOT=GL/idempotency and live writer exclusion remain required",
+      "Prepared same-run exact backup/restore cannot be claimed as performed on VPS; final approval remains required"
     ],
     "production_executor_code_path_repaired": true,
-    "old_source_count_preserved": 786
+    "old_source_count_preserved": 786,
+    "required_remaining_gates": [
+      "Two independent real accounting decisions and private authorized identities/references bound to the existing packet SHA; never infer approval from this task",
+      "Actual existing-archive Backfill/LOT=GL/idempotency using the qualified code after those decisions",
+      "Actual private writer/admin/scheduler profile approval and independently authorized temporary account exclusion/maintenance",
+      "Operational qualification of the prepared full deployment, fresh encrypted backup/owned restore and exact derived artifact; preserve fail-closed financial drift checks",
+      "Final security approval and independent production deployment authorization"
+    ]
   },
   "production_upgrade": {
     "implementation": "EXPLICIT_18_PRODUCTION_ADAPTERS_V1",
@@ -705,7 +712,29 @@
     "original_files_retained": 786,
     "guard_additions": 3,
     "application_files": 789,
-    "new_ci_result": "PENDING",
-    "release_decision": "NO-GO"
+    "new_ci_result": "PASS",
+    "release_decision": "NO-GO",
+    "tested_code_commit": "e7e6e115dea7060b859961d738d452ca63ec1de4",
+    "new_ci_run": "https://github.com/mptech96/salb/actions/runs/40889911787",
+    "percona_version": "8.4.8-8",
+    "new_checks": {
+      "owned_account_lock_and_drain": 7,
+      "ordered_executor": 20,
+      "approved_history_fixture": 11,
+      "derived_executor_integration": 10,
+      "private_writer_profile": 7,
+      "encrypted_assets_and_restore": 8,
+      "backup_receipt": 20,
+      "backup_contract": 10,
+      "partial_ddl_recovery": 12,
+      "runtime_flags": 9,
+      "deployment_order_and_failure": 6,
+      "changed_history_orchestration": 11
+    },
+    "frontend_production_build": "PASS_62_STATIC_PAGES",
+    "history_tools_changed_orchestration_ci": "https://github.com/mptech96/salb/actions/runs/40889610935",
+    "actual_approved_history_run": "NOT_RUN_PENDING_TWO_HUMAN_APPROVALS",
+    "all_tenant_live_writer_exclusion": "NOT_OPERATIONALLY_PROVEN",
+    "new_commit_does_not_authorize_deployment": true
   }
 }
