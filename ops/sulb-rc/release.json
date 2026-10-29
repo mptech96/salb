@@ -798,6 +798,14 @@
     "new_live_scan_required": false,
     "approval_recorded": false,
     "production_changes_authorized": false,
-    "release_decision": "NO-GO"
+    "release_decision": "NO-GO",
+    "tested_code_commit": "4ba011f2039052307e9815f79a71049fd9f2827d",
+    "ci_result": "PASS",
+    "ci_run": "https://github.com/mptech96/salb/actions/runs/40938668508",
+    "new_tests_passed_ci": 16,
+    "new_tests_skipped_ci": 0,
+    "local_tests_passed": 12,
+    "local_linux_only_tests_skipped": 4,
+    "actual_private_packet_not_created_by_codex": true
   }
 }
