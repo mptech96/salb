@@ -39,6 +39,7 @@ jobs:
       - name: New accounting policy and application fence only
         run: |
           php ops/sulb-rc/test-approved-history-policy.php
+          sudo php ops/sulb-rc/test-approval-audit.php
           php ops/sulb-rc/test-write-fence.php
           php ops/sulb-rc/test-write-fence-integration.php
           php ops/sulb-rc/test-release-fence-evidence.php

@@ -1,14 +1,20 @@
 <?php
 require_once __DIR__.'/approved-history-evidence.php';
 function historyApprovalPolicies(array $release,string $sha,array $authority,array $scopes=['cost','mapping']):array {
+    if(!$scopes||array_diff($scopes,['cost','mapping']))throw new RuntimeException('EXPLICIT_APPROVAL_SCOPE_REQUIRED');
+    if(($release['history_approval_policy']['require_distinct_reviewers']??false)===true){$a=trim((string)($authority['cost']['reviewer']??''));$b=trim((string)($authority['mapping']['reviewer']??''));if($a===''||$b===''||strcasecmp($a,$b)===0)throw new RuntimeException('INDEPENDENT_REVIEWERS_REQUIRED');}
     foreach(['legacy_allocation_accounting_approval'=>'cost','inventory_account_mapping_approval'=>'mapping']as$key=>$scope){if(!in_array($scope,$scopes,true))continue;$p=$release[$key]??[];if(($p['authorized']??false)!==true||($p['packet_sha256']??null)!==$sha)throw new RuntimeException($scope==='cost'?'COST_ATTESTATION_NOT_AUTHORIZED':'INVENTORY_MAPPING_NOT_AUTHORIZED');$who=$authority[$scope]??[];if(($who['packet_sha256']??null)!==$sha||!in_array($who['role']??'',['AUTHORIZED_ACCOUNTANT','AUTHORIZED_FINANCIAL_OWNER'],true)||($who['decision']??null)!==($scope==='cost'?'APPROVE_RECORDED_LOT_ALLOCATIONS':'APPROVE_COMPANY3_ACCOUNT180_MAPPING'))throw new RuntimeException('EXPLICIT_PRIVATE_ACCOUNTING_DECISION_REQUIRED');foreach(['reviewer','review_reference']as$f)if(!is_string($who[$f]??null)||trim($who[$f])===''||strlen($who[$f])>256)throw new RuntimeException('PRIVATE_ACCOUNTANT_IDENTITY_REQUIRED');$release[$key]=array_merge($p,$who);}
     return $release;
 }
 function recordPrivateHistoryDecision(string $dir,string $scope,array $decision,string $identitySha):array {
-    if(!in_array($scope,['cost','mapping'],true))throw new RuntimeException('INDEPENDENT_DECISION_SCOPE_REQUIRED');
+    if(!in_array($scope,['cost','mapping'],true)||!preg_match('/^[a-f0-9]{64}$/D',$decision['packet_sha256']??'')||!preg_match('/^[a-f0-9]{64}$/D',$identitySha))throw new RuntimeException('INDEPENDENT_DECISION_SCOPE_REQUIRED');
     $file=$dir.'/'.$scope.'-attestation-'.$decision['packet_sha256'].'.json';
-    if(file_exists($file)){accountPrivate($file);$old=json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);if(($old['decision']??null)!==$decision||($old['authority_file_sha256']??null)!==$identitySha||empty($old['recorded_utc']))throw new RuntimeException('INDEPENDENT_ATTESTATION_CONFLICT');}
-    else historyPrivateJson($file,['decision'=>$decision,'authority_file_sha256'=>$identitySha,'recorded_utc'=>gmdate('c')]);
+    $record=['decision'=>$decision,'authority_file_sha256'=>$identitySha,'recorded_utc'=>gmdate('c')];
+    if(!file_exists($file)){
+        $f=@fopen($file,'xb');
+        if($f!==false){try{if(!chmod($file,0600))throw new RuntimeException('ATTESTATION_PRIVATE_MODE_FAILED');$data=json_encode($record,JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR);if(fwrite($f,$data)!==strlen($data)||!fflush($f)||!fsync($f))throw new RuntimeException('ATTESTATION_DURABILITY_FAILED');}finally{fclose($f);}}
+    }
+    accountPrivate($file);$old=json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);if(($old['decision']??null)!==$decision||($old['authority_file_sha256']??null)!==$identitySha||empty($old['recorded_utc']))throw new RuntimeException('INDEPENDENT_ATTESTATION_CONFLICT');
     return ['private_attestation'=>$file,'attestation_sha256'=>hash_file('sha256',$file)];
 }
 function historyApprovalBundle(string $sha,string $scope='both'):array {
