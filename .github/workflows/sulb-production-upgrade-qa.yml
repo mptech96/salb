@@ -22,6 +22,8 @@ on:
       - 'ops/sulb-rc/rollback-policy.php'
       - 'ops/sulb-rc/test-recovery-policy.php'
       - 'ops/sulb-rc/test-writer-profile.php'
+      - 'ops/sulb-rc/*writer-signoff-policy.php'
+      - 'ops/sulb-rc/test-writer-signoff-fixture.php'
       - 'ops/sulb-rc/*writer-review-context.php'
       - 'ops/sulb-rc/*writer-linkage.php'
       - 'ops/sulb-rc/trusted-release-application.php'
@@ -60,6 +62,7 @@ jobs:
           php ops/sulb-rc/test-write-fence.php
           php ops/sulb-rc/test-write-fence-integration.php
           php ops/sulb-rc/test-release-fence-evidence.php
+          php ops/sulb-rc/test-writer-signoff-policy.php
           php ops/sulb-rc/test-writer-review-context.php
           php ops/sulb-rc/test-writer-linkage.php
           python3 ops/sulb-rc/test-history-stage.py

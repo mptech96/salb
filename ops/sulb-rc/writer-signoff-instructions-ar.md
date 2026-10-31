@@ -33,3 +33,20 @@
 - review: هوية المراجع ومرجعه؛ لا تصبح complete وexternal_writers_and_schedules_reviewed صحيحتين إلا بعد المراجعة الفعلية، ولا تعوض العلامات دليلًا ناقصًا.
 
 بعد المراجعة المستقلة فقط تُربط profile_file وprofile_sha256 وprofile_authorized في write_fence_plan بقرار صريح. حارس المشروع يتحقق من البصمة والملكية والأسطح والهوية وخطة الكتابة. لا تعدّل هذه الأداة تلك الحقول. تصريح قفل الحسابات مؤقتًا أو الصيانة أو النشر مستقل ويظل غير ممنوح هنا. لا تُرفع RELEASE_DECISION إلى GO بتوقيع هذه الحزمة وحده؛ التصديقات المحاسبية وBackfill التاريخي واعتماد التشغيل والنشر ما زالت بوابات منفصلة.
+
+
+## شرط الحارس التنفيذي بعد المراجعة الفعلية
+
+لم يعد review.complete وحده كافيًا. تحتفظ الحزمة الأصلية وملف المصدر دون تعديل. بعد صدور القرار الحقيقي فقط تُحفظ نسخة قرارات مكتملة باسم decisions-approved.json داخل مجلد الحزمة الخاص، بصيغة SULB_REVIEWED_WRITER_SIGNOFF_V1 وapproved=true؛ تظل production_changes_authorized وdeployment_authorized على false. لا تُسجل هذه الخطوات موافقة بدل المخوّل.
+
+- رأس القرار: reviewer وrole (AUTHORIZED_TECHNICAL_OWNER أو AUTHORIZED_DATABASE_ADMIN) وreview_reference وattested_at_utc وsigned_document_sha256، إضافة إلى بصمتي الأدلة والمصدر.
+- كل حساب: owner وservice_or_operator_role وmaintenance_handling ودليل binding_evidence_sha256 وبيانات المراجع والتاريخ وبصمة وثيقة القرار. القرار أحد APPROVE_APPLICATION_WRITER أو APPROVE_PRIVILEGED_OPERATOR أو KEEP_LOCKED_EXCLUDED أو CONFIRM_READ_ONLY، بحسب الحقائق فقط. لا يسمح KEEP_LOCKED_EXCLUDED لحساب غير مقفل.
+- كل قدرة: required_for وjustification وقرار APPROVE_SCOPED_CAPABILITY، أو KEEP_DISABLED لحساب يبقى مقفلًا. القدرة غير المبررة تمنع الاعتماد.
+- كل خدمة: owner وaccount_principals وbinding_evidence_sha256 وindirect_script_review_reference وبيانات القرار؛ decision=APPROVE_SCOPED_SERVICE وبصمة الملف الأصلية. وحدة writer_units لا تُقبل دون قرار خدمة يتضمن unit صالحًا؛ ملفات Cron ليست أسماء وحدات.
+- كل فئة نقص: قرار RESOLVED_WITH_PRIVATE_EVIDENCE، مع هوية المراجع ومرجعه وبصمة وثيقة الدليل. لا يُستخدم هذا الرمز قبل إغلاق النقص فعليًا؛ دليل ناقص يبقي الحارس BLOCKED.
+
+تُحفظ وثيقة القرار الموقعة باسم signed-decision.pdf، والوثائق المراجعة للفئات الناقصة باسم proof-<evidence_sha256>.pdf داخل مجلد الحزمة. لا تُنشر. الحارس يتحقق من وجودها وملكيتها وصلاحياتها وبصماتها، ولا يدعي التحقق التشفيري من هوية الموقّع أو دلالة محتواها؛ يتحقق المخوّل من صحة الهوية والتوقيع والمحتوى داخليًا.
+
+في نسخة profile المراجعة يُضاف writer_signoff متضمنًا packet_directory وsource_profile_file وevidence_sha256 وdecision_sha256. كل المسارات ضمن المساحات الخاصة المعتمدة فقط. يجب أن تبقى حقائق الحسابات والخدمات في الأدلة مطابقة للمصدر، وأن تساوي قائمة writer_accounts وtrusted_privileged_accounts القرارات المطابقة لها دون زيادة أو نقص. لا يستورد أي شيء من قرارات غير موقعة تلقائيًا. أثناء التنفيذ المستقبلي يعاد التحقق من حسابات MySQL وامتيازاتها؛ التغير في العضوية أو الصلاحيات يوقف التنفيذ، بينما قفل الحساب العادي المصرح به للصيانة لا يفسد مقارنة الامتيازات.
+
+هذه الشروط لا تمنح تصريح الصيانة أو قفل الحسابات أو التصديق المحاسبي أو Backfill أو النشر. تبقى كل تلك الموافقات مستقلة ومعلقة إن لم تصدر.
