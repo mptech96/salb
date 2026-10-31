@@ -55,8 +55,9 @@ class TerminalTests(unittest.TestCase):
   master,slave=pty.openpty()
   try:
    os.write(master,b'SYNTHETIC_INPUT\n')
-   with self.assertRaises((io.UnsupportedOperation,OSError)):
+   with self.assertRaises((io.UnsupportedOperation,OSError))as failure:
     with open(os.ttyname(slave),'r+')as terminal:terminal.write('PROMPT');terminal.flush();terminal.readline()
+   self.assertIn('seek',str(failure.exception).lower());print('REPRODUCED_OLD_TTY_FAILURE='+type(failure.exception).__name__+'; seek_failure=true')
   finally:os.close(master);os.close(slave)
  def test_separate_stream_terminal_input(self):
   import pty
