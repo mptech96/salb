@@ -1,0 +1,50 @@
+name: SULB new passive writer identity proof
+on:
+  push:
+    branches: [codex/sulb-complete-rc-20261027]
+    paths:
+      - 'ops/sulb-rc/*writer-runtime*'
+      - 'ops/sulb-rc/*writer-kernel-links.py'
+      - 'ops/sulb-rc/observe-existing-writers.php'
+      - '.github/workflows/sulb-writer-runtime-qa.yml'
+permissions:
+  contents: read
+jobs:
+  proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql
+          coverage: none
+      - name: New parser, kernel and authentication policy checks only
+        run: |
+          php ops/sulb-rc/test-writer-runtime.php
+          python3 ops/sulb-rc/test-writer-kernel-links.py
+          php -l ops/sulb-rc/observe-existing-writers.php
+      - name: Owned host-network Percona for new socket proof only
+        run: |
+          set -euo pipefail
+          token=$(openssl rand -hex 16)
+          data="/var/lib/mysql/sulb-shipment-$token"
+          socketdir="/tmp/sulb-auth-$token"
+          mkdir "$socketdir"
+          chmod 777 "$socketdir" # CI-only empty socket folder; no customer data or credentials.
+          echo "SULB_RUNTIME_QA_SOCKET=$socketdir/mysql.sock" >> "$GITHUB_ENV"
+          docker run -d --name sulb-runtime-auth-qa --network host --memory 512m --cpus 1 --pids-limit 128             -v "$socketdir:$socketdir" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_ROOT_HOST=%             percona/percona-server@sha256:eaa4cf955f8a01a43faa6ef656bf8fb69a17c17c278a3b0514212291ca0448b1             --datadir="$data" --socket="$socketdir/mysql.sock" --port=3339 --bind-address=127.0.0.1 --mysqlx=0 --skip-log-bin             --innodb-buffer-pool-size=64M '--performance-schema-instrument=wait/io/socket/sql/%=ON'
+          echo "SULB_RUNTIME_QA_SERVER_PID=$(docker inspect --format '{{.State.Pid}}' sulb-runtime-auth-qa)" >> "$GITHUB_ENV"
+          for n in $(seq 1 90); do
+            if docker exec sulb-runtime-auth-qa mysqladmin ping -h127.0.0.1 -P3339 --silent >/dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: New real TCP and Unix worker proof on isolated Percona only
+        run: sudo --preserve-env=GITHUB_ACTIONS,SULB_RUNTIME_QA_SOCKET,SULB_RUNTIME_QA_SERVER_PID php ops/sulb-rc/test-writer-runtime-percona.php
+      - name: Stop owned CI server only
+        if: always()
+        run: docker rm -f sulb-runtime-auth-qa >/dev/null 2>&1 || true
