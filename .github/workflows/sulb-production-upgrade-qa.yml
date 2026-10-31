@@ -68,7 +68,7 @@ jobs:
           python3 ops/sulb-rc/test-history-stage.py
           php ops/sulb-rc/test-runtime-config.php
           php ops/sulb-rc/test-recovery-policy.php
-          sudo php ops/sulb-rc/test-writer-profile.php
+          sudo --preserve-env=GITHUB_ACTIONS php ops/sulb-rc/test-writer-profile.php
           php ops/sulb-rc/test-release-backup-contract.php
           php ops/sulb-rc/test-backup-receipt.php
           php ops/sulb-rc/test-asset-backup.php
