@@ -821,6 +821,18 @@
     "new_local_policy_checks": 30,
     "production_connections": 0,
     "deployment_authorized": false,
-    "release_decision": "NO-GO"
+    "release_decision": "NO-GO",
+    "tested_code_commit": "50fbf7610d2e6c0ca550caeaa3c24c439411afea",
+    "new_ci_result": "PASS",
+    "new_ci_run": "https://github.com/mptech96/salb/actions/runs/41192278639",
+    "new_policy_tests_passed": 30,
+    "affected_private_profile_tests_passed": 9,
+    "new_document_binding_cases": 2,
+    "affected_offline_packet_tests_passed": 16,
+    "offline_packet_ci_run": "https://github.com/mptech96/salb/actions/runs/41192175359",
+    "real_human_approvals_recorded": false,
+    "actual_history_validation": "BLOCKED_PENDING_AUTHORIZED_APPROVALS_AND_PRIVATE_EXECUTION",
+    "production_writer_signoff": "BLOCKED_NO_HUMAN_DECISIONS",
+    "production_release_decision": "NO-GO"
   }
 }
