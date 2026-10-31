@@ -67,18 +67,43 @@ def private_report(facts):
  lines+=['','## الأدلة المطلوبة']+[('- '+r['code']+': '+r['reason_ar'])for r in facts['missing_proofs']]
  lines+=['','يملأ المسؤول قرارات الحسابات التسعة ومبرر كل قدرة ومالك الخدمة وأدلة الربط والتاريخ ومرجع القرار والتوقيع داخل الملف غير الموقّع. لا ترفع هذه الملفات إلى GitHub أو المحادثة. لا تشغّل ترحيلًا أو Backfill أو نشرًا.']
  return ('\n'.join(lines)+'\n').encode('utf-8')
+def prompted_inputs(source,prompts):
+ prompts.write('Private profile path: ');prompts.flush();path=source.readline().strip()
+ if not path:raise Blocked('PROFILE_PATH_REQUIRED')
+ prompts.write('Expected profile SHA-256: ');prompts.flush();sha=source.readline().strip()
+ if not re.fullmatch('[a-f0-9]{64}',sha):raise Blocked('PROFILE_SHA_REQUIRED')
+ return path,sha
+
+def tty_inputs(tty_path='/dev/tty'):
+ # Two one-direction text streams: no BufferedRandom seek on a character device.
+ with open(tty_path,'r',encoding='utf-8')as source,open(tty_path,'w',encoding='utf-8')as prompts:return prompted_inputs(source,prompts)
+
+def safe_failure(error,stage):
+ if isinstance(error,Blocked):reason=str(error)
+ elif stage=='READ_OPERATOR_INPUT':reason='OPERATOR_TTY_INPUT_UNAVAILABLE'
+ elif isinstance(error,FileNotFoundError):reason='PRIVATE_PROFILE_NOT_FOUND'if stage=='READ_PROFILE'else'PRIVATE_PACKET_PATH_NOT_FOUND'
+ elif isinstance(error,PermissionError):reason='PRIVATE_FILE_ACCESS_DENIED'
+ elif isinstance(error,json.JSONDecodeError):reason='PRIVATE_PROFILE_JSON_INVALID'
+ elif stage=='VALIDATE_PACKET'and isinstance(error,(TypeError,KeyError,AttributeError,ValueError)):reason='PRIVATE_PROFILE_STRUCTURE_INVALID'
+ elif stage=='WRITE_PACKET'and isinstance(error,OSError):reason='PRIVATE_PACKET_WRITE_FAILED'
+ else:reason='PRIVATE_OFFLINE_PACKET_FAILURE'
+ return {'writer_signoff_packet':'BLOCKED','reason':reason,'stage':stage,'exception_type':type(error).__name__,'os_errno':error.errno if isinstance(error,OSError)else None,'approval_recorded':False,'database_connections':0,'release_decision':'NO-GO'}
+
 def main(argv):
- os.umask(0o077)
+ os.umask(0o077);stage='VALIDATE_CONTEXT'
  try:
   if sys.platform!='linux'or os.geteuid()!=0 or pathlib.Path.cwd()!=pathlib.Path('/home/sulb-release'):raise Blocked('LINUX_ROOT_RC_CHECKOUT_REQUIRED')
   if len(argv)==1 and argv[0]=='--prepare':
-   with open('/dev/tty','r+')as tty:tty.write('Private profile path: ');tty.flush();path=tty.readline().strip();tty.write('Expected profile SHA-256: ');tty.flush();sha=tty.readline().strip()
+   stage='READ_OPERATOR_INPUT';path,sha=tty_inputs()
   elif len(argv)==3 and argv[0]=='--prepare':path,sha=argv[1:]
   else:raise Blocked('EXPLICIT_OFFLINE_PREPARATION_REQUIRED')
-  facts,draft,summary=packet(private_source(path,sha),sha)
+  if not path:raise Blocked('PROFILE_PATH_REQUIRED')
+  if not re.fullmatch('[a-f0-9]{64}',sha):raise Blocked('PROFILE_SHA_REQUIRED')
+  stage='READ_PROFILE';profile=private_source(path,sha)
+  stage='VALIDATE_PACKET';facts,draft,summary=packet(profile,sha)
+  stage='WRITE_PACKET'
   out=pathlib.Path('/home/mgye-api-sulb')/('sulb-writer-signoff-'+secrets.token_hex(8));out.mkdir(mode=0o700)
   write_private(out/'evidence-private.json',canonical(facts));write_private(out/'decisions-unsigned.json',canonical(draft));write_private(out/'review-private.md',private_report(facts));summary['private_packet_directory']=str(out);write_private(out/'safe-summary.json',canonical(summary));print(json.dumps(summary,ensure_ascii=True,indent=2));return 0
  except Exception as e:
-  reason=str(e)if isinstance(e,Blocked)else'PRIVATE_OFFLINE_PACKET_FAILURE'
-  print(json.dumps({'writer_signoff_packet':'BLOCKED','reason':reason,'approval_recorded':False,'database_connections':0,'release_decision':'NO-GO'}));return 78
+  print(json.dumps(safe_failure(e,stage)));return 78
 if __name__=='__main__':raise SystemExit(main(sys.argv[1:]))
