@@ -117,4 +117,4 @@ if __name__=='__main__':
   payload=sys.stdin.buffer.read(1048577)
   if len(payload)>1048576:raise Unproven('INPUT_LIMIT')
   print(json.dumps(inspect(json.loads(payload))))
- except Exception as e:print(json.dumps({'blocked':str(e)if isinstance(e,Unproven)else'PRIVATE_KERNEL_INSPECTION_FAILURE'}));raise SystemExit(78)
+ except Exception as e:print(json.dumps({'blocked':str(e)if isinstance(e,Unproven)else('KERNEL_PROC_ACCESS_DENIED'if isinstance(e,PermissionError)else'PRIVATE_KERNEL_INSPECTION_FAILURE')}));raise SystemExit(78)

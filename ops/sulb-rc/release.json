@@ -851,5 +851,18 @@
     "operator_reported_reclaim_upper_bound": 502984704,
     "deletion_performed": false,
     "release_decision": "NO-GO"
+  },
+  "passive_writer_evidence": {
+    "existing_packet_directory": "/home/mgye-api-sulb/sulb-writer-signoff-330e13362e20f1e0",
+    "source_profile_sha256": "a980c2246daf9c58abfb19fed4ca168d7d321065e068e7a8a89b21bca4bab6fa",
+    "evidence_sha256": "be378f0075a022510b1203d4856b67f3f44f941637b6bc72ac5dccb833060fac",
+    "entry": "php ops/sulb-rc/observe-existing-writers.php",
+    "production_observation_performed_by_codex": false,
+    "observation_seconds": 30,
+    "new_application_connections_created": false,
+    "selected_grant_host_proven": false,
+    "human_approval_recorded": false,
+    "production_changes": false,
+    "release_decision": "NO-GO"
   }
 }
