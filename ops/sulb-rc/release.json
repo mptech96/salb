@@ -891,5 +891,15 @@
     "operator_fpm_version": "8.5",
     "live_binding_check_executed_by_codex": false,
     "approval_recorded": false
+  },
+  "pool_include_guard_fix": {
+    "tested_commit": "0a0b55563bfaea5b6ecfd351fd7eff85d54e1cc8",
+    "ci_run": "https://github.com/mptech96/salb/actions/runs/41323577010",
+    "include_policy_tests_passed": 17,
+    "private_public_context_separation_passed": true,
+    "application_migration_jobs_skipped_in_scoped_run": true,
+    "allowed_external_include": "Protected root-owned direct modules-enabled .conf -> /usr/share/nginx/modules-available direct .conf containing only constrained load_module declarations",
+    "production_failed_include_actual_path_verified": false,
+    "production_changes": false
   }
 }
