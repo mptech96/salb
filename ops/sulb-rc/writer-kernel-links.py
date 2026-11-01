@@ -63,6 +63,13 @@ def unix_peers():
       at+=(size+3)&~3
     offset+=(length+3)&~3
 
+def php_executable(exe):
+ name=pathlib.Path(exe.removesuffix(' (deleted)')).name
+ return bool(re.fullmatch(r'(?:php(?:[0-9.]*)?|php-fpm[0-9.]*|php[0-9.]+-fpm|lsphp[0-9.]*)',name))
+
+def actor_scope(p,site_uid,backend):
+ return p['uid']==site_uid or backend+'/artisan' in p['argv'] or (p['cwd']==backend and re.search(r'(?:^|\s)(?:\./)?artisan(?:\s|$)',p['argv']) is not None)
+
 def inspect(request):
  global DEADLINE,FD_BUDGET
  DEADLINE=time.monotonic()+8;FD_BUDGET=32768
@@ -72,14 +79,22 @@ def inspect(request):
  server_fds=fds(server['pid']);server_tcp=tcp(server['pid']);accepted={i:t for i,t in server_tcp.items()if i in server_fds and t['local_port']==int(request['server_port'])};peers={};unknown=[]
  try:peers=unix_peers()
  except (OSError,Unproven):unknown.append('UNIX_DIAGNOSTICS_UNAVAILABLE')
- actors=[];paths=list(pathlib.Path('/proc').glob('[0-9]*'))
+ actors=[];coverage={'processes_read':0,'site_uid_processes':0,'php_processes':0,'php_other_scope':0,'site_non_php_processes':0,'vanished_processes':0,'permission_denied':0};candidates=[];paths=list(pathlib.Path('/proc').glob('[0-9]*'))
  if len(paths)>8192:raise Unproven('PROCESS_SCAN_LIMIT')
  for path in paths:
   try:p=proc(int(path.name))
-  except PermissionError:unknown.append('PROCESS_VISIBILITY_INCOMPLETE');continue
-  if not p or not re.fullmatch(r'php(?:[0-9.]*)?|php-fpm[0-9.]*',pathlib.Path(p['exe'].replace(' (deleted)','')).name):continue
-  related=p['uid']==int(request['site_uid'])or request['backend']+'/artisan'in p['argv']or(p['cwd']==request['backend']and re.search(r'(?:^|\s)(?:\./)?artisan(?:\s|$)',p['argv']))
-  if not related:continue
+  except PermissionError:coverage['permission_denied']+=1;unknown.append('PROCESS_VISIBILITY_INCOMPLETE');continue
+  if not p:coverage['vanished_processes']+=1;continue
+  coverage['processes_read']+=1
+  site=p['uid']==int(request['site_uid'])
+  if site:coverage['site_uid_processes']+=1
+  if not php_executable(p['exe']):
+   if site:coverage['site_non_php_processes']+=1
+   continue
+  coverage['php_processes']+=1
+  related=actor_scope(p,int(request['site_uid']),request['backend'])
+  if len(candidates)<256:candidates.append({'pid':p['pid'],'uid':p['uid'],'executable':pathlib.Path(p['exe']).name,'scope_match':related,'fpm_pool_title_present':'php-fpm: pool ' in p['argv'],'fpm_master_title_present':'php-fpm: master process' in p['argv']})
+  if not related:coverage['php_other_scope']+=1;continue
   if len(actors)>=256:raise Unproven('SITE_PROCESS_SCAN_LIMIT')
   try:owned=fds(p['pid'])
   except (PermissionError,FileNotFoundError):unknown.append('SITE_FD_VISIBILITY_UNPROVEN');continue
@@ -110,7 +125,9 @@ def inspect(request):
   matches.append({'connection_id':session['id'],'pid':p['pid'],'uid':p['uid'],'start_ticks':p['start_ticks'],'role':role,'transport':transport,'client_inode':inode,'client_fd':fd,'server_inode':server_inode,'server_fd':server_fds[server_inode],'kernel_peer_binding_proven':True})
  final_server=proc(server['pid'])
  if not final_server or final_server['start_ticks']!=server['start_ticks']:raise Unproven('MYSQL_PROCESS_CHANGED')
- return {'matches':matches,'unmapped':unmapped,'limitations':sorted(set(unknown)),'site_processes_observed':len(actors),'new_application_connections_created':False}
+ if not actors:unknown.append('NO_SCOPED_PHP_PROCESS_OBSERVED_NOT_ABSENCE_PROOF')
+ if not request['sessions']:unknown.append('NO_RELEVANT_SESSION_IN_SAMPLE_SHORT_CONNECTIONS_MAY_BE_MISSED')
+ return {'coverage':coverage,'private_php_candidates':candidates,'matches':matches,'unmapped':unmapped,'limitations':sorted(set(unknown)),'site_processes_observed':len(actors),'new_application_connections_created':False}
 if __name__=='__main__':
  try:
   if sys.platform!='linux'or os.geteuid()!=0:raise Unproven('LINUX_ROOT_INSPECTION_REQUIRED')
