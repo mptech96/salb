@@ -1,6 +1,15 @@
-import importlib.util,pathlib,unittest
+import importlib.util,pathlib,unittest,stat
+from unittest.mock import patch
+from types import SimpleNamespace
 spec=importlib.util.spec_from_file_location('pool',pathlib.Path(__file__).with_name('pool-binding.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 class Includes(unittest.TestCase):
+ def test_system_ownership_protected(self):
+  def info(p):return SimpleNamespace(st_uid=0,st_mode=(stat.S_IFREG|0o644) if str(p).endswith('.conf') else (stat.S_IFDIR|0o755))
+  with patch.object(pathlib.Path,'stat',info):self.assertTrue(m.protected_system_file('/synthetic/module.conf'))
+ def test_nonroot_system_config_rejected(self):
+  with patch.object(pathlib.Path,'stat',lambda p:SimpleNamespace(st_uid=1001,st_mode=stat.S_IFREG|0o644)):self.assertFalse(m.protected_system_file('/synthetic/module.conf'))
+ def test_writable_system_config_rejected(self):
+  with patch.object(pathlib.Path,'stat',lambda p:SimpleNamespace(st_uid=0,st_mode=stat.S_IFREG|0o666)):self.assertFalse(m.protected_system_file('/synthetic/module.conf'))
  def test_normal_nginx(self):self.assertEqual(m.path_policy('/etc/nginx/fastcgi_params','/etc/nginx/fastcgi_params','/etc/nginx'),'WITHIN_COMPONENT_ROOT')
  def test_enabled_site(self):self.assertIsNotNone(m.path_policy('/etc/nginx/sites-enabled/site.conf','/etc/nginx/sites-available/site.conf','/etc/nginx'))
  def test_system_module_symlink(self):self.assertEqual(m.path_policy('/etc/nginx/modules-enabled/50-mod-http-geoip.conf','/usr/share/nginx/modules-available/mod-http-geoip.conf','/etc/nginx'),'ROOT_OWNED_MODULE_DECLARATION_ONLY')
