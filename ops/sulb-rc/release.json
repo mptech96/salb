@@ -864,5 +864,19 @@
     "human_approval_recorded": false,
     "production_changes": false,
     "release_decision": "NO-GO"
+  },
+  "deployment_runtime_compatibility": {
+    "tested_code_commit": "4dbf2691e7ab51c255c05aa7870a83661f545048",
+    "ci_run": "https://github.com/mptech96/salb/actions/runs/41313016406",
+    "php_cli_tested": "8.5.12",
+    "locked_production_platform_passed": true,
+    "changed_orchestration_tests_passed": 8,
+    "adapter_contract_checks_passed": 74,
+    "application_scope_files": 789,
+    "application_scope_hash_mismatches": 0,
+    "production_nginx_fpm_binding_verified": false,
+    "production_php85_runtime_exercised": false,
+    "runtime_selection": "Explicit SULB_PHP_BIN; same binary for Composer, release entrypoints and root subprocess PATH shim",
+    "deployment_authorized": false
   }
 }
