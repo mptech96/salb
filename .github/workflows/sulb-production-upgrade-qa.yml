@@ -59,7 +59,7 @@ jobs:
           before=os.environ['BEFORE'];after=os.environ['AFTER']
           result=subprocess.run(['git','diff','--name-only','-z',before,after],stdout=subprocess.PIPE)
           files=set(result.stdout.decode().strip('\0').split('\0'))
-          only=result.returncode==0 and 'ops/sulb-rc/pool-binding.py' in files and files<=allowed
+          only=result.returncode==0 and bool(files) and files<=allowed
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('pool_only='+str(only).lower()+'\n')
           PY
   upgrade:
