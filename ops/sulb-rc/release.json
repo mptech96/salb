@@ -901,5 +901,20 @@
     "allowed_external_include": "Protected root-owned direct modules-enabled .conf -> /usr/share/nginx/modules-available direct .conf containing only constrained load_module declarations",
     "production_failed_include_actual_path_verified": false,
     "production_changes": false
+  },
+  "operator_writer_signoff_evidence": {
+    "pool_binding_file": "pool-binding-6afdea27b8a1ed7e.json",
+    "pool_binding_sha256": "0a4a86110b39015184f05f4b04e6a76b17a5d997b9c65041d223f9f98c20961d",
+    "configured_pool_binding_operator_report": "PASS",
+    "mode": "ondemand",
+    "listener_owned_by_master_operator_report": true,
+    "worker_required_while_idle": false,
+    "nginx_loaded_configuration_proven": false,
+    "queue_schedule_candidates_operator_report": 0,
+    "queue_absence_proven": false,
+    "actual_mysql_application_authentication_proven": false,
+    "unsigned_decision_document": "ops/sulb-rc/writer-final-signoff-ar.md",
+    "approval_recorded": false,
+    "production_changes": false
   }
 }
