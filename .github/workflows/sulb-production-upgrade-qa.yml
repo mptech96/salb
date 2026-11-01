@@ -12,6 +12,7 @@ on:
       - 'ops/sulb-rc/*write-fence*'
       - 'ops/sulb-rc/*release-fence*'
       - 'ops/sulb-rc/release-process-fence.php'
+      - 'ops/sulb-rc/*pool*'
       - 'backend/app/Support/ReleaseRuntimeConfig.php'
       - 'ops/sulb-rc/*backup*'
       - 'ops/sulb-rc/*receipt*'
@@ -72,6 +73,9 @@ jobs:
           php ops/sulb-rc/test-release-backup-contract.php
           php ops/sulb-rc/test-backup-receipt.php
           php ops/sulb-rc/test-asset-backup.php
+          python3 ops/sulb-rc/test-pool-binding.py
+          php ops/sulb-rc/test-idle-pool.php
+          php -l ops/sulb-rc/release-process-fence.php
           bash -n ops/sulb-rc/deploy-reviewed-release.sh
           python3 ops/sulb-rc/test-deployment-orchestration.py
       - name: Owned Percona for NEW executor only
@@ -124,6 +128,9 @@ jobs:
           coverage: none
       - name: Changed deployment orchestration only, fake toolchain and no production
         run: |
+          python3 ops/sulb-rc/test-pool-binding.py
+          php ops/sulb-rc/test-idle-pool.php
+          php -l ops/sulb-rc/release-process-fence.php
           bash -n ops/sulb-rc/deploy-reviewed-release.sh
           python3 ops/sulb-rc/test-deployment-orchestration.py
       - name: Locked production dependencies on PHP 8.5, without application scripts

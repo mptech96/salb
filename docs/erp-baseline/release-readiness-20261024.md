@@ -2557,3 +2557,16 @@ S01: فحص SHA ومراجع سكربتات نصية محدودة وبصماته
 
 
 نتيجة الإغلاق المتأثر النهائية: https://github.com/mptech96/salb/actions/runs/41313016406 PASS للكود 4dbf2691e7ab51c255c05aa7870a83661f545048. نجح job deployment-runtime85 على PHP8.5.12: 8 اختبارات ترتيب وفشل مبكر (نسخة PHP أو ربط FPM غير مطابق، فشل الاستعادة أو الإيصال أو DDL أو postcheck)، اعتماديات production وامتداداتها متوافقة وlint ناجح، 74 عقد محولات ناجحة بلا DB. job upgrade ناجح أيضًا؛ لم تعاد أي تجربة إنتاجية أو استخراج أو استعادة VPS. لم يُختبر ربط Nginx الحقيقي ولا تشغيل FPM8.5 الفعلي من Codex. لا وعد بزوال جميع أخطاء البيئة دون هذه الأدلة؛ القرار BLOCKED/NO-GO. خطوة التنفيذ المستقبلية الوحيدة هي deploy-reviewed-release.sh --execute مع Commit GO مستقل معتمد وSULB_PHP_BIN وSULB_APPROVED_DERIVED_ARTIFACT الصحيحين؛ الحارس يرفض المرشح الحالي قبل اتصال إنتاج أو تغيير خدمات.
+
+
+## حارس PHP-FPM ondemand — 2026-11-01
+
+المشغّل قدم pool /etc/php/8.5/fpm/pool.d/api.sulb.mgye.tech.conf، user/group=mgye-api-sulb وpm=ondemand ووجود master8.5. هذا يفسر إمكان خمول الموقع دون Worker ولا يُثبت ربط Nginx وحده.
+
+أُصلح شرط releaseProcessSnapshot: لا يشترط Worker للخمول إذا أثبت releasePoolBinding تطابق configured Nginx fastcgi_pass مع listen للـPool المشمول في php-fpm.conf، وتماثل مستخدمه ومجموعته، وملكية master8.5 الصحيح لمقبس الاستماع الفعلي. يدعم Unix وTCP صريح 127.0.0.1، ويرفض المتغيرات/المسارات غير المثبتة وعدم تطابق جذر Backend أو master/listener. لا يشغّل nginx -T أو FPM -t لأنهما ليسا قراءة ملفات خالصة، ولا ينشئ HTTP أو PDO أو عملية FPM. يقرأ systemctl show فقط، /proc/config files، ويكتب دليلًا صغيرًا 0600 داخل حزمة الاعتماد الحالية.
+
+لا تخفف حواجز التوقيع: كل config_hashes في الدليل يجب أن يطابق surface_files أو external_writer_source_files في profile المعتمد والموقع بالآلية القائمة. review_source_rows داخل الملف الخاص تسهل إدراج الأدلة؛ لا تعدل profile أو قراراته آليًا. تؤخذ بصمات الإعدادات الفرعية وملفات Queue/Cron ذات الصلة، ولا تطبع أسماء المستخدمين أو محتوى الأوامر أو البيئة. وجود مرشح Queue يتطلب مراجعة مالك الخدمة والمراجع الخارجية في القرار التقني القائم؛ غياب مرشح ليس برهان حصر شامل.
+
+فحص الملفات لا يثبت أن Nginx الحالي حمّل نفس المحتوى؛ nginx_loaded_configuration_proven=false يبقى صريحًا، ويعالج ضمن مسؤولية إثبات الإعداد الفعلي والتوقيع التقني القائم، لا بإضافة تصريح بشري مصطنع أو reload تلقائي. التنفيذ يفحص الإعدادات والمقبس مجددًا وقت acquire قبل أي صيانة. لا Worker ولا جلسة MySQL لازمة لإثبات صلاحية Pool ondemand؛ لكنها ليست إثبات مصادقة التطبيق.
+
+محليًا: 9 اختبارات parser/pool صحيحة وخاطئة +8 حالات قبول ondemand ورفض تغيير الهوية/المقبس/البصمات نجحت، بلا DB أو خدمة. الأمر الخاص بالمشغّل: php8.5 ops/sulb-rc/release-process-fence.php --check-pool من checkout المثبت؛ يعرض ملخصًا منقحًا ويحتفظ بالدليل في الحزمة القائمة. لم ينفذ Codex هذا الأمر على VPS. نتائج Schema/history/restore السابقة محفوظة، والموافقات المحاسبية/التقنية والتجربة التاريخية التابعة لها باقية، Manifest NO-GO.
