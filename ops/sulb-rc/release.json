@@ -878,5 +878,18 @@
     "production_php85_runtime_exercised": false,
     "runtime_selection": "Explicit SULB_PHP_BIN; same binary for Composer, release entrypoints and root subprocess PATH shim",
     "deployment_authorized": false
+  },
+  "ondemand_pool_qualification": {
+    "tested_commit": "090e04d1ccffadd4daf9a9a457896582e7b79109",
+    "ci_run": "https://github.com/mptech96/salb/actions/runs/41314981578",
+    "parser_cases_passed": 9,
+    "idle_policy_cases_passed": 8,
+    "idle_worker_required": false,
+    "configured_pool_and_existing_master_listener_required": true,
+    "signed_config_hashes_required": true,
+    "operator_pool_mode": "ondemand",
+    "operator_fpm_version": "8.5",
+    "live_binding_check_executed_by_codex": false,
+    "approval_recorded": false
   }
 }
