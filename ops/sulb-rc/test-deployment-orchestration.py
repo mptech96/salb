@@ -15,6 +15,8 @@ if cmd=='php':
  if not args:sys.stdin.read();event('scope');raise SystemExit(0)
  if pathlib.Path(args[0]).name=='composer':event('platform'if args[1]=='check-platform-reqs'else'composer');raise SystemExit(0)
  if args[0]=='-r':
+  if 'PHP_MINOR_VERSION'in args[1]:event('runtime_version')
+  if 'releaseWithReviewedFencePlan'in args[1]:event('runtime_binding')
   if 'random_bytes(8)'in args[1]:print('a'*16)
   elif 'COPY_STARTED'in args[1]:inside(args[2]).write_text('SYNTHETIC COPY MARKER')
   raise SystemExit(0)
@@ -92,6 +94,10 @@ class DeploymentOrdering(unittest.TestCase):
   positions=[e.index(x)for x in order];self.assertEqual(positions,sorted(positions))
  def test_gate_rejects_before_build_or_maintenance(self):
   code,e,fence=self.run_case('gate');self.assertNotEqual(code,0);self.assertEqual(e,['gate']);self.assertFalse(fence)
+ def test_wrong_php_stops_before_build_or_fence(self):
+  code,e,fence=self.run_case('runtime_version');self.assertNotEqual(code,0);self.assertFalse(fence);self.assertNotIn('composer',e);self.assertNotIn('fence',e)
+ def test_wrong_fpm_binding_stops_before_build_or_fence(self):
+  code,e,fence=self.run_case('runtime_binding');self.assertNotEqual(code,0);self.assertFalse(fence);self.assertNotIn('composer',e);self.assertNotIn('fence',e)
  def test_restore_failure_never_copies_or_migrates(self):
   code,e,fence=self.run_case('restore');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertNotIn('copy',e);self.assertNotIn('migration',e)
  def test_receipt_failure_never_copies(self):

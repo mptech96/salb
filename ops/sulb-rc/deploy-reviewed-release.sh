@@ -127,6 +127,9 @@ for command in composer node npm rsync systemctl tar python3 runuser realpath fi
 php -r 'if(PHP_MAJOR_VERSION!==8||PHP_MINOR_VERSION!==5||PHP_SAPI!=="cli")exit(78);'
 composer_file=$(realpath "$(command -v composer)")
 test -f "$composer_file"
+php -r '$s=file_get_contents($argv[1],false,null,0,4096);if(!is_string($s)||!str_contains($s,"<?php"))exit(78);' "$composer_file"
+php -r 'require "ops/sulb-rc/release-process-fence.php";$r=json_decode(file_get_contents("ops/sulb-rc/release.json"),true,512,JSON_THROW_ON_ERROR);$r=releaseWithReviewedFencePlan($r);if(($r["write_fence_plan"]["php_fpm_unit"]??null)!=="php".PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION."-fpm.service")exit(78);'
+
 # Hashes cover the entire application; binary assets are never newline-normalized.
 php <<'SULB_SCOPE_PHP'
 <?php
