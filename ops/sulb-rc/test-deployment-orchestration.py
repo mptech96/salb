@@ -13,6 +13,7 @@ def inside(path):
  return p
 if cmd=='php':
  if not args:sys.stdin.read();event('scope');raise SystemExit(0)
+ if pathlib.Path(args[0]).name=='composer':event('platform'if args[1]=='check-platform-reqs'else'composer');raise SystemExit(0)
  if args[0]=='-r':
   if 'random_bytes(8)'in args[1]:print('a'*16)
   elif 'COPY_STARTED'in args[1]:inside(args[2]).write_text('SYNTHETIC COPY MARKER')
@@ -57,6 +58,7 @@ elif cmd=='mkdir':inside(args[-1]).mkdir(mode=0o700)
 elif cmd=='id':print('0'if'-u'in args else'synthetic_group')
 elif cmd=='uname':print('Linux')
 elif cmd=='stat':print('0')
+elif cmd=='command':raise RuntimeError('UNEXPECTED_COMMAND')
 elif cmd=='git':
  if 'rev-parse'in args:print('b'*40)
 elif cmd=='dirname':print(str(pathlib.Path(args[-1]).parent))
@@ -81,12 +83,12 @@ class DeploymentOrdering(unittest.TestCase):
    text=pathlib.Path(__file__).with_name('deploy-reviewed-release.sh').read_text();
    for old,new in [('/home/sulb-release',str(checkout)),('/home/mgye-api-sulb',str(root/'api')),('/home/mgye-sulb',str(root/'front')),('/run/sulb-release.fence',str(root/'fence'))]:text=text.replace(old,new)
    script=checkout/'ops/sulb-rc/deploy.sh';script.write_text(text)
-   env={'PATH':str(root/'bin'),'SULB_APPROVED_COMMIT':'b'*40,'SULB_APPROVED_DERIVED_ARTIFACT':str(root/'SYNTHETIC_ONLY')}
+   env={'PATH':str(root/'bin'),'SULB_PHP_BIN':str(root/'bin/php'),'SULB_APPROVED_COMMIT':'b'*40,'SULB_APPROVED_DERIVED_ARTIFACT':str(root/'SYNTHETIC_ONLY')}
    r=subprocess.run(['/bin/bash',str(script),'--execute'],cwd=checkout,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=45)
    events=[json.loads(line)for line in (root/'events.jsonl').read_text().splitlines()];return r.returncode,events,(root/'fence').exists()
  def test_complete_order_only_with_successful_restore(self):
   code,e,fence=self.run_case();self.assertEqual(code,0);self.assertFalse(fence)
-  order=['gate','scope','composer','npm_ci','npm_run','manifest','fence','capture','restore','receipt','copy','cache','migration','postcheck','activation','release','resume','frontend_restart','smoke']
+  order=['gate','scope','composer','npm_ci','npm_run','manifest','fence','capture','restore','receipt','migration','copy','cache','postcheck','activation','release','resume','frontend_restart','smoke']
   positions=[e.index(x)for x in order];self.assertEqual(positions,sorted(positions))
  def test_gate_rejects_before_build_or_maintenance(self):
   code,e,fence=self.run_case('gate');self.assertNotEqual(code,0);self.assertEqual(e,['gate']);self.assertFalse(fence)
@@ -95,7 +97,7 @@ class DeploymentOrdering(unittest.TestCase):
  def test_receipt_failure_never_copies(self):
   code,e,fence=self.run_case('receipt');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertNotIn('copy',e)
  def test_migration_failure_never_activates_or_releases(self):
-  code,e,fence=self.run_case('migration');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertNotIn('activation',e);self.assertNotIn('release',e)
+  code,e,fence=self.run_case('migration');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertNotIn('copy',e);self.assertNotIn('activation',e);self.assertNotIn('release',e)
  def test_postcheck_failure_never_releases(self):
   code,e,fence=self.run_case('postcheck');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertNotIn('release',e)
 if __name__=='__main__':unittest.main()

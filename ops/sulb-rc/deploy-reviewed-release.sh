@@ -94,12 +94,18 @@ fi
 if [ "${1:---plan}" = --plan ]; then
   printf '%s\n' 'NO-GO candidate. Planned order only:' \
     'GitHub -> /home/sulb-release pinned clean commit -> reviewed write fence' \
-    'Private code/data backup -> rsync Backend/Frontend -> Composer' \
-    'Explicit approved migrations -> Frontend build -> restart -> smoke tests' \
+    'Candidate PHP/Composer/Next builds -> write fence -> verified private backup/restore' \
+    'Explicit approved 18 migrations -> full Backend/Frontend copy -> refresh -> checks -> resume' \
     'No automatic database restore or migration rollback.'
   exit 78
 fi
 [ "${1:-}" = --execute ] || exit 2
+# An explicit runtime is mandatory; never silently inherit the default PHP CLI.
+: "${SULB_PHP_BIN:?Absolute reviewed PHP CLI path required}"
+test "${SULB_PHP_BIN#/}" != "$SULB_PHP_BIN"
+test -x "$SULB_PHP_BIN"
+runtime_php=$(realpath "$SULB_PHP_BIN")
+php() { "$runtime_php" "$@"; }
 # No production bootstrap or side effect is reachable before independent GO.
 php "$tools/check-approval.php"
 test "$(id -u)" = 0
@@ -116,7 +122,11 @@ id mgye-api-sulb >/dev/null
 id mgye-sulb >/dev/null
 backend_group=$(id -gn mgye-api-sulb)
 frontend_group=$(id -gn mgye-sulb)
-for command in php composer node npm rsync systemctl tar python3 runuser realpath find; do command -v "$command" >/dev/null; done
+for command in composer node npm rsync systemctl tar python3 runuser realpath find curl sha256sum; do command -v "$command" >/dev/null; done
+# Check the PHP used by FPM, Composer and release entrypoints before maintenance.
+php -r 'if(PHP_MAJOR_VERSION!==8||PHP_MINOR_VERSION!==5||PHP_SAPI!=="cli")exit(78);'
+composer_file=$(realpath "$(command -v composer)")
+test -f "$composer_file"
 # Hashes cover the entire application; binary assets are never newline-normalized.
 php <<'SULB_SCOPE_PHP'
 <?php
@@ -124,6 +134,11 @@ $r=json_decode(file_get_contents('ops/sulb-rc/release.json'),true,512,JSON_THROW
 SULB_SCOPE_PHP
 backup=/home/mgye-api-sulb/sulb-release-backup.$(php -r 'echo bin2hex(random_bytes(8));')
 mkdir -m 700 "$backup"
+# Root-private PATH shim also pins Python-launched PHP subprocesses.
+mkdir -m 700 "$backup/runtime-bin"
+printf '#!/bin/bash\nexec %q "$@"\n' "$runtime_php" > "$backup/runtime-bin/php"
+chmod 700 "$backup/runtime-bin/php"
+export PATH="$backup/runtime-bin:$PATH"
 export SULB_CURRENT_BACKUP_DIR="$backup"
 export LOG_CHANNEL=null
 # Backend and privileged tools must remain root-owned and not writable by site users.
@@ -139,9 +154,11 @@ runuser -u mgye-sulb -- test -x /home/sulb-release/frontend
 unset COMPOSER_VENDOR_DIR COMPOSER
 # Composer never executes plugins/scripts; frontend tooling runs as the frontend site user.
 # No live .env/storage is copied or modified by these candidate builds.
-(cd backend && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-plugins) > "$backup/candidate-backend-build-private.log" 2>&1
+(cd backend && "$runtime_php" "$composer_file" check-platform-reqs --lock --no-dev && "$runtime_php" "$composer_file" install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-plugins) > "$backup/candidate-backend-build-private.log" 2>&1
 (cd frontend && runuser -u mgye-sulb -- env -i PATH="$PATH" HOME=/home/mgye-sulb NODE_ENV=production SULB_QA_UOM=0 NEXT_PUBLIC_API_URL=https://api.sulb.mgye.tech/api NODE_OPTIONS=--max-old-space-size=2048 npm ci --include=dev --no-audit --no-fund && runuser -u mgye-sulb -- env -i PATH="$PATH" HOME=/home/mgye-sulb NODE_ENV=production SULB_QA_UOM=0 NEXT_PUBLIC_API_URL=https://api.sulb.mgye.tech/api NODE_OPTIONS=--max-old-space-size=2048 npm run build) > "$backup/candidate-frontend-build-private.log" 2>&1
 test -z "$(git status --porcelain)"
+# Dependency platform checks use the actual installed vendor, not config.platform.
+(cd backend && "$runtime_php" "$composer_file" check-platform-reqs --no-dev) > "$backup/candidate-platform-private.log" 2>&1
 php "$tools/release-app-control.php" --prepare-candidate > "$backup/candidate-manifest-private.json"
 trap 'if [ -d /run/sulb-release.fence ]; then printf "%s\n" "BLOCKED: write fence retained; preserve all private evidence and obtain reviewed forward repair." >&2; else printf "%s\n" "BLOCKED after fence release or before acquisition: customer writes may be active. Preserve evidence; never restore an older database or run down()." >&2; fi' ERR
 php "$tools/release-fence.php" --acquire "$backup" > "$backup/fence-summary.json"
@@ -151,6 +168,9 @@ php "$tools/release-backup.php" --capture "$backup" > "$backup/backup-summary.js
 python3 "$tools/history-stage.py" --verify-release-backup "$backup" > "$backup/restore-summary.json"
 php "$tools/release-backup.php" --issue-upgrade-receipt "$backup" > "$backup/receipt-summary.json"
 export SULB_UPGRADE_AUTHORIZATION_FILE="$backup/upgrade-authorization.json"
+# DDL runs from immutable candidate code while all customer writers remain fenced.
+# Failure retains the fence; never auto-restore an older database or run down().
+php "$tools/production-upgrade.php" --execute > "$backup/migration-summary.json"
 for dir in "$backend" "$frontend" "$backend/bootstrap/cache"; do test ! -L "$dir"; test "$(realpath -m "$dir")" = "$dir"; done
 # No application copy occurs until the actual backup has been restored and financial drift rejected.
 php -r '$f=fopen($argv[1],"xb");if(!$f||!fwrite($f,"COPY_STARTED\n")||!fflush($f)||!fsync($f))exit(78);fclose($f);' "$backup/application-copy-started"
@@ -169,7 +189,6 @@ chown -R "mgye-api-sulb:$backend_group" "$backend/bootstrap/cache"
 find "$backend/bootstrap/cache" -type d -exec chmod 755 {} +
 find "$backend/bootstrap/cache" -type f -exec chmod 644 {} +
 php "$tools/release-fence.php" --refresh-workers "$backup" > "$backup/refresh-summary.json"
-php "$tools/production-upgrade.php" --execute > "$backup/migration-summary.json"
 php "$tools/release-postcheck.php" > "$backup/postcheck-summary.json"
 php "$tools/release-activate.php" > "$backup/activation-summary.json"
 php "$tools/release-fence.php" --refresh-workers "$backup" > "$backup/activated-workers-summary.json"

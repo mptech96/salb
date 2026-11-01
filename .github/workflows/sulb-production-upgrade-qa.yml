@@ -108,3 +108,27 @@ jobs:
       - name: Stop owned QA container only
         if: always()
         run: docker rm -f sulb-upgrade-qa >/dev/null 2>&1 || true
+
+  deployment-runtime85:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.5'
+          extensions: pdo_mysql, sodium, bcmath, mbstring, dom, xml, fileinfo, zip
+          tools: composer:v2
+          coverage: none
+      - name: Changed deployment orchestration only, fake toolchain and no production
+        run: |
+          bash -n ops/sulb-rc/deploy-reviewed-release.sh
+          python3 ops/sulb-rc/test-deployment-orchestration.py
+      - name: Locked production dependencies on PHP 8.5, without application scripts
+        run: |
+          composer install --working-dir=backend --no-dev --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins
+          composer check-platform-reqs --working-dir=backend --no-dev
+          find backend/app backend/database/migrations ops/sulb-rc/production-upgrade -name '*.php' -print0 | xargs -0 -n1 php -l > /tmp/sulb-runtime85-lint.txt
+          php ops/sulb-rc/test-production-upgrade-contracts.php
