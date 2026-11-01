@@ -2573,3 +2573,12 @@ S01: فحص SHA ومراجع سكربتات نصية محدودة وبصماته
 
 
 CI النهائي لإصلاح ondemand: https://github.com/mptech96/salb/actions/runs/41314981578 PASS للكود 090e04d1ccffadd4daf9a9a457896582e7b79109. نجح 9 parser/pool +8 policy على PHP8.5، وكذلك اختبارات المنفذ المتأثرة. لا ربط VPS مدعى ولا مصادقة تطبيق أو اعتماد بشري مسجل. يُشغّل --check-pool مرة واحدة للحصول على دليل إعداد/مقبس/مرشحي Queues، ثم تُراجع review_source_rows في الدليل الخاص ضمن profile الموقع القائم؛ لا يلزم إنشاء حزمة توقيع أخرى. بعد التصديقين المحاسبيين فقط يستخدم مسار close-approved-history.py الأرشيف الموجود دون استخراج جديد، لاستكمال Backfill/LOT=GL/Idempotency. تبقى بوابات التاريخ والكتّاب والتصريح النهائي دون تغيير؛ RELEASE_DECISION=NO-GO.
+
+
+## تصحيح رفض include خارج الجذر — 2026-11-01
+
+نتيجة المشغّل RELEASE_CONFIG_INCLUDE_OUTSIDE_ROOT لا تتضمن الوجهة canonical أو اسم include الذي فشل؛ القوائم المرسلة كلها داخل الجذور نصيًا، لذلك لا يُدعى تحديد الملف الفعلي دون دليله. سبب الفقد البرمجي: expand كان يمرر المسار المحلول إلى read، فتُفقد سلسلة الرابط، والخطأ لا يحمل سياقًا عبر PHP. التصحيح يحفظ requested/resolved/root وscope مع include_id. العام nginx_global، موقع Backend nginx_backend، المواقع الأخرى nginx_other_site، وFPM php_fpm_main/php_fpm_backend. المسارات الكاملة تبقى في سجل خاص بالحزمة القائمة، وTerminal يعرض مسارات نظامية آمنة أو placeholders منقحة.
+
+لم يفتح الجذر العام /usr/share أو /home. الاستثناء الوحيد خارج /etc/nginx: ملف .conf مباشر من /etc/nginx/modules-enabled إلى ملف .conf مباشر في /usr/share/nginx/modules-available، مع تحقق root وعدم group/world write للوجهة وآبائها ومجلد المصدر وآبائه، ومحتوى load_module حصري بامتداد .so ومسار modules مباشر دون traversal أو include أو blocks. جميع وجهات FPM تبقى داخل /etc/php/8.5/fpm. ما لا يطابق ذلك يرفض مع سياقه؛ لا تعميم ثقة على جميع الروابط.
+
+لم يتغير شرط fastcgi/listen أو master/listener أو ondemand أو التوقيع. نجح محليًا 14 اختبار include متأثر وPHP syntax. CI يحدد نطاق التغييرات من Git ويشغّل اختبارات include فقط حين تكون الملفات محصورة بهذا الإصلاح؛ لا Composer أو ترحيلات أو نسخ أو تطبيق في هذا المسار. أمر --check-pool نفسه يقرأ الإعدادات ويضيف دليلًا خاصًا فقط؛ لا خدمات أو قاعدة إنتاج أو اعتماد تلقائي. RELEASE_DECISION=NO-GO حتى الأدلة والتصديقات المعلقة.

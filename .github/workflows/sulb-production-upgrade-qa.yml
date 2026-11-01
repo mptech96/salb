@@ -39,7 +39,32 @@ on:
 permissions:
   contents: read
 jobs:
+  changed-scope:
+    runs-on: ubuntu-24.04
+    outputs:
+      pool_only: ${{ steps.scope.outputs.pool_only }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: scope
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,subprocess
+          allowed={'ops/sulb-rc/pool-binding.py','ops/sulb-rc/release-process-fence.php','ops/sulb-rc/test-pool-include-policy.py','docs/erp-baseline/release-readiness-20261024.md','ops/sulb-rc/release.json','.github/workflows/sulb-production-upgrade-qa.yml'}
+          before=os.environ['BEFORE'];after=os.environ['AFTER']
+          result=subprocess.run(['git','diff','--name-only','-z',before,after],stdout=subprocess.PIPE)
+          files=set(result.stdout.decode().strip('\0').split('\0'))
+          only=result.returncode==0 and 'ops/sulb-rc/pool-binding.py' in files and files<=allowed
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('pool_only='+str(only).lower()+'\n')
+          PY
   upgrade:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.pool_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -73,6 +98,7 @@ jobs:
           php ops/sulb-rc/test-release-backup-contract.php
           php ops/sulb-rc/test-backup-receipt.php
           php ops/sulb-rc/test-asset-backup.php
+          python3 ops/sulb-rc/test-pool-include-policy.py
           python3 ops/sulb-rc/test-pool-binding.py
           php ops/sulb-rc/test-idle-pool.php
           php -l ops/sulb-rc/release-process-fence.php
@@ -114,6 +140,8 @@ jobs:
         run: docker rm -f sulb-upgrade-qa >/dev/null 2>&1 || true
 
   deployment-runtime85:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.pool_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -128,6 +156,7 @@ jobs:
           coverage: none
       - name: Changed deployment orchestration only, fake toolchain and no production
         run: |
+          python3 ops/sulb-rc/test-pool-include-policy.py
           python3 ops/sulb-rc/test-pool-binding.py
           php ops/sulb-rc/test-idle-pool.php
           php -l ops/sulb-rc/release-process-fence.php
@@ -139,3 +168,23 @@ jobs:
           composer check-platform-reqs --working-dir=backend --no-dev
           find backend/app backend/database/migrations ops/sulb-rc/production-upgrade -name '*.php' -print0 | xargs -0 -n1 php -l > /tmp/sulb-runtime85-lint.txt
           php ops/sulb-rc/test-production-upgrade-contracts.php
+
+  pool-include-guard-only:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.pool_only == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.5'
+          coverage: none
+      - name: Changed include policy only, no application or database
+        run: |
+          python3 ops/sulb-rc/test-pool-include-policy.py
+          python3 -m py_compile ops/sulb-rc/pool-binding.py
+          php -l ops/sulb-rc/release-process-fence.php
+          php -r 'require "ops/sulb-rc/release-process-fence.php"; $e=new ReleasePoolIncludeFailure("RELEASE_CONFIG_INCLUDE_OUTSIDE_ROOT",["scope"=>"nginx_global"],["requested_path"=>"SYNTHETIC_PRIVATE_PATH"]); if($e->safeContext!==["scope"=>"nginx_global"]||str_contains(json_encode($e->safeContext),"SYNTHETIC_PRIVATE_PATH"))exit(1); echo "PASS private/safe include context separation\n";'
