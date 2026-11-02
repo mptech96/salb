@@ -14,11 +14,16 @@
   "reviewer": null,
   "role": null,
   "attested_at_utc": null,
-  "review_reference": null,
+  "review_reference": "SULB-C3-LOT-20261101",
   "signed_document_sha256": null,
-  "decision": null,
+  "decision": "APPROVE_RECORDED_LOT_ALLOCATIONS",
   "required_decision_if_approved": "APPROVE_RECORDED_LOT_ALLOCATIONS",
   "approval_recorded": false,
   "production_authorized": false,
-  "no_historical_recalculation": true
+  "no_historical_recalculation": true,
+  "decision_date": "2026-11-01",
+  "decision_text_ar": "تصديق القيم التاريخية المسجلة للدفعات LOT 34–38 للشركة 3 كما هي، دون تعديل أو إعادة توزيع، وفق ملف الأدلة المحدد. يخص هذا القرار التصديق المحاسبي للتجربة المعزولة، ولا يشكل تصريح ترحيل أو نشر إنتاجي.",
+  "user_declared_accounting_authority": true,
+  "decision_received_on": "2026-11-02",
+  "record_status": "EXPLICIT_DECISION_RECEIVED_PENDING_IDENTITY_AND_SIGNED_DOCUMENT"
 }

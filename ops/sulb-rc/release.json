@@ -916,5 +916,29 @@
     "unsigned_decision_document": "ops/sulb-rc/writer-final-signoff-ar.md",
     "approval_recorded": false,
     "production_changes": false
+  },
+  "accounting_decisions_intake": {
+    "packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
+    "received_on": "2026-11-02",
+    "user_declared_authorized": true,
+    "cost": {
+      "review_reference": "SULB-C3-LOT-20261101",
+      "decision_date": "2026-11-01",
+      "scope": "PRESERVE_RECORDED_COMPANY3_LOT34_38_NO_REALLOCATION",
+      "form": "ops/sulb-rc/accounting-cost-unsigned.json"
+    },
+    "mapping": {
+      "review_reference": "SULB-C3-ACC180-20261101",
+      "decision_date": "2026-11-01",
+      "company_id": 3,
+      "account_id": 180,
+      "other_companies_authorized": false,
+      "form": "ops/sulb-rc/accounting-mapping-unsigned.json"
+    },
+    "reviewer_identity_complete": false,
+    "signed_documents_provided": false,
+    "private_attestation_recorded": false,
+    "technical_signoff_recorded": false,
+    "production_authorized": false
   }
 }

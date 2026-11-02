@@ -15,9 +15,9 @@
   "reviewer": null,
   "role": null,
   "attested_at_utc": null,
-  "review_reference": null,
+  "review_reference": "SULB-C3-ACC180-20261101",
   "signed_document_sha256": null,
-  "decision": null,
+  "decision": "APPROVE_COMPANY3_ACCOUNT180_MAPPING",
   "required_decision_if_approved": "APPROVE_COMPANY3_ACCOUNT180_MAPPING",
   "approval_recorded": false,
   "production_authorized": false,
@@ -30,5 +30,10 @@
     3,
     8
   ],
-  "other_companies_authorized": false
+  "other_companies_authorized": false,
+  "decision_date": "2026-11-01",
+  "decision_text_ar": "اعتماد الحساب 180 حسابًا للمخزون للشركة 3 فقط ضمن حالات الأدلة التاريخية المحددة. القرار مستقل عن تصديق التكاليف، ولا يجيز تعميم الحساب على شركة أخرى أو تغيير القيود التاريخية أو تنفيذ نشر إنتاجي.",
+  "user_declared_accounting_authority": true,
+  "decision_received_on": "2026-11-02",
+  "record_status": "EXPLICIT_DECISION_RECEIVED_PENDING_IDENTITY_AND_SIGNED_DOCUMENT"
 }
