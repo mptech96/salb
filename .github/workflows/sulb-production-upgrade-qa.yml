@@ -9,6 +9,8 @@ on:
       - 'backend/bootstrap/app.php'
       - 'ops/sulb-rc/*approved*'
       - 'ops/sulb-rc/record-history-approvals.php'
+      - 'ops/sulb-rc/test-financial-delegate.php'
+      - 'ops/sulb-rc/accounting-forms-ar.md'
       - 'ops/sulb-rc/*write-fence*'
       - 'ops/sulb-rc/*release-fence*'
       - 'ops/sulb-rc/release-process-fence.php'
@@ -43,6 +45,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       pool_only: ${{ steps.scope.outputs.pool_only }}
+      delegate_only: ${{ steps.scope.outputs.delegate_only }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -60,11 +63,13 @@ jobs:
           result=subprocess.run(['git','diff','--name-only','-z',before,after],stdout=subprocess.PIPE)
           files=set(result.stdout.decode().strip('\0').split('\0'))
           only=result.returncode==0 and bool(files) and files<=allowed
-          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('pool_only='+str(only).lower()+'\n')
+          delegate_allowed={'ops/sulb-rc/record-history-approvals.php','ops/sulb-rc/test-financial-delegate.php','ops/sulb-rc/accounting-forms-ar.md','ops/sulb-rc/release.json','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
+          delegate_only=result.returncode==0 and bool(files) and files<=delegate_allowed and not only
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('pool_only='+str(only).lower()+'\ndelegate_only='+str(delegate_only).lower()+'\n')
           PY
   upgrade:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -141,7 +146,7 @@ jobs:
 
   deployment-runtime85:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -188,3 +193,21 @@ jobs:
           python3 -m py_compile ops/sulb-rc/pool-binding.py
           php -l ops/sulb-rc/release-process-fence.php
           php -r 'require "ops/sulb-rc/release-process-fence.php"; $e=new ReleasePoolIncludeFailure("RELEASE_CONFIG_INCLUDE_OUTSIDE_ROOT",["scope"=>"nginx_global"],["requested_path"=>"SYNTHETIC_PRIVATE_PATH"]); if($e->safeContext!==["scope"=>"nginx_global"]||str_contains(json_encode($e->safeContext),"SYNTHETIC_PRIVATE_PATH"))exit(1); echo "PASS private/safe include context separation\n";'
+
+  financial-delegate-only:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.delegate_only == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.5'
+          coverage: none
+      - name: New explicit delegate-role policy only, no old application or database tests
+        run: |
+          php -l ops/sulb-rc/record-history-approvals.php
+          php ops/sulb-rc/test-financial-delegate.php

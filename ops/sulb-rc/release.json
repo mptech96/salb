@@ -504,8 +504,8 @@
     }
   },
   "legacy_allocation_accounting_approval": {
-    "authorized": false,
-    "packet_sha256": null,
+    "authorized": true,
+    "packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
     "reviewer": null,
     "review_reference": null,
     "company_id": 3,
@@ -529,7 +529,9 @@
     "actual_private_review_packet_pending": false,
     "prepared_packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
     "prepared_packet_status": "AWAITING_EXPLICIT_ACCOUNTING_ATTESTATION",
-    "packet_blocking_reasons": []
+    "packet_blocking_reasons": [],
+    "institutional_signature_acceptance_confirmed": true,
+    "private_recording_on_vps_completed": false
   },
   "production_executor_qualified": false,
   "write_fence_qualified": false,
@@ -612,7 +614,7 @@
     "derived_artifact_sha256": null
   },
   "inventory_account_mapping_approval": {
-    "authorized": false,
+    "authorized": true,
     "packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
     "company_id": 3,
     "account_id": 180,
@@ -628,9 +630,11 @@
       37,
       38
     ],
-    "production_authorized": false
+    "production_authorized": false,
+    "institutional_signature_acceptance_confirmed": true,
+    "private_recording_on_vps_completed": false
   },
-  "history_accounting_authority_sha256": null,
+  "history_accounting_authority_sha256": "65f5be4598627a4048c51c5da31b32674b36ab74b945b4d95854a60d134d4c02",
   "write_fence_plan": {
     "qualified": false,
     "writer_accounts": [],
@@ -935,10 +939,11 @@
       "other_companies_authorized": false,
       "form": "ops/sulb-rc/accounting-mapping-unsigned.json"
     },
-    "reviewer_identity_complete": false,
-    "signed_documents_provided": false,
+    "reviewer_identity_complete": true,
+    "signed_documents_provided": true,
     "private_attestation_recorded": false,
     "technical_signoff_recorded": false,
-    "production_authorized": false
+    "production_authorized": false,
+    "institutional_hand_drawn_signature_acceptance_confirmed": true
   }
 }
