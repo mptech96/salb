@@ -11,6 +11,7 @@ $dir='/home/mgye-api-sulb/sulb-writer-signoff-'.bin2hex(random_bytes(8));
 $srcDir='/home/mgye-api-sulb/sulb-release-review-'.bin2hex(random_bytes(8));
 if(file_exists($dir)||file_exists($srcDir))throw new RuntimeException('SYNTHETIC_FIXTURE_PATH_EXISTS');
 mkdir($dir,0700,true);mkdir($srcDir,0700,true);$created=[];$n=0;
+$fixtureCheckout=false;$originalCwd=getcwd();
 $write=function($file,$bytes)use(&$created){if(!in_array($file,$created,true))$created[]=$file;file_put_contents($file,$bytes);chmod($file,0600);clearstatcache(true,$file);};
 $json=fn($v)=>json_encode($v,JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR)."\n";
 $reject=function(callable $call,string $expected)use(&$n){try{$call();}catch(RuntimeException $e){if($e->getMessage()!==$expected)throw $e;$n++;return;}throw new RuntimeException('WINDOW_FILE_TEST_EXPECTED_'.$expected);};
@@ -78,8 +79,29 @@ try{
     $reject(fn()=>releaseWithReviewedFencePlan($badRelease),'RELEASE_WRITER_QUALIFICATION_MODE_MISMATCH');
     $write($profileFile,$json($profile));$badRelease=$release;$badRelease['write_fence_plan']['profile_sha256']=str_repeat('f',64);
     $reject(fn()=>releaseWithReviewedFencePlan($badRelease),'RELEASE_WRITER_PROFILE_CHANGED');
+    // Exercise the real preparation entry point using the exact Linux context, in this isolated CI VM only.
+    if(file_exists('/home/sulb-release'))throw new RuntimeException('ISOLATED_CHECKOUT_ALREADY_EXISTS');
+    mkdir('/home/sulb-release',0700);$fixtureCheckout=true;chdir('/home/sulb-release');
+    unlink($decisionFile);unlink($profileFile);
+    $write($dir.'/decisions-reviewed-pending.json',$json($pending));
+    $write($dir.'/signature-receipt-private.json',$json([
+        'signed_document_sha256'=>$documentSha,'review_reference'=>$pending['review_reference'],
+        'owner_reaffirmation_recorded_at_utc'=>$pending['attested_at_utc']]));
+    $hashes=[];foreach([$sourceFile,$dir.'/evidence-private.json',$dir.'/signed-decision.pdf',$dir.'/decisions-reviewed-pending.json']as$f)$hashes[$f]=hash_file('sha256',$f);
+    foreach(['decisions-window-pending.json','profile-window-pending.json']as$name)$created[]=$dir.'/'.$name;
+    $args=['SYNTHETIC_SCRIPT','--prepare-window',$dir,$sourceFile,$sourceSha,$poolName,$poolSha];
+    ob_start();$code=writerWindowPrepareCli($args);$reply=json_decode(ob_get_clean(),true,512,JSON_THROW_ON_ERROR);
+    if($code!==0||$reply['window_candidate_policy']!=='PASS'||$reply['approved']!==false)throw new RuntimeException('WINDOW_PREPARATION_FAILED');$n++;
+    foreach($hashes as$f=>$h)if(hash_file('sha256',$f)!==$h)throw new RuntimeException('ORIGINAL_EVIDENCE_CHANGED');$n++;
+    if(file_exists($decisionFile)||file_exists($profileFile))throw new RuntimeException('WINDOW_PREPARATION_ACTIVATED_APPROVAL');$n++;
+    ob_start();$code=writerWindowPrepareCli($args);ob_end_clean();if($code!==0)throw new RuntimeException('WINDOW_PREPARATION_NOT_IDEMPOTENT');$n++;
+    $candidateFile=$dir.'/decisions-window-pending.json';$originalCandidate=file_get_contents($candidateFile);
+    $write($candidateFile,$originalCandidate.' ');
+    ob_start();$code=writerWindowPrepareCli($args);$reply=json_decode(ob_get_clean(),true,512,JSON_THROW_ON_ERROR);
+    if($code!==78||$reply['reason']!=='WRITER_WINDOW_EXISTING_CANDIDATE_DIFFERS'||file_get_contents($candidateFile)!==$originalCandidate.' ')throw new RuntimeException('WINDOW_PREPARATION_OVERWROTE_CANDIDATE');$n++;
     echo 'PASS '.$n.' root-private window evidence and signature binding checks; production_connections=0; actual_approvals_recorded=false'.PHP_EOL;
 }finally{
+    chdir($originalCwd);if($fixtureCheckout)rmdir('/home/sulb-release');
     // Only explicitly created fixture files, never a recursive removal or customer archive.
     foreach(array_reverse($created)as$file)if(is_file($file)||is_link($file))unlink($file);
     rmdir($dir);rmdir($srcDir);
