@@ -93,6 +93,7 @@ function buildWriterWindowCandidate(array $profile, array $facts, array $pending
 }
 
 function writerWindowPrepareCli(array $argv): int {
+    $stage='VALIDATE_CONTEXT';$privateFile=null;
     try {
         writerWindowAssert(PHP_OS_FAMILY === 'Linux' && posix_geteuid() === 0 && getcwd() === '/home/sulb-release',
             'WRITER_WINDOW_ROOT_CHECKOUT_REQUIRED');
@@ -104,7 +105,8 @@ function writerWindowPrepareCli(array $argv): int {
         writerWindowAssert(preg_match('#^/home/mgye-api-sulb/sulb-release-review-[a-f0-9]{16}/profile-private\.json$#D',$source)===1
             && realpath($source)===$source && fileowner(dirname($source))===0 && (fileperms(dirname($source))&0077)===0,
             'WRITER_PRIVATE_SOURCE_REQUIRED');
-        $read = function(string $file): array {
+        $read = function(string $file) use (&$stage,&$privateFile): array {
+            $stage='READ_'.strtoupper(str_replace(['.','-'],['_','_'],basename($file)));$privateFile=$file;
             accountPrivate($file);
             writerWindowAssert(filesize($file)<=1048576,'WRITER_SIGNOFF_SIZE_LIMIT');
             return json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);
@@ -116,7 +118,7 @@ function writerWindowPrepareCli(array $argv): int {
             && ($pending['source_profile_sha256']??null)===$sourceSha
             && ($pending['evidence_sha256']??null)===hash_file('sha256',$dir.'/evidence-private.json'),
             'WRITER_SIGNOFF_EVIDENCE_BINDING');
-        $pdf=$dir.'/signed-decision.pdf'; accountPrivate($pdf);
+        $pdf=$dir.'/signed-decision.pdf';$stage='CHECK_SIGNED_DOCUMENT';$privateFile=$pdf;accountPrivate($pdf);
         writerWindowAssert(filesize($pdf)<=16777216 && hash_file('sha256',$pdf)===($pending['signed_document_sha256']??null)
             && ($receipt['signed_document_sha256']??null)===$pending['signed_document_sha256']
             && ($receipt['review_reference']??null)===$pending['review_reference']
@@ -127,6 +129,7 @@ function writerWindowPrepareCli(array $argv): int {
             && ($profile['writer_linkage']['service_schedule_candidates']??null)===$facts['service_candidates'],
             'WRITER_SOURCE_FACTS_NOT_PRESERVED');
         $reference=['file'=>$poolName,'sha256'=>$poolSha];
+        $stage='LOAD_POOL_EVIDENCE';$privateFile=$dir.'/'.$poolName;
         $evidence=loadWriterWindowEvidence(['window_evidence'=>['pool_binding'=>$reference]],$dir);
         [$reviewed,$candidate]=buildWriterWindowCandidate($profile,$facts,$pending,$evidence['pool_binding'],$reference);
         // Eligibility probe only: no approved=true is persisted and no reviewed profile is activated.
@@ -138,6 +141,7 @@ function writerWindowPrepareCli(array $argv): int {
             'decision_sha256'=>hash('sha256',$candidateBytes)];
         foreach (['decisions-window-pending.json'=>$candidate,'profile-window-pending.json'=>$reviewed] as $name=>$value) {
             $file=$dir.'/'.$name; $bytes=json_encode($value,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)."\n";
+            $stage=$name==='decisions-window-pending.json'?'SAVE_DECISIONS_CANDIDATE':'SAVE_PROFILE_CANDIDATE';$privateFile=$file;
             clearstatcache(true,$file);
             if (file_exists($file) || is_link($file)) {
                 accountPrivate($file);
@@ -146,6 +150,7 @@ function writerWindowPrepareCli(array $argv): int {
             }
             $old=umask(0077); $h=fopen($file,'xb'); umask($old);
             writerWindowAssert(is_resource($h),'WRITER_WINDOW_CANDIDATE_CREATE_FAILED');
+            if(!chmod($file,0600)){fclose($h);throw new RuntimeException('WRITER_WINDOW_CANDIDATE_PERMISSIONS_FAILED');}
             $written=fwrite($h,$bytes); $synced=fflush($h)&&fsync($h); fclose($h);
             writerWindowAssert($written===strlen($bytes)&&$synced,'WRITER_WINDOW_CANDIDATE_WRITE_FAILED');
         }
@@ -156,8 +161,15 @@ function writerWindowPrepareCli(array $argv): int {
             'production_changes'=>false,'database_connections'=>0,'release_decision'=>'NO-GO']).PHP_EOL;
         return 0;
     } catch (Throwable $e) {
+        $metadata=null;
+        if($e->getMessage()==='PRIVATE_EVIDENCE_REQUIRED'&&is_string($privateFile)){
+            clearstatcache(true,$privateFile);
+            $metadata=['is_link'=>is_link($privateFile),'is_file'=>is_file($privateFile),
+                'uid'=>is_file($privateFile)?fileowner($privateFile):null,
+                'mode'=>is_file($privateFile)?sprintf('%04o',fileperms($privateFile)&0777):null];
+        }
         echo json_encode(['window_candidate_policy'=>'BLOCKED','reason'=>preg_match('/^[A-Z0-9_]+$/D',$e->getMessage())?$e->getMessage():'PRIVATE_WINDOW_CANDIDATE_FAILURE',
-            'approved'=>false,'production_changes'=>false,'database_connections'=>0,'release_decision'=>'NO-GO']).PHP_EOL;
+            'stage'=>$stage,'private_file_metadata'=>$metadata,'approved'=>false,'production_changes'=>false,'database_connections'=>0,'release_decision'=>'NO-GO']).PHP_EOL;
         return 78;
     }
 }

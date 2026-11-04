@@ -94,7 +94,7 @@ try{
     if($code!==0||$reply['window_candidate_policy']!=='PASS'||$reply['approved']!==false)throw new RuntimeException('WINDOW_PREPARATION_FAILED');$n++;
     foreach($hashes as$f=>$h)if(hash_file('sha256',$f)!==$h)throw new RuntimeException('ORIGINAL_EVIDENCE_CHANGED');$n++;
     if(file_exists($decisionFile)||file_exists($profileFile))throw new RuntimeException('WINDOW_PREPARATION_ACTIVATED_APPROVAL');$n++;
-    ob_start();$code=writerWindowPrepareCli($args);$reply=json_decode(ob_get_clean(),true,512,JSON_THROW_ON_ERROR);if($code!==0)throw new RuntimeException('WINDOW_PREPARATION_NOT_IDEMPOTENT_'.($reply['reason']??'UNKNOWN'));$n++;
+    ob_start();$code=writerWindowPrepareCli($args);$reply=json_decode(ob_get_clean(),true,512,JSON_THROW_ON_ERROR);if($code!==0){echo json_encode($reply).PHP_EOL;throw new RuntimeException('WINDOW_PREPARATION_NOT_IDEMPOTENT_'.($reply['reason']??'UNKNOWN'));}$n++;
     $candidateFile=$dir.'/decisions-window-pending.json';$originalCandidate=file_get_contents($candidateFile);
     $write($candidateFile,$originalCandidate.' ');
     ob_start();$code=writerWindowPrepareCli($args);$reply=json_decode(ob_get_clean(),true,512,JSON_THROW_ON_ERROR);
