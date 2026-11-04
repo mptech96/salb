@@ -138,6 +138,7 @@ function writerWindowPrepareCli(array $argv): int {
             'decision_sha256'=>hash('sha256',$candidateBytes)];
         foreach (['decisions-window-pending.json'=>$candidate,'profile-window-pending.json'=>$reviewed] as $name=>$value) {
             $file=$dir.'/'.$name; $bytes=json_encode($value,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)."\n";
+            clearstatcache(true,$file);
             if (file_exists($file) || is_link($file)) {
                 accountPrivate($file);
                 writerWindowAssert(file_get_contents($file)===$bytes,'WRITER_WINDOW_EXISTING_CANDIDATE_DIFFERS');
