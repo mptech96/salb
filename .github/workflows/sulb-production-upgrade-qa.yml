@@ -26,6 +26,8 @@ on:
       - 'ops/sulb-rc/test-recovery-policy.php'
       - 'ops/sulb-rc/test-writer-profile.php'
       - 'ops/sulb-rc/*writer-signoff-policy.php'
+      - 'ops/sulb-rc/*writer-window*'
+      - 'ops/sulb-rc/writer-signoff-instructions-ar.md'
       - 'ops/sulb-rc/test-writer-signoff-fixture.php'
       - 'ops/sulb-rc/*writer-review-context.php'
       - 'ops/sulb-rc/*writer-linkage.php'
@@ -46,6 +48,7 @@ jobs:
     outputs:
       pool_only: ${{ steps.scope.outputs.pool_only }}
       delegate_only: ${{ steps.scope.outputs.delegate_only }}
+      window_only: ${{ steps.scope.outputs.window_only }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -65,11 +68,14 @@ jobs:
           only=result.returncode==0 and bool(files) and files<=allowed
           delegate_allowed={'ops/sulb-rc/record-history-approvals.php','ops/sulb-rc/test-financial-delegate.php','ops/sulb-rc/accounting-forms-ar.md','ops/sulb-rc/release.json','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
           delegate_only=result.returncode==0 and bool(files) and files<=delegate_allowed and not only
+          window_allowed={'ops/sulb-rc/writer-window-policy.php','ops/sulb-rc/writer-window-prepare.php','ops/sulb-rc/test-writer-window-policy.php','ops/sulb-rc/test-writer-window-files.php','ops/sulb-rc/writer-signoff-policy.php','ops/sulb-rc/release-fence-evidence.php','ops/sulb-rc/release-process-fence.php','ops/sulb-rc/writer-signoff-instructions-ar.md','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
+          window_only=result.returncode==0 and bool(files) and files<=window_allowed and not only and not delegate_only
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('pool_only='+str(only).lower()+'\ndelegate_only='+str(delegate_only).lower()+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('window_only='+str(window_only).lower()+'\n')
           PY
   upgrade:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -94,6 +100,8 @@ jobs:
           php ops/sulb-rc/test-write-fence-integration.php
           php ops/sulb-rc/test-release-fence-evidence.php
           php ops/sulb-rc/test-writer-signoff-policy.php
+          php ops/sulb-rc/test-writer-window-policy.php
+          sudo --preserve-env=GITHUB_ACTIONS php ops/sulb-rc/test-writer-window-files.php
           php ops/sulb-rc/test-writer-review-context.php
           php ops/sulb-rc/test-writer-linkage.php
           python3 ops/sulb-rc/test-history-stage.py
@@ -146,7 +154,7 @@ jobs:
 
   deployment-runtime85:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -211,3 +219,30 @@ jobs:
         run: |
           php -l ops/sulb-rc/record-history-approvals.php
           php ops/sulb-rc/test-financial-delegate.php
+
+  writer-window-only:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.window_only == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        php: ['8.4', '8.5']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Affected writer qualification and fence contracts only; no database or application tests
+        run: |
+          php -l ops/sulb-rc/writer-window-policy.php
+          php -l ops/sulb-rc/writer-window-prepare.php
+          php -l ops/sulb-rc/release-process-fence.php
+          php ops/sulb-rc/test-writer-window-policy.php
+          php ops/sulb-rc/test-writer-signoff-policy.php
+          php ops/sulb-rc/test-release-fence-evidence.php
+          php ops/sulb-rc/test-idle-pool.php
+          sudo --preserve-env=GITHUB_ACTIONS php ops/sulb-rc/test-writer-window-files.php

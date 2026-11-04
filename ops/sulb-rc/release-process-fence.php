@@ -25,9 +25,15 @@ function releaseProcessSnapshot(array $release,bool $needPoolProof=false):array 
     if($needPoolProof){$pool=releasePoolBinding($master);$idleAllowed=releaseIdlePoolAllowed($pool,$master,(int)$user['uid'],$release['write_fence_plan']['reviewed_config_hashes']??[]);if(!$fpm&&!$idleAllowed)throw new RuntimeException('RELEASE_SITE_POOL_IDENTITY_NOT_PROVEN');}
     return ['site_uid'=>(int)$user['uid'],'php_fpm_unit'=>$unit,'master_pid'=>$master,'workers'=>$fpm,'cli_writers'=>$cli];
 }
+function releaseAssertProcessDrain(array $receipt,array $current,callable $lookup):array {
+    if(($receipt['site_uid']??null)!==($current['site_uid']??null)||($receipt['php_fpm_unit']??null)!==($current['php_fpm_unit']??null))throw new RuntimeException('RELEASE_PROCESS_PROFILE_CHANGED');
+    foreach(array_merge($receipt['workers']??[],$receipt['cli_writers']??[])as$old){$now=$lookup($old['pid']);if($now&&$now['start_ticks']===$old['start_ticks'])throw new RuntimeException('RELEASE_OLD_PHP_WRITER_STILL_ALIVE');}
+    if($current['cli_writers'])throw new RuntimeException('RELEASE_UNREGISTERED_LIVE_CLI_WRITER');
+    return ['old_application_processes_drained'=>true,'active_cli_writer_count'=>0,'site_uid'=>$current['site_uid'],'php_fpm_unit'=>$current['php_fpm_unit']];
+}
 function verifyReleaseProcessFence(array $release):array {
     $release=releaseWithReviewedFencePlan($release);
-    $file='/run/sulb-release.fence/processes.json';accountPrivate($file);$receipt=json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);if(!is_int($receipt['created_unix']??null)||$receipt['created_unix']>time()||time()-$receipt['created_unix']>3600)throw new RuntimeException('RELEASE_PROCESS_RECEIPT_EXPIRED');if(($receipt['site_uid']??null)!==($release['write_fence_plan']['site_uid']??null)||($receipt['php_fpm_unit']??null)!==($release['write_fence_plan']['php_fpm_unit']??null))throw new RuntimeException('RELEASE_PROCESS_PROFILE_CHANGED');foreach(array_merge($receipt['workers']??[],$receipt['cli_writers']??[])as$old){$now=releaseProcess($old['pid']);if($now&&$now['start_ticks']===$old['start_ticks'])throw new RuntimeException('RELEASE_OLD_PHP_WRITER_STILL_ALIVE');}$current=releaseProcessSnapshot($release);if($current['cli_writers'])throw new RuntimeException('RELEASE_UNREGISTERED_LIVE_CLI_WRITER');return ['old_application_processes_drained'=>true,'active_cli_writer_count'=>0,'site_uid'=>$current['site_uid'],'php_fpm_unit'=>$current['php_fpm_unit'],'process_receipt_sha256'=>hash_file('sha256',$file)];
+    $file='/run/sulb-release.fence/processes.json';accountPrivate($file);$receipt=json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);if(!is_int($receipt['created_unix']??null)||$receipt['created_unix']>time()||time()-$receipt['created_unix']>3600)throw new RuntimeException('RELEASE_PROCESS_RECEIPT_EXPIRED');if(($receipt['site_uid']??null)!==($release['write_fence_plan']['site_uid']??null)||($receipt['php_fpm_unit']??null)!==($release['write_fence_plan']['php_fpm_unit']??null))throw new RuntimeException('RELEASE_PROCESS_PROFILE_CHANGED');$current=releaseProcessSnapshot($release);return releaseAssertProcessDrain($receipt,$current,'releaseProcess')+['process_receipt_sha256'=>hash_file('sha256',$file)];
 }
 
 if(realpath($_SERVER['SCRIPT_FILENAME']??'')===__FILE__){
