@@ -1,6 +1,6 @@
 <?php
 // Standalone read-only VPS evidence collection; never boots Laravel or reads .env.
-require __DIR__.'/../../backend/scripts/release_metadata_collect.php';
+require __DIR__.'/production-schema-gate.php';
 ini_set('display_errors','0');
 try{
     if(PHP_SAPI!=='cli')throw new RuntimeException('CLI_REQUIRED');
@@ -12,13 +12,12 @@ try{
     $password=rtrim($line,"\r\n");unset($line);
     try{$db=new PDO('mysql:host=localhost;dbname=sulbprod;charset=utf8mb4','sulbmetadata',$password,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false,PDO::ATTR_TIMEOUT=>10]);}finally{unset($password);}
     $authorization=verifyReleaseMetadataReader($db);
-    $sets=[];foreach(releaseMetadataQueries($db)as$statement){$rows=$db->query($statement);if(str_starts_with(strtoupper($statement),'SELECT')||str_starts_with($statement,'SHOW SESSION VARIABLES'))$sets[]=$rows->fetchAll(PDO::FETCH_ASSOC);}
-    foreach(releaseExtendedMetadataQueries($db)as$statement)$sets[]=$db->query($statement)->fetchAll(PDO::FETCH_ASSOC);
+    $sets=releaseSchemaMetadata($db);
     $hasMigrations=$db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='migrations'")->fetchColumn();
     $migrations=$hasMigrations?$db->query('SELECT migration,batch FROM migrations ORDER BY migration')->fetchAll(PDO::FETCH_ASSOC):null;
     $release=json_decode(file_get_contents(__DIR__.'/release.json'),true,512,JSON_THROW_ON_ERROR);
     $extensions=[];foreach($release['required_php_extensions']as$name)$extensions[$name]=extension_loaded($name);
-    $schemaHash=hash('sha256',json_encode($sets,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+    $schemaHash=releaseSchemaFingerprint($sets);
     $live=[];$source=json_decode(file_get_contents(__DIR__.'/source-manifest.json'),true,512,JSON_THROW_ON_ERROR);
     foreach($source as$file){$path=$file['path'];foreach(['backend','frontend']as$component){if(!str_starts_with($path,$component.'/'))continue;$target=$release['paths'][$component].'/'.substr($path,strlen($component)+1);$live[$path]=is_file($target)?hash_file('sha256',$target):null;}}
     echo json_encode(['mode'=>'READ_ONLY_PREFLIGHT','writes_performed'=>false,'release_decision'=>'NO-GO','deployment_authorized'=>false,
