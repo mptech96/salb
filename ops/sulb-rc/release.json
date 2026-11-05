@@ -4,7 +4,7 @@
   "release_decision": "NO-GO",
   "deployment_authorized": false,
   "vps_schema_verified": true,
-  "approved_history_verified": false,
+  "approved_history_verified": true,
   "staging_passed": false,
   "complete_security_review": false,
   "production_backup_restore_rehearsed": true,
@@ -630,7 +630,26 @@
     "original_qa_guards_unchanged": true,
     "original_application_files_retained": 786,
     "qualified_backup_issuer_sha256": "c7963d1e835a0e1399f0743de2ac5372a95417649d5e72720dca0db83ab99f26",
-    "derived_artifact_sha256": null
+    "derived_artifact_sha256": "e3dc16febf4886f204ada921954ed3838a490d900025ac97421bbce95d73f252",
+    "derived_artifact_owner_approval": {
+      "decision_date": "2026-11-05",
+      "decision_timezone": "Asia/Riyadh",
+      "decision": "EXPLICIT_RELEASE_OWNER_SELECTION",
+      "round_id": "13ca3196bd69445f",
+      "derived_artifact_sha256": "e3dc16febf4886f204ada921954ed3838a490d900025ac97421bbce95d73f252",
+      "history_result_sha256": "0803a6ad515502bd7f8cf958ecd1ca638304e4aafa2c31c54fd644d7d07518f2",
+      "generator_sha256": "c525cdcc6657903186859a358d845b056fdafbcdc21427dd8fa7d77e12b49250",
+      "authority_file_sha256": "65f5be4598627a4048c51c5da31b32674b36ab74b945b4d95854a60d134d4c02",
+      "accounting_packet_sha256": "e6591276adf1a442406ac2c810f6e9c5f3b9f2b6f5ffbe4ca04bd036cc5a23f8",
+      "vps_inspector_result": "PASS_REPORTED_BY_OPERATOR",
+      "backfill": "PASS",
+      "LOT_GL": "PASS",
+      "snapshot_restore_rehearsal": "PASS",
+      "compared_round_id": "e92dc1c0583e46bc",
+      "same_source_snapshot_sha256": true,
+      "equivalence_basis": "Only created_at and updated_at differ in two sequence rows. Scope, next_number, representation, id, other fields and scope order match.",
+      "deployment_authorized": false
+    }
   },
   "inventory_account_mapping_approval": {
     "authorized": true,
