@@ -2,6 +2,25 @@
 /** Explicit reviewed decisions only. Hashes bind privately reviewed documents, not cryptographic identities. */
 function writerSignoffText(mixed $v):bool{return is_string($v)&&trim($v)!==''&&strlen($v)<=2048;}
 function writerSignoffSha(mixed $v):bool{return is_string($v)&&preg_match('/^[a-f0-9]{64}$/D',$v)===1;}
+/** JSON object member order is insignificant; list order, types, values and key membership are not. */
+function writerSourceFactsEqual(mixed $left,mixed $right):bool {
+    if(!is_array($left)||!is_array($right))return $left===$right;
+    if(array_is_list($left)!==array_is_list($right)||count($left)!==count($right))return false;
+    if(!array_is_list($left)){ksort($left,SORT_STRING);ksort($right,SORT_STRING);}
+    if(array_keys($left)!==array_keys($right))return false;
+    foreach($left as$key=>$value)if(!writerSourceFactsEqual($value,$right[$key]))return false;
+    return true;
+}
+function writerAssertSourceFacts(array $original,array $facts,?array $reviewed=null):void {
+    if(($original['format']??null)!=='SULB_PRIVATE_WRITER_PROFILE_V1'
+        ||($facts['format']??null)!=='SULB_WRITER_SIGNOFF_EVIDENCE_V1'
+        ||($reviewed!==null&&!writerSourceFactsEqual($original['database_accounts']??null,$reviewed['database_accounts']??null)))
+        throw new RuntimeException('WRITER_SOURCE_FACTS_NOT_PRESERVED');
+    if(!writerSourceFactsEqual($original['writer_linkage']['missing_proofs']??null,array_column($facts['missing_proofs']??[],'code')))
+        throw new RuntimeException('WRITER_SOURCE_PROOF_CATEGORIES_CHANGED');
+    if(!writerSourceFactsEqual($original['writer_linkage']['service_schedule_candidates']??null,$facts['service_candidates']??null))
+        throw new RuntimeException('WRITER_SOURCE_SERVICE_FACTS_CHANGED');
+}
 function writerSignoffIdentity(array $r,string $documentSha):void {
     foreach(['reviewer','review_reference']as$k)if(!writerSignoffText($r[$k]??null))throw new RuntimeException('WRITER_EXPLICIT_REVIEWER_REQUIRED');$stamp=$r['attested_at_utc']??'';$date=is_string($stamp)?DateTimeImmutable::createFromFormat('!Y-m-d\TH:i:s\Z',$stamp,new DateTimeZone('UTC')):false;if(!$date||$date->format('Y-m-d\TH:i:s\Z')!==$stamp||$date->getTimestamp()>time()||($r['signed_document_sha256']??null)!==$documentSha)throw new RuntimeException('WRITER_SIGNED_DATE_AND_DOCUMENT_REQUIRED');
 }
@@ -34,7 +53,7 @@ function assertWriterInventoryMatches(array $fresh,array $reviewed):void {
 function loadVerifiedWriterSignoff(array $profile):void {
     $link=$profile['writer_signoff']??[];$dir=$link['packet_directory']??'';$source=$link['source_profile_file']??'';
     if(!preg_match('#^/home/mgye-api-sulb/sulb-writer-signoff-[a-f0-9]{16}$#D',$dir)||realpath($dir)!==$dir||fileowner($dir)!==0||(fileperms($dir)&0077)!==0||!preg_match('#^/home/mgye-api-sulb/sulb-release-review-[a-f0-9]{16}/profile-private\.json$#D',$source)||realpath(dirname($source))!==dirname($source)||fileowner(dirname($source))!==0||(fileperms(dirname($source))&0077)!==0)throw new RuntimeException('WRITER_PRIVATE_SIGNOFF_PACKET_REQUIRED');accountPrivate($source);$read=function($name)use($dir){$file=$dir.'/'.$name;accountPrivate($file);if(filesize($file)>1048576)throw new RuntimeException('WRITER_SIGNOFF_SIZE_LIMIT');return json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);};
-    $facts=$read('evidence-private.json');if(filesize($source)>1048576)throw new RuntimeException('WRITER_SOURCE_PROFILE_SIZE');$original=json_decode(file_get_contents($source),true,512,JSON_THROW_ON_ERROR);if(($original['format']??'')!=='SULB_PRIVATE_WRITER_PROFILE_V1'||($original['database_accounts']??null)!==($profile['database_accounts']??null)||($original['writer_linkage']['missing_proofs']??null)!==array_column($facts['missing_proofs']??[],'code')||($original['writer_linkage']['service_schedule_candidates']??null)!==($facts['service_candidates']??null))throw new RuntimeException('WRITER_SOURCE_FACTS_NOT_PRESERVED');$known=[];foreach(array_merge($profile['surface_files']??[],$profile['external_writer_source_files']??[])as$r)$known[$r['path']]=$r['sha256'];foreach($facts['service_candidates']??[]as$r)if(($known[$r['path']]??null)!==($r['sha256']??null))throw new RuntimeException('WRITER_SIGNED_SERVICE_OUTSIDE_REVIEWED_SURFACE');$signed=$read('decisions-approved.json');$evidenceSha=hash_file('sha256',$dir.'/evidence-private.json');if(($link['evidence_sha256']??null)!==$evidenceSha||($link['decision_sha256']??null)!==hash_file('sha256',$dir.'/decisions-approved.json'))throw new RuntimeException('WRITER_SIGNOFF_FILES_CHANGED');$document=$dir.'/signed-decision.pdf';accountPrivate($document);if(filesize($document)>16777216||($signed['signed_document_sha256']??null)!==hash_file('sha256',$document))throw new RuntimeException('WRITER_SIGNED_DOCUMENT_FILE_REQUIRED');
+    $facts=$read('evidence-private.json');if(filesize($source)>1048576)throw new RuntimeException('WRITER_SOURCE_PROFILE_SIZE');$original=json_decode(file_get_contents($source),true,512,JSON_THROW_ON_ERROR);writerAssertSourceFacts($original,$facts,$profile);$known=[];foreach(array_merge($profile['surface_files']??[],$profile['external_writer_source_files']??[])as$r)$known[$r['path']]=$r['sha256'];foreach($facts['service_candidates']??[]as$r)if(($known[$r['path']]??null)!==($r['sha256']??null))throw new RuntimeException('WRITER_SIGNED_SERVICE_OUTSIDE_REVIEWED_SURFACE');$signed=$read('decisions-approved.json');$evidenceSha=hash_file('sha256',$dir.'/evidence-private.json');if(($link['evidence_sha256']??null)!==$evidenceSha||($link['decision_sha256']??null)!==hash_file('sha256',$dir.'/decisions-approved.json'))throw new RuntimeException('WRITER_SIGNOFF_FILES_CHANGED');$document=$dir.'/signed-decision.pdf';accountPrivate($document);if(filesize($document)>16777216||($signed['signed_document_sha256']??null)!==hash_file('sha256',$document))throw new RuntimeException('WRITER_SIGNED_DOCUMENT_FILE_REQUIRED');
     if(isset($signed['qualification_mode'])){require_once __DIR__.'/writer-window-policy.php';if($signed['qualification_mode']!==WRITER_WINDOW_MODE)throw new RuntimeException('WRITER_UNKNOWN_QUALIFICATION_MODE');validateWriterSignoff($profile,$facts,$signed,$evidenceSha,hash_file('sha256',$source),[],loadWriterWindowEvidence($signed,$dir));return;}
     $proofs=[];foreach($signed['proof_resolutions']??[]as$r){$sha=$r['evidence_sha256']??'';if(!writerSignoffSha($sha))throw new RuntimeException('WRITER_PRIVATE_PROOF_SHA_REQUIRED');$file=$dir.'/proof-'.$sha.'.pdf';accountPrivate($file);if(filesize($file)>16777216||hash_file('sha256',$file)!==$sha)throw new RuntimeException('WRITER_PRIVATE_PROOF_FILE_REQUIRED');$proofs[]=$sha;}validateWriterSignoff($profile,$facts,$signed,$evidenceSha,hash_file('sha256',$source),$proofs);
 }

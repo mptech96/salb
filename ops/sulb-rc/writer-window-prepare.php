@@ -125,9 +125,8 @@ function writerWindowPrepareCli(array $argv): int {
             && ($receipt['owner_reaffirmation_recorded_at_utc']??null)===$pending['attested_at_utc'],
             'WRITER_WINDOW_SIGNED_RECEIPT_REQUIRED');
         // The original profile/facts and existing PDF remain untouched.
-        writerWindowAssert(($profile['writer_linkage']['missing_proofs']??null)===array_column($facts['missing_proofs'],'code')
-            && ($profile['writer_linkage']['service_schedule_candidates']??null)===$facts['service_candidates'],
-            'WRITER_SOURCE_FACTS_NOT_PRESERVED');
+        $stage='CHECK_SOURCE_FACTS';$privateFile=null;
+        writerAssertSourceFacts($profile,$facts);
         $reference=['file'=>$poolName,'sha256'=>$poolSha];
         $stage='LOAD_POOL_EVIDENCE';$privateFile=$dir.'/'.$poolName;
         $evidence=loadWriterWindowEvidence(['window_evidence'=>['pool_binding'=>$reference]],$dir);

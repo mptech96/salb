@@ -14,6 +14,7 @@ mkdir($dir,0700,true);mkdir($srcDir,0700,true);$created=[];$n=0;
 $fixtureCheckout=false;$originalCwd=getcwd();
 $write=function($file,$bytes)use(&$created){if(!in_array($file,$created,true))$created[]=$file;file_put_contents($file,$bytes);chmod($file,0600);clearstatcache(true,$file);};
 $json=fn($v)=>json_encode($v,JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR)."\n";
+$sortObjectKeys=function($value)use(&$sortObjectKeys){if(!is_array($value))return$value;if(!array_is_list($value))ksort($value,SORT_STRING);foreach($value as&$item)$item=$sortObjectKeys($item);unset($item);return$value;};
 $reject=function(callable $call,string $expected)use(&$n){try{$call();}catch(RuntimeException $e){if($e->getMessage()!==$expected)throw $e;$n++;return;}throw new RuntimeException('WINDOW_FILE_TEST_EXPECTED_'.$expected);};
 try{
     [$source,$facts,$pending]=writerSignoffFixture();
@@ -28,7 +29,7 @@ try{
         'service_schedule_candidates'=>$facts['service_candidates']];
     $sourceFile=$srcDir.'/profile-private.json';$write($sourceFile,$json($source));
     $sourceSha=hash_file('sha256',$sourceFile);$facts['source_profile_sha256']=$sourceSha;
-    $write($dir.'/evidence-private.json',$json($facts));$evidenceSha=hash_file('sha256',$dir.'/evidence-private.json');
+    $write($dir.'/evidence-private.json',$json($sortObjectKeys($facts)));$evidenceSha=hash_file('sha256',$dir.'/evidence-private.json');
     $pdf='%PDF-1.4 SYNTHETIC UNIT FIXTURE, NOT A REAL SIGNATURE';
     $write($dir.'/signed-decision.pdf',$pdf);$documentSha=hash('sha256',$pdf);
     $pending['source_profile_sha256']=$sourceSha;$pending['evidence_sha256']=$evidenceSha;
