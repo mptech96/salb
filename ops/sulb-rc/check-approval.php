@@ -1,8 +1,25 @@
 <?php
-// No application bootstrap, credentials, filesystem mutation or database access.
+// Default/status: no application bootstrap or database access. Explicit --readiness reads private evidence and schema metadata only.
 $release=json_decode(file_get_contents(__DIR__.'/release.json'),true,512,JSON_THROW_ON_ERROR);
-$gates=['deployment_authorized','vps_schema_verified','approved_history_verified','staging_passed','complete_security_review','production_backup_restore_rehearsed','rollback_strategy_qualified','production_executor_qualified','write_fence_qualified','deployment_backup_restore_qualified','production_derived_balance_executor_qualified','deployment_pipeline_qualified'];
-$missing=array_values(array_filter($gates,fn($gate)=>($release[$gate]??false)!==true));
+require_once __DIR__.'/release-qualification.php';
+try {
+    verifyReleaseQualificationBindings($release,dirname(__DIR__,2));
+    if (($argv[1]??'')==='--readiness') {
+        ini_set('display_errors','0');ini_set('log_errors','0');
+        $status=inspectReleaseReadiness($release,dirname(__DIR__,2));
+        echo json_encode($status,JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR).PHP_EOL;
+        exit($status['qualification_status']==='BLOCKED'?78:0);
+    }
+    if (($argv[1]??'')==='--status') {
+        echo json_encode(['qualification_bindings'=>'PASS','pending_gates'=>releasePendingGates($release),
+            'release_decision'=>$release['release_decision'],'database_connections'=>0],JSON_THROW_ON_ERROR).PHP_EOL;
+        exit($release['release_decision']==='GO'&&!releasePendingGates($release)?0:78);
+    }
+} catch (Throwable $error) {
+    $reason=preg_match('/^[A-Z0-9_]+$/D',$error->getMessage())?$error->getMessage():'RELEASE_QUALIFICATION_CHECK_FAILED';
+    fwrite(STDERR,'NO-GO: '.$reason.PHP_EOL);exit(78);
+}
+$missing=releasePendingGates($release);
 if(($release['release_decision']??'')!=='GO'||$missing||!preg_match('/^[a-f0-9]{64}$/D',$release['expected_production_schema_sha256']??'')||!count($release['approved_migration_paths']??[])){
     fwrite(STDERR,"NO-GO: release approval, exact schema evidence, staging and ordered production executor are not certified.\n");exit(78);
 }

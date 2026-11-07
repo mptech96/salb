@@ -7,6 +7,9 @@ on:
       - 'backend/app/Http/Middleware/EnforceReleaseWriteFence.php'
       - 'backend/app/Providers/AppServiceProvider.php'
       - 'backend/bootstrap/app.php'
+      - 'ops/sulb-rc/*qualification*'
+      - 'ops/sulb-rc/test-production-schema-gate.php'
+      - 'ops/sulb-rc/check-approval.php'
       - 'ops/sulb-rc/*approved*'
       - 'ops/sulb-rc/record-history-approvals.php'
       - 'ops/sulb-rc/test-financial-delegate.php'
@@ -50,6 +53,7 @@ jobs:
       pool_only: ${{ steps.scope.outputs.pool_only }}
       delegate_only: ${{ steps.scope.outputs.delegate_only }}
       window_only: ${{ steps.scope.outputs.window_only }}
+      qualification_only: ${{ steps.scope.outputs.qualification_only }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -73,10 +77,13 @@ jobs:
           window_only=result.returncode==0 and bool(files) and files<=window_allowed and not only and not delegate_only
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('pool_only='+str(only).lower()+'\ndelegate_only='+str(delegate_only).lower()+'\n')
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('window_only='+str(window_only).lower()+'\n')
+          qualification_allowed={'ops/sulb-rc/release.json','ops/sulb-rc/check-approval.php','ops/sulb-rc/release-qualification.php','ops/sulb-rc/inspect-approved-history.php','ops/sulb-rc/test-release-qualification.php','ops/sulb-rc/test-production-schema-gate.php','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
+          qualification_only=result.returncode==0 and bool(files) and files<=qualification_allowed and not (only or delegate_only or window_only)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('qualification_only='+str(qualification_only).lower()+'\n')
           PY
   upgrade:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -156,7 +163,7 @@ jobs:
 
   deployment-runtime85:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -249,3 +256,31 @@ jobs:
           php ops/sulb-rc/test-release-fence-evidence.php
           php ops/sulb-rc/test-idle-pool.php
           sudo --preserve-env=GITHUB_ACTIONS php ops/sulb-rc/test-writer-window-files.php
+
+  qualification:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.qualification_only == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        php: ['8.4', '8.5']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql
+          coverage: none
+      - name: Changed qualification bindings and pre-DDL metadata guard only
+        run: |
+          php -l ops/sulb-rc/inspect-approved-history.php
+          php -l ops/sulb-rc/check-approval.php
+          php ops/sulb-rc/test-release-qualification.php
+          php ops/sulb-rc/test-production-schema-gate.php
+          set +e
+          php ops/sulb-rc/check-approval.php --status
+          result=$?
+          set -e
+          test "$result" -eq 78

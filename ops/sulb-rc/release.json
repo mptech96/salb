@@ -5,7 +5,7 @@
   "deployment_authorized": false,
   "vps_schema_verified": true,
   "approved_history_verified": true,
-  "staging_passed": false,
+  "staging_passed": true,
   "complete_security_review": false,
   "production_backup_restore_rehearsed": true,
   "backward_compatible_schema_proven": false,
@@ -52,10 +52,8 @@
   },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
   "staging_blocked_inputs": [
-    "independently approved representative production-history snapshot kept only in a private local VPS enclave",
-    "historical Backfill/FIFO/LOT=GL validation with explicit unresolved exceptions",
-    "verified consistent backup and isolated restore preserving newer production transactions",
-    "qualified ordered production migration executor, final security review and explicit deployment approval"
+    "final consolidated security-review approval record",
+    "independent final deployment-window authorization; live fence and fresh backup/restore receipts remain execution-time requirements"
   ],
   "minimum_php": "8.3.0",
   "minimum_node": "20.9.0",
@@ -552,9 +550,9 @@
     "institutional_signature_acceptance_confirmed": true,
     "private_recording_on_vps_completed": false
   },
-  "production_executor_qualified": false,
-  "write_fence_qualified": false,
-  "deployment_backup_restore_qualified": false,
+  "production_executor_qualified": true,
+  "write_fence_qualified": true,
+  "deployment_backup_restore_qualified": true,
   "final_closure": {
     "scope_manifest": "ops/sulb-rc/full-release-scope.json",
     "scope_sha256": "a5b9326155e77e075acadf16e3a2e3138cd33429bf179f806940a19b7ec19116",
@@ -611,7 +609,9 @@
     "implementation": "EXPLICIT_18_PRODUCTION_ADAPTERS_V1",
     "entry": "php ops/sulb-rc/production-upgrade.php --execute",
     "catalog": "ops/sulb-rc/production-upgrade/catalog.json",
-    "catalog_sha256": "5cb2c98eb35d5355ea0ba5113ca085d239646292f97689effba8cef13e4ae9cd",
+    "catalog_sha256": "f1ce948b9936a865f6cdee52ad2b64b2a85c5122fcfcca90263a42060880904c",
+    "catalog_sha256_normalization": "LF",
+    "catalog_sha256_legacy_crlf": "5cb2c98eb35d5355ea0ba5113ca085d239646292f97689effba8cef13e4ae9cd",
     "original_qa_guard_and_786_application_files_unchanged": false,
     "sql_payload_identity_checks_passed": 74,
     "mysql84_new_executor_checks_passed": 20,
@@ -712,8 +712,8 @@
     "percona_ci_run": "https://github.com/mptech96/salb/actions/runs/40780227587",
     "affected_history_orchestration_ci_run": "https://github.com/mptech96/salb/actions/runs/40780227555"
   },
-  "production_derived_balance_executor_qualified": false,
-  "deployment_pipeline_qualified": false,
+  "production_derived_balance_executor_qualified": true,
+  "deployment_pipeline_qualified": true,
   "technical_closure_20261029": {
     "reference_commit": "ab741beaac1623a757a336de725312ed45315394",
     "approval_policy_new_checks": 22,
@@ -732,7 +732,7 @@
     "new_ci_run": "https://github.com/mptech96/salb/actions/runs/40863828725",
     "tested_code_commit": "f5982301cdc71e11aeff3793fd14505c5317c342"
   },
-  "rollback_strategy_qualified": false,
+  "rollback_strategy_qualified": true,
   "rollback_strategy": {
     "mode": "FORWARD_REPAIR_ONLY",
     "automatic_database_restore": false,
@@ -984,5 +984,121 @@
     "technical_signoff_recorded": false,
     "production_authorized": false,
     "institutional_hand_drawn_signature_acceptance_confirmed": true
+  },
+  "integrated_qualification": {
+    "qualification_date": "2026-11-07",
+    "qualification_timezone": "Asia/Riyadh",
+    "scope": "Implementation qualification plus previously accepted isolated schema/history evidence. Fresh runtime window receipts are issued only in an independently authorized execution window.",
+    "gate_evidence": {
+      "staging_passed": {
+        "scope": "IMPLEMENTATION_AND_ACCEPTED_EVIDENCE",
+        "references": [
+          "operator_schema_execution",
+          "production_upgrade.derived_artifact_owner_approval",
+          "application unchanged from accepted e491f2d"
+        ],
+        "source_sha256": {
+          "approved-history-rehearsal.php": "c525cdcc6657903186859a358d845b056fdafbcdc21427dd8fa7d77e12b49250",
+          "production-upgrade/catalog.json": "f1ce948b9936a865f6cdee52ad2b64b2a85c5122fcfcca90263a42060880904c"
+        }
+      },
+      "production_executor_qualified": {
+        "scope": "IMPLEMENTATION_AND_ACCEPTED_EVIDENCE",
+        "references": [
+          "technical_pipeline_closure.new_ci_run",
+          "production_upgrade.percona_ci_run",
+          "new schema gate focused PDO tests"
+        ],
+        "source_sha256": {
+          "production-upgrade-runtime.php": "c59a382cbbfc24eaa5da3b631b1606b9c462180abfb57035bd380ad982df3fce",
+          "production-upgrade.php": "28ee9931c508081e1168c10e5a7671bc33fecbfa37e6f574d597b99ec590ff19",
+          "production-schema-gate.php": "c83d0ad82e16ca6be180007f28d7830d6bac097e9ce7cd8a9242187d5b03c2fe",
+          "production-upgrade/catalog.json": "f1ce948b9936a865f6cdee52ad2b64b2a85c5122fcfcca90263a42060880904c"
+        }
+      },
+      "write_fence_qualified": {
+        "scope": "IMPLEMENTATION_AND_ACCEPTED_EVIDENCE",
+        "references": [
+          "accepted ACCOUNT_FENCE_WINDOW_V1 profile b587599b9d365a0ed0ae04ac4774f48f772ce96d1d1d039cc0d1b6f7bfd29b88",
+          "https://github.com/mptech96/salb/actions/runs/41939050898"
+        ],
+        "source_sha256": {
+          "release-fence.php": "f22fef6d1d5f2c12a5c97c43bd9c7685357bde4c45c8a89f43d129625e0c62f6",
+          "release-fence-evidence.php": "692232ad0d64bd970c478b8a5e128e50a892cf51880f6562d0ceffea070b7e13",
+          "release-process-fence.php": "de7ed8963afbc2213b025758a3f0c2451af8ce60897a18f379a0eb68094ce374",
+          "writer-signoff-policy.php": "c2af30895dc5ac0d1f25746f0bad7fbb77bd66cc71adbd3b771b92289b562ab3",
+          "writer-window-policy.php": "2b51a57d87464ae0c97cf7ad6259f828e0c874a610b7d397d3fd5af8c4adadea"
+        }
+      },
+      "deployment_backup_restore_qualified": {
+        "scope": "IMPLEMENTATION_AND_ACCEPTED_EVIDENCE",
+        "references": [
+          "technical_pipeline_closure.new_ci_run",
+          "operator_historical_experiment.two_restores_verified",
+          "production_upgrade.qualified_backup_issuer_sha256"
+        ],
+        "source_sha256": {
+          "release-backup.php": "c7963d1e835a0e1399f0743de2ac5372a95417649d5e72720dca0db83ab99f26",
+          "backup-receipt.php": "64a61a41e11c83855854b683452b2ba9a606231dda58ce4e774f8b007dbee21d",
+          "asset-backup.php": "424095883eb66ba9b57b7dc334d79eec2f4f0c902580db6b444e0bec70d1f087",
+          "history-stage.py": "168e1ba281d8ab8e3def1b93d4ca6e7a6d5fecd9901fd53acbd7110469aa36d0",
+          "run-private-backup-check.php": "ee2fd338461fe93c19f6f42e11507ab51527fd3a47fe155a06719bc87857d7e4"
+        }
+      },
+      "production_derived_balance_executor_qualified": {
+        "scope": "IMPLEMENTATION_AND_ACCEPTED_EVIDENCE",
+        "references": [
+          "production_upgrade.derived_artifact_owner_approval",
+          "technical_pipeline_closure.new_ci_run"
+        ],
+        "source_sha256": {
+          "production-derived.php": "11ac33ebecfb86b40c6aa03dcf1f021413055205a7aa8ffafb0deda5e5983a5f",
+          "approved-history-rehearsal.php": "c525cdcc6657903186859a358d845b056fdafbcdc21427dd8fa7d77e12b49250"
+        }
+      },
+      "deployment_pipeline_qualified": {
+        "scope": "IMPLEMENTATION_AND_ACCEPTED_EVIDENCE",
+        "references": [
+          "deployment_runtime_compatibility.ci_run",
+          "technical_pipeline_closure.new_ci_run",
+          "new schema gate focused PDO tests"
+        ],
+        "source_sha256": {
+          "deploy-reviewed-release.sh": "d4bc62f44dae03de808c408dc04f929edca26f9cf991e27d840b44afc136442c",
+          "release-app-control.php": "d0a63ddd36d44223791ef683184e7ec6b2f6794649986d99002fec044ae1ba82",
+          "release-postcheck.php": "4ec77bf25ce1d00d8b23a9f61295a371f877fe4e340cddf0fa03a37f3a441681",
+          "release-activate.php": "9156542d053d51d2845d9746082d0002ae8f40d3cde210764a5c54eae251c9f0"
+        }
+      },
+      "rollback_strategy_qualified": {
+        "scope": "IMPLEMENTATION_AND_ACCEPTED_EVIDENCE",
+        "references": [
+          "rollback_strategy",
+          "technical_pipeline_closure.new_ci_run",
+          "signed writer window decision"
+        ],
+        "source_sha256": {
+          "rollback-policy.php": "7a6e537f99a26f7a36c5e2188d69f9f3c183a1f12f12e1bde6767ad785bedb12"
+        }
+      }
+    },
+    "staging_scope": "PRODUCTION_SCHEMA_18_UPGRADE_AND_APPROVED_HISTORICAL_RESTORE",
+    "unchanged_accepted_engine_commit": "e7e6e115dea7060b859961d738d452ca63ec1de4",
+    "unchanged_accepted_pipeline_commit": "4dbf2691e7ab51c255c05aa7870a83661f545048",
+    "runtime_window_requirements": [
+      "actual account exclusion and process/session drain",
+      "fresh encrypted release backup and exact isolated restore",
+      "fresh commit-bound authorization receipt within one hour",
+      "current schema fingerprint and financial source drift validation before DDL"
+    ],
+    "runtime_window_evidence_created": false,
+    "remaining_approval_records": {
+      "complete_security_review": "Final consolidated security review approval has not been recorded. Existing tests and window signoff do not assert this approval.",
+      "deployment_authorized": "Independent final production execution authorization has not been issued."
+    },
+    "window_authorization_fields_pending": [
+      "write_fence_plan.temporary_account_lock_authorized",
+      "production_backup.creation_authorized"
+    ]
   }
 }

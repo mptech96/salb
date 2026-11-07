@@ -1,0 +1,139 @@
+<?php
+/** Qualification of implementation and accepted evidence. Fresh window receipts remain mandatory at execution. */
+require_once __DIR__.'/production-upgrade-runtime.php';
+require_once __DIR__.'/rollback-policy.php';
+
+function releaseQualificationSources(): array {
+    return [
+        'staging_passed'=>['approved-history-rehearsal.php','production-upgrade/catalog.json'],
+        'production_executor_qualified'=>['production-upgrade-runtime.php','production-upgrade.php','production-schema-gate.php','production-upgrade/catalog.json'],
+        'write_fence_qualified'=>['release-fence.php','release-fence-evidence.php','release-process-fence.php','writer-signoff-policy.php','writer-window-policy.php'],
+        'deployment_backup_restore_qualified'=>['release-backup.php','backup-receipt.php','asset-backup.php','history-stage.py','run-private-backup-check.php'],
+        'production_derived_balance_executor_qualified'=>['production-derived.php','approved-history-rehearsal.php'],
+        'deployment_pipeline_qualified'=>['deploy-reviewed-release.sh','release-app-control.php','release-postcheck.php','release-activate.php'],
+        'rollback_strategy_qualified'=>['rollback-policy.php'],
+    ];
+}
+
+function releaseQualificationHash(string $root, string $relative): string {
+    $file=$root.'/ops/sulb-rc/'.$relative;
+    if (is_link($file) || !is_file($file)) throw new RuntimeException('RELEASE_QUALIFICATION_SOURCE_REQUIRED');
+    return hash('sha256',str_replace("\r\n","\n",file_get_contents($file)));
+}
+
+function verifyReleaseQualificationBindings(array $release, string $root): void {
+    $bindings=$release['integrated_qualification']['gate_evidence']??[];
+    foreach (releaseQualificationSources() as $gate=>$files) {
+        if (($release[$gate]??false)!==true) continue;
+        $binding=$bindings[$gate]??[];
+        if (($binding['scope']??null)!=='IMPLEMENTATION_AND_ACCEPTED_EVIDENCE'
+            || empty($binding['references']) || !is_array($binding['references'])) {
+            throw new RuntimeException('RELEASE_QUALIFICATION_EVIDENCE_REQUIRED');
+        }
+        $hashes=$binding['source_sha256']??[];
+        $keys=array_keys($hashes);$expected=$files;sort($keys);sort($expected);
+        if ($keys!==$expected) throw new RuntimeException('RELEASE_QUALIFICATION_SOURCE_SET_CHANGED');
+        foreach ($files as $file) {
+            if (($hashes[$file]??null)!==releaseQualificationHash($root,$file)) {
+                throw new RuntimeException('RELEASE_QUALIFICATION_SOURCE_CHANGED');
+            }
+        }
+    }
+    $plan=\Sulb\Release\ProductionUpgradeExecutor::plan($root);
+    if (($release['production_upgrade']['catalog_sha256_normalization']??null)!=='LF'
+        || ($release['approved_migration_paths']??null)!==array_column($plan,'source_path')
+        || ($release['production_upgrade']['catalog_sha256']??null)!==releaseQualificationHash($root,'production-upgrade/catalog.json')) {
+        throw new RuntimeException('EXACT_ORDERED_18_PRODUCTION_ADAPTERS_REQUIRED');
+    }
+    if (($release['deployment_backup_restore_qualified']??false)===true
+        && ($release['production_upgrade']['qualified_backup_issuer_sha256']??null)!==hash_file('sha256',$root.'/ops/sulb-rc/release-backup.php')) {
+        throw new RuntimeException('UPGRADE_QUALIFIED_BACKUP_ISSUER_REQUIRED');
+    }
+    if (($release['rollback_strategy_qualified']??false)===true) reviewedRollbackPolicy($release);
+    if (($release['write_fence_qualified']??false)===true) {
+        $writer=$release['write_fence_plan']??[];
+        if (($writer['profile_authorized']??null)!==true || ($writer['qualification_mode']??null)!=='ACCOUNT_FENCE_WINDOW_V1'
+            || preg_match('/^[a-f0-9]{64}$/D',$writer['profile_sha256']??'')!==1) {
+            throw new RuntimeException('RELEASE_ACCEPTED_WRITER_PROFILE_REQUIRED');
+        }
+    }
+    if (($release['production_derived_balance_executor_qualified']??false)===true || ($release['staging_passed']??false)===true) {
+        $approval=$release['production_upgrade']['derived_artifact_owner_approval']??[];
+        if (($release['approved_history_verified']??false)!==true
+            || preg_match('/^[a-f0-9]{64}$/D',$release['production_upgrade']['derived_artifact_sha256']??'')!==1
+            || preg_match('/^[a-f0-9]{64}$/D',$approval['history_result_sha256']??'')!==1
+            || preg_match('/^[a-f0-9]{16}$/D',$approval['round_id']??'')!==1
+            || preg_match('/^[a-f0-9]{64}$/D',$release['history_accounting_authority_sha256']??'')!==1
+            || preg_match('/^[a-f0-9]{64}$/D',$release['legacy_allocation_accounting_approval']['prepared_packet_sha256']??'')!==1
+            || ($approval['vps_inspector_result']??null)!=='PASS_REPORTED_BY_OPERATOR'
+            || ($approval['backfill']??null)!=='PASS' || ($approval['LOT_GL']??null)!=='PASS'
+            || ($approval['snapshot_restore_rehearsal']??null)!=='PASS'
+            || ($approval['derived_artifact_sha256']??null)!==($release['production_upgrade']['derived_artifact_sha256']??null)
+            || ($approval['generator_sha256']??null)!==releaseQualificationHash($root,'approved-history-rehearsal.php')
+            || ($approval['authority_file_sha256']??null)!==($release['history_accounting_authority_sha256']??null)
+            || ($approval['accounting_packet_sha256']??null)!==($release['legacy_allocation_accounting_approval']['prepared_packet_sha256']??null)) {
+            throw new RuntimeException('RELEASE_ACCEPTED_HISTORY_BINDING_REQUIRED');
+        }
+    }
+    if (($release['staging_passed']??false)===true) {
+        $schema=$release['operator_schema_execution']??[];
+        if (($schema['schema_only_rehearsal']??null)!=='PASS' || ($schema['uom_migrations_applied']??null)!==14
+            || ($schema['lot_l3_dependencies_applied']??null)!==4 || ($schema['production_connected']??null)!==false
+            || ($schema['owned_server_stopped']??null)!==true
+            || preg_match('/^[a-f0-9]{64}$/D',$release['expected_production_schema_sha256']??'')!==1
+            || ($release['expected_production_schema_sha256']??null)!==($release['received_production_schema_sha256']??null)) {
+            throw new RuntimeException('RELEASE_ACCEPTED_SCHEMA_REHEARSAL_REQUIRED');
+        }
+    }
+}
+
+function releasePendingGates(array $release): array {
+    $gates=['deployment_authorized','vps_schema_verified','approved_history_verified','staging_passed',
+        'complete_security_review','production_backup_restore_rehearsed','rollback_strategy_qualified',
+        'production_executor_qualified','write_fence_qualified','deployment_backup_restore_qualified',
+        'production_derived_balance_executor_qualified','deployment_pipeline_qualified'];
+    return array_values(array_filter($gates,fn($gate)=>($release[$gate]??false)!==true));
+}
+
+function inspectReleaseReadiness(array $release, string $root): array {
+    if (PHP_OS_FAMILY!=='Linux' || posix_geteuid()!==0 || getcwd()!=='/home/sulb-release' || $root!=='/home/sulb-release') {
+        throw new RuntimeException('RELEASE_READINESS_ROOT_CHECKOUT_REQUIRED');
+    }
+    verifyReleaseQualificationBindings($release,$root);
+    require_once __DIR__.'/release-fence-evidence.php';
+    require_once __DIR__.'/production-schema-gate.php';
+    require_once __DIR__.'/inspect-approved-history.php';
+    $checks=[];$errors=[];$connections=0;
+    $check=function(string $name,callable $read)use(&$checks,&$errors):void{
+        try {$read();$checks[$name]='PASS';}
+        catch (Throwable $error) {
+            $checks[$name]='BLOCKED';
+            $errors[$name]=preg_match('/^[A-Z0-9_]+$/D',$error->getMessage())?$error->getMessage():'PRIVATE_EVIDENCE_CHECK_FAILED';
+        }
+    };
+    $check('existing_history_artifact',function()use($release){
+        $id=$release['production_upgrade']['derived_artifact_owner_approval']['round_id']??'';
+        if (!preg_match('/^[a-f0-9]{16}$/D',$id)) throw new RuntimeException('HISTORY_APPROVED_ROUND_REQUIRED');
+        inspectApprovedHistoryEvidence('/home/mgye-api-sulb/sulb-history-restore-'.$id.'/approved-history-details-private.json',$release);
+    });
+    $check('accepted_writer_profile_binding',function()use($release){
+        $writer=$release['write_fence_plan'];$file=$writer['profile_file']??'';
+        if (!preg_match('#^/home/mgye-api-sulb/sulb-writer-signoff-[a-f0-9]{16}/profile-window-private\.json$#D',$file)
+            || realpath($file)!==$file) throw new RuntimeException('RELEASE_PRIVATE_WRITER_PROFILE_REQUIRED');
+        accountPrivate($file);
+        if (hash_file('sha256',$file)!==$writer['profile_sha256']) throw new RuntimeException('RELEASE_WRITER_PROFILE_CHANGED');
+    });
+    $check('current_schema_fingerprint',function()use($release,&$connections){
+        $db=releaseAdminConnection();$connections++;
+        verifyReleaseSourceUuid($db,$release);
+        verifyProductionSchemaFingerprint($db,$release['expected_production_schema_sha256']??'');
+    });
+    return ['qualification_status'=>!$errors&&!releasePendingGates($release)?'QUALIFIED_PENDING_FINAL_GO_RECORD':'BLOCKED',
+        'existing_evidence_checks'=>$checks,'evidence_errors'=>$errors,
+        'pending_gates'=>releasePendingGates($release),
+        'runtime_window_requirements'=>['actual_account_exclusion_and_worker_session_drain',
+            'new_encrypted_backup_and_exact_isolated_restore','fresh_commit_bound_upgrade_receipt',
+            'schema_fingerprint_and_financial_source_drift_check_before_ddl'],
+        'runtime_window_evidence_created'=>false,'database_connections_created'=>$connections,
+        'database_rows_written'=>false,'services_changed'=>false,'release_decision'=>$release['release_decision']];
+}
