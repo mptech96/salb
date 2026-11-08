@@ -72,11 +72,51 @@ function verifyReleaseSecurityBindings(array $release,string $root): void {
     if(count($seen)!==115||($inventory['application_writer_files']??null)!==115)throw new RuntimeException('RELEASE_WRITER_SOURCE_SET_CHANGED');
 }
 
+/** Pin an existing private artifact without inventing the unreported cache timestamp. */
+function requirePinnedSiteRuntimeDescriptor(array $e,string $policySha,string $profileSha):void {
+    if(($e['format']??null)!=='SULB_PINNED_SITE_RUNTIME_EVIDENCE_V1'
+        ||!preg_match('#^/home/mgye-api-sulb/sulb-writer-signoff-330e13362e20f1e0/site-runtime-[a-f0-9]{16}\.json$#D',$e['file']??'')
+        ||!preg_match('/^[a-f0-9]{64}$/D',$e['sha256']??'')||!preg_match('/^[a-f0-9]{40}$/D',$e['inspection_commit']??'')
+        ||($e['policy_source_sha256']??null)!==$policySha||($e['approved_profile_sha256']??null)!==$profileSha
+        ||($e['site_runtime']??null)!=='PASS'||($e['shared_service_operations']??null)!==false
+        ||($e['production_database_connections']??null)!==0)throw new RuntimeException('RELEASE_EFFECTIVE_SITE_RUNTIME_EVIDENCE_REQUIRED');
+    $f=$e['reported_facts']??[];$keys=array_keys($f);sort($keys);
+    $expected=['uid','sapi','php_major','php_minor','opcache_enabled','opcache_status_proven','validate_timestamps','revalidate_freq','file_update_protection','preload_configured','file_cache_configured'];sort($expected);
+    if($keys!==$expected||!is_int($f['uid'])||$f['uid']<=0||$f['sapi']!=='fpm-fcgi'||$f['php_major']!==8||$f['php_minor']!==5
+        ||$f['opcache_enabled']!==true||$f['opcache_status_proven']!==true||$f['validate_timestamps']!==true
+        ||!is_int($f['revalidate_freq'])||!is_int($f['file_update_protection'])
+        ||min($f['revalidate_freq'],$f['file_update_protection'])<0||max($f['revalidate_freq'],$f['file_update_protection'])>30
+        ||$f['preload_configured']!==false||$f['file_cache_configured']!==false)throw new RuntimeException('RELEASE_REPORTED_SITE_RUNTIME_FACTS_REQUIRED');
+}
+function verifyPinnedSiteRuntimeBytes(string $bytes,array $e):array {
+    if(strlen($bytes)>32768||!hash_equals($e['sha256'],$actualHash=hash('sha256',$bytes)))throw new RuntimeException('RELEASE_SITE_RUNTIME_EVIDENCE_CHANGED');
+    $a=json_decode($bytes,true,512,JSON_THROW_ON_ERROR);
+    foreach(['site_runtime','inspection_commit','policy_source_sha256','approved_profile_sha256','shared_service_operations','production_database_connections']as$key)
+        if(($a[$key]??null)!==($e[$key]??null))throw new RuntimeException('RELEASE_SITE_RUNTIME_PROVENANCE_MISMATCH');
+    if(($a['master_signalled']??null)!==false||!is_array($a['facts']??null))throw new RuntimeException('RELEASE_SITE_RUNTIME_PROVENANCE_MISMATCH');
+    foreach($e['reported_facts']as$key=>$value)if(($a['facts'][$key]??null)!==$value)throw new RuntimeException('RELEASE_SITE_RUNTIME_FACT_MISMATCH');
+    require_once __DIR__.'/release-site-runtime.php';$wait=releaseSiteCachePolicy($a['facts']);
+    if(($a['cache_wait_seconds']??null)!==$wait)throw new RuntimeException('RELEASE_SITE_RUNTIME_FACT_MISMATCH');
+    return ['site_runtime_evidence'=>'PASS','evidence_sha256'=>$actualHash,'inspection_commit'=>$a['inspection_commit'],'cache_wait_seconds'=>$wait,'database_connections'=>0,'services_changed'=>false];
+}
+function verifyPrivateSiteRuntimeEvidence(array $release):array {
+    if(PHP_OS_FAMILY!=='Linux'||!function_exists('posix_geteuid')||posix_geteuid()!==0||getcwd()!=='/home/sulb-release')throw new RuntimeException('RELEASE_SITE_EVIDENCE_ROOT_CHECKOUT_REQUIRED');
+    $e=$release['runtime_execution_corrections']['accepted_evidence']??[];
+    requirePinnedSiteRuntimeDescriptor($e,releaseQualificationHash(dirname(__DIR__,2),'release-site-runtime.php'),$release['write_fence_plan']['profile_sha256']??'');
+    require_once __DIR__.'/review-account-evidence.php';$file=$e['file'];accountPrivate($file);
+    if(realpath($file)!==$file||fileowner(dirname($file))!==0||(fileperms(dirname($file))&0077)!==0||filesize($file)>32768)throw new RuntimeException('RELEASE_SITE_RUNTIME_EVIDENCE_CHANGED');
+    return verifyPinnedSiteRuntimeBytes(file_get_contents($file),$e);
+}
+
 function verifyReleaseQualificationBindings(array $release, string $root): void {
     verifyReleaseSecurityBindings($release,$root);
     if((($release['write_fence_qualified']??false)===true||($release['deployment_pipeline_qualified']??false)===true)
         &&($release['runtime_execution_corrections']['effective_site_runtime_verified']??false)!==true)throw new RuntimeException('RELEASE_EFFECTIVE_SITE_RUNTIME_EVIDENCE_REQUIRED');
-    if(($release['write_fence_qualified']??false)===true||($release['deployment_pipeline_qualified']??false)===true){require_once __DIR__.'/release-site-runtime.php';requireReleaseSiteRuntimeEvidenceMetadata($release['runtime_execution_corrections']['accepted_evidence']??[],releaseQualificationHash($root,'release-site-runtime.php'),$release['write_fence_plan']['profile_sha256']??'');}
+    if(($release['write_fence_qualified']??false)===true||($release['deployment_pipeline_qualified']??false)===true){
+        $e=$release['runtime_execution_corrections']['accepted_evidence']??[];
+        if(($e['format']??null)==='SULB_PINNED_SITE_RUNTIME_EVIDENCE_V1')requirePinnedSiteRuntimeDescriptor($e,releaseQualificationHash($root,'release-site-runtime.php'),$release['write_fence_plan']['profile_sha256']??'');
+        else {require_once __DIR__.'/release-site-runtime.php';requireReleaseSiteRuntimeEvidenceMetadata($e,releaseQualificationHash($root,'release-site-runtime.php'),$release['write_fence_plan']['profile_sha256']??'');}
+    }
     $bindings=$release['integrated_qualification']['gate_evidence']??[];
     foreach (releaseQualificationSources() as $gate=>$files) {
         if (($release[$gate]??false)!==true) continue;
@@ -178,9 +218,7 @@ function inspectReleaseReadiness(array $release, string $root): array {
         accountPrivate($file);
         if (hash_file('sha256',$file)!==$writer['profile_sha256']) throw new RuntimeException('RELEASE_WRITER_PROFILE_CHANGED');
     });
-    if(($release['runtime_execution_corrections']['effective_site_runtime_verified']??false)===true)$check('effective_site_runtime_evidence',function()use($release){
-        $e=$release['runtime_execution_corrections']['accepted_evidence'];$file=$e['file'];accountPrivate($file);if(realpath($file)!==$file||filesize($file)>32768||hash_file('sha256',$file)!==$e['sha256'])throw new RuntimeException('RELEASE_SITE_RUNTIME_EVIDENCE_CHANGED');$actual=json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);foreach(['site_runtime','facts','policy_source_sha256','approved_profile_sha256','shared_service_operations']as$key)if(($actual[$key]??null)!==($e[$key]??null))throw new RuntimeException('RELEASE_SITE_RUNTIME_EVIDENCE_CHANGED');
-    });
+    if(($release['runtime_execution_corrections']['effective_site_runtime_verified']??false)===true)$check('effective_site_runtime_evidence',fn()=>verifyPrivateSiteRuntimeEvidence($release));
     $check('current_schema_fingerprint',function()use($release,&$connections){
         $db=releaseAdminConnection();$connections++;
         verifyReleaseSourceUuid($db,$release);

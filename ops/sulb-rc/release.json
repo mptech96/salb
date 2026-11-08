@@ -52,7 +52,6 @@
   },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
   "staging_blocked_inputs": [
-    "effective VPS Pool/cache policy proof for new natural-drain mechanism",
     "independent final deployment-window authorization; live fence and fresh backup/restore receipts remain execution-time requirements"
   ],
   "minimum_php": "8.3.0",
@@ -551,7 +550,7 @@
     "private_recording_on_vps_completed": false
   },
   "production_executor_qualified": true,
-  "write_fence_qualified": false,
+  "write_fence_qualified": true,
   "deployment_backup_restore_qualified": true,
   "final_closure": {
     "scope_manifest": "ops/sulb-rc/full-release-scope.json",
@@ -713,7 +712,7 @@
     "affected_history_orchestration_ci_run": "https://github.com/mptech96/salb/actions/runs/40780227555"
   },
   "production_derived_balance_executor_qualified": true,
-  "deployment_pipeline_qualified": false,
+  "deployment_pipeline_qualified": true,
   "technical_closure_20261029": {
     "reference_commit": "ab741beaac1623a757a336de725312ed45315394",
     "approval_policy_new_checks": 22,
@@ -1021,7 +1020,8 @@
         "references": [
           "accepted ACCOUNT_FENCE_WINDOW_V1 profile b587599b9d365a0ed0ae04ac4774f48f772ce96d1d1d039cc0d1b6f7bfd29b88",
           "https://github.com/mptech96/salb/actions/runs/41939050898",
-          "runtime_execution_corrections: current isolated runtime contract tests; actual VPS proof pending"
+          "https://github.com/mptech96/salb/actions/runs/42512247109",
+          "runtime_execution_corrections.accepted_evidence: actual owner-reported VPS PASS with private SHA/inspection commit pinned"
         ],
         "source_sha256": {
           "release-fence.php": "2c92bf358b0f82fee493382aebcd71a5528f20c953283ee3abd60e0aab44e482",
@@ -1064,7 +1064,8 @@
           "deployment_runtime_compatibility.ci_run",
           "technical_pipeline_closure.new_ci_run",
           "new schema gate focused PDO tests",
-          "runtime_execution_corrections: current isolated runtime contract tests; actual VPS proof pending"
+          "https://github.com/mptech96/salb/actions/runs/42512247109",
+          "runtime_execution_corrections.accepted_evidence: actual owner-reported VPS PASS with private SHA/inspection commit pinned"
         ],
         "source_sha256": {
           "deploy-reviewed-release.sh": "37385c8a0333cff81abf07dbcdfc857eefa5814ccc3a73ffb192a60db39a1ea5",
@@ -1302,8 +1303,8 @@
   },
   "runtime_execution_corrections": {
     "mode": "ONDEMAND_NATURAL_DRAIN_AND_TIMESTAMP_CACHE_V1",
-    "status": "PENDING_EFFECTIVE_VPS_POOL_RUNTIME_PROOF",
-    "effective_site_runtime_verified": false,
+    "status": "OPERATOR_PASS_PINNED_PRIVATE_BYTE_RECHECK_ENFORCED",
+    "effective_site_runtime_verified": true,
     "basis_commit": "46bb976765188ca23f24e7042854b292e011320d",
     "no_pool_reload_assumed": true,
     "shared_master_signals_or_service_reload": false,
@@ -1320,6 +1321,32 @@
     "signed_writer_evidence_changed": false,
     "financial_history_or_migrations_changed": false,
     "runtime_window_executed": false,
-    "accepted_evidence": null
+    "accepted_evidence": {
+      "format": "SULB_PINNED_SITE_RUNTIME_EVIDENCE_V1",
+      "file": "/home/mgye-api-sulb/sulb-writer-signoff-330e13362e20f1e0/site-runtime-09200164c4700a78.json",
+      "sha256": "6ee8ea9ddb281e20194bb19b068e09b46655747a8748833659fd2f41b834f752",
+      "inspection_commit": "79f9d05c7f0fb0ecfac5a85aeb7694753b24588d",
+      "policy_source_sha256": "d0309e4198e501d64d6f68e83ba7052cbdd9f84779e55d6d1a4ee8c2034a53af",
+      "approved_profile_sha256": "b587599b9d365a0ed0ae04ac4774f48f772ce96d1d1d039cc0d1b6f7bfd29b88",
+      "site_runtime": "PASS",
+      "production_database_connections": 0,
+      "shared_service_operations": false,
+      "reported_facts": {
+        "uid": 1004,
+        "sapi": "fpm-fcgi",
+        "php_major": 8,
+        "php_minor": 5,
+        "opcache_enabled": true,
+        "opcache_status_proven": true,
+        "validate_timestamps": true,
+        "revalidate_freq": 2,
+        "file_update_protection": 2,
+        "preload_configured": false,
+        "file_cache_configured": false
+      }
+    },
+    "verification_source": "Actual VPS PASS reported by release owner; raw private file is not available locally. Explicit read-only verifier and every executable GO guard require actual artifact bytes/provenance/full policy to match.",
+    "reported_cache_wait_seconds": 6,
+    "inspection_policy_git_commit_verified": "79f9d05c7f0fb0ecfac5a85aeb7694753b24588d"
   }
 }

@@ -67,6 +67,7 @@ jobs:
       import_security_only: ${{ steps.scope.outputs.import_security_only }}
       semantic_only: ${{ steps.scope.outputs.semantic_only }}
       runtime_fix_only: ${{ steps.scope.outputs.runtime_fix_only }}
+      site_binding_only: ${{ steps.scope.outputs.site_binding_only }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -102,10 +103,13 @@ jobs:
           runtime_allowed={'ops/sulb-rc/deploy-reviewed-release.sh','ops/sulb-rc/release-fence.php','ops/sulb-rc/release-process-fence.php','ops/sulb-rc/release-site-runtime.php','ops/sulb-rc/release-app-control.php','ops/sulb-rc/release-qualification.php','ops/sulb-rc/release.json','ops/sulb-rc/test-release-qualification.php','ops/sulb-rc/test-site-runtime.php','ops/sulb-rc/test-site-fcgi.py','ops/sulb-rc/test-deployment-orchestration.py','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
           runtime_only=result.returncode==0 and bool(files) and files<=runtime_allowed and not (only or delegate_only or window_only or qualification_only or security_only or semantic_only)
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('runtime_fix_only='+str(runtime_only).lower()+'\n')
+          binding_allowed={'ops/sulb-rc/release.json','ops/sulb-rc/release-qualification.php','ops/sulb-rc/check-approval.php','ops/sulb-rc/test-site-runtime-binding.php','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
+          binding_only=result.returncode==0 and bool(files) and files<=binding_allowed and not (only or delegate_only or window_only or qualification_only or security_only or semantic_only or runtime_only)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('site_binding_only='+str(binding_only).lower()+'\n')
           PY
   upgrade:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true' && needs.changed-scope.outputs.semantic_only != 'true' && needs.changed-scope.outputs.runtime_fix_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true' && needs.changed-scope.outputs.semantic_only != 'true' && needs.changed-scope.outputs.runtime_fix_only != 'true' && needs.changed-scope.outputs.site_binding_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -185,7 +189,7 @@ jobs:
 
   deployment-runtime85:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true' && needs.changed-scope.outputs.semantic_only != 'true' && needs.changed-scope.outputs.runtime_fix_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true' && needs.changed-scope.outputs.semantic_only != 'true' && needs.changed-scope.outputs.runtime_fix_only != 'true' && needs.changed-scope.outputs.site_binding_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -387,6 +391,32 @@ jobs:
           result=unittest.TextTestRunner(verbosity=2).run(suite)
           if not result.wasSuccessful()or result.skipped:raise SystemExit(1)
           PY
+          set +e
+          php ops/sulb-rc/check-approval.php --status
+          result=$?
+          set -e
+          test "$result" -eq 78
+
+  site-runtime-binding:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.site_binding_only == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        php: ['8.4', '8.5']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: New private-artifact binding contracts only
+        run: |
+          php -l ops/sulb-rc/release-qualification.php
+          php -l ops/sulb-rc/check-approval.php
+          php ops/sulb-rc/test-site-runtime-binding.php
           set +e
           php ops/sulb-rc/check-approval.php --status
           result=$?

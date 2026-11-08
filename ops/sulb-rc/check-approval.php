@@ -4,6 +4,14 @@ $release=json_decode(file_get_contents(__DIR__.'/release.json'),true,512,JSON_TH
 require_once __DIR__.'/release-qualification.php';
 try {
     verifyReleaseQualificationBindings($release,dirname(__DIR__,2));
+    if (($argv[1]??'')==='--verify-site-runtime') {
+        ini_set('display_errors','0');ini_set('log_errors','0');
+        $proof=verifyPrivateSiteRuntimeEvidence($release);
+        echo json_encode($proof+['qualification_bindings'=>'PASS','pending_gates'=>releasePendingGates($release),'release_decision'=>$release['release_decision']],JSON_THROW_ON_ERROR).PHP_EOL;
+        exit($release['release_decision']==='GO'&&!releasePendingGates($release)?0:78);
+    }
+    // Every executable GO entry verifies the actual private artifact before any production side effect.
+    if(($release['release_decision']??null)==='GO'&&($argv[1]??'')!=='--status'&&($argv[1]??'')!=='--readiness')verifyPrivateSiteRuntimeEvidence($release);
     if (($argv[1]??'')==='--readiness') {
         ini_set('display_errors','0');ini_set('log_errors','0');
         $status=inspectReleaseReadiness($release,dirname(__DIR__,2));
