@@ -29,7 +29,7 @@ class DataImportController extends Controller
 
     public function batch(Request $r, int $id, AccountingContext $ctx, MigrationCenterService $svc)
     {
-        try{return response()->json(['status'=>true,'data'=>$svc->batch($ctx->companyId($r),$id)]);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],404);}
+        try{return response()->json(['status'=>true,'data'=>$svc->batch($ctx->companyId($r),$id)]);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],404);}
     }
 
     public function template(Request $r, string $entity, MigrationCenterService $svc)
@@ -37,7 +37,7 @@ class DataImportController extends Controller
         try{
             $t=$svc->template($entity);$filename='SULB-'.$entity.'-template.csv';
             return response()->streamDownload(function()use($t){$out=fopen('php://output','w');fwrite($out,"\xEF\xBB\xBF");fputcsv($out,$t['headers']);fputcsv($out,array_map(fn($h)=>$t['example'][$h]??'',$t['headers']));fclose($out);},$filename,['Content-Type'=>'text/csv; charset=UTF-8']);
-        }catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        }catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     public function preview(Request $r, string $entity, AccountingContext $ctx, MigrationCenterService $svc)
@@ -54,7 +54,7 @@ class DataImportController extends Controller
             $mapping=$this->mapping($r);
             $data=$svc->preview($ctx->companyId($r),$entity,$parsed,$mapping,$ctx->branchFilter($r));
             return response()->json(['status'=>true,'data'=>$data]);
-        }catch(ValidationException $e){throw $e;}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        }catch(ValidationException $e){throw $e;}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     public function import(Request $r, string $entity, AccountingContext $ctx, MigrationCenterService $svc)
@@ -90,13 +90,13 @@ class DataImportController extends Controller
                 ['name'=>$r->hasFile('file')?$r->file('file')->getClientOriginalName():$r->input('file_name','import.csv')]
             );
             return response()->json(['status'=>true,'message'=>'اكتملت دفعة الاستيراد. راجع الملخص والأخطاء قبل اعتماد أي ترحيل مالي.','data'=>$data]);
-        }catch(ValidationException $e){throw $e;}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        }catch(ValidationException $e){throw $e;}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     public function export(Request $r, string $entity, AccountingContext $ctx, MigrationCenterService $svc)
     {
         $r->validate(['date_from'=>'nullable|date','date_to'=>'nullable|date|after_or_equal:date_from','branch_id'=>'nullable|integer','format'=>'nullable|in:csv']);
-        try{$rows=$svc->exportRows($ctx->companyId($r),$entity,['branch_id'=>$ctx->branchFilter($r),'date_from'=>$r->query('date_from'),'date_to'=>$r->query('date_to')]);$filename='SULB-'.$entity.'-export-'.date('Ymd-His').'.csv';return response()->streamDownload(function()use($rows){$out=fopen('php://output','w');fwrite($out,"\xEF\xBB\xBF");if(!$rows){fputcsv($out,['no_data']);}else{$headers=array_keys($rows[0]);fputcsv($out,$headers);foreach($rows as$row)fputcsv($out,array_map(fn($h)=>is_scalar($row[$h]??null)||is_null($row[$h]??null)?$row[$h]??'':json_encode($row[$h],JSON_UNESCAPED_UNICODE),$headers));}fclose($out);},$filename,['Content-Type'=>'text/csv; charset=UTF-8']);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>$e->getMessage()],422);}
+        try{$rows=$svc->exportRows($ctx->companyId($r),$entity,['branch_id'=>$ctx->branchFilter($r),'date_from'=>$r->query('date_from'),'date_to'=>$r->query('date_to')]);$filename='SULB-'.$entity.'-export-'.date('Ymd-His').'.csv';return response()->streamDownload(function()use($rows){$out=fopen('php://output','w');fwrite($out,"\xEF\xBB\xBF");if(!$rows){fputcsv($out,['no_data']);}else{$headers=array_keys($rows[0]);fputcsv($out,$headers);foreach($rows as$row)fputcsv($out,array_map(fn($h)=>is_scalar($row[$h]??null)||is_null($row[$h]??null)?$row[$h]??'':json_encode($row[$h],JSON_UNESCAPED_UNICODE),$headers));}fclose($out);},$filename,['Content-Type'=>'text/csv; charset=UTF-8']);}catch(\Throwable $e){return response()->json(['status'=>false,'message'=>\App\Support\ApiExceptionMessage::for($e)],422);}
     }
 
     private function parsedFile(Request $r, MigrationCenterService $svc): array

@@ -555,7 +555,7 @@
   "deployment_backup_restore_qualified": true,
   "final_closure": {
     "scope_manifest": "ops/sulb-rc/full-release-scope.json",
-    "scope_sha256": "a5b9326155e77e075acadf16e3a2e3138cd33429bf179f806940a19b7ec19116",
+    "scope_sha256": "7fb40c1264b56ce53af76374c8c4812fc4c802f69d9cf03c49d2c38061763205",
     "full_release_only": true,
     "tenant_account180_scope": {
       "company_id": 3,
@@ -1100,5 +1100,20 @@
       "write_fence_plan.temporary_account_lock_authorized",
       "production_backup.creation_authorized"
     ]
+  },
+  "security_review_closure_20261108": {
+    "status": "BLOCKED_SCOPE_EVIDENCE_INCOMPLETE",
+    "reviewed_commit": "fd77aa992f73af41df72320e6fcefd057f2fde7e",
+    "prior_evidence": "local_security_closure: 9 HTTP tests / 76 assertions; explicitly focused, not accumulated-tree semantic approval",
+    "proven_defect": "DataImportController and MigrationCenterService exposed raw database diagnostics in error responses and stored row logs",
+    "fix": "Reuse existing ApiExceptionMessage at exception boundaries and on reading legacy row-log messages; preserve tenant filters, business errors, status codes and historical values",
+    "changed_source_sha256": {
+      "backend/app/Http/Controllers/Api/DataImportController.php": "15a25ee750f13dd94e15d13a24f6d7a8073a78543f63bc33ea1916a2888b7332",
+      "backend/app/Services/MigrationCenterService.php": "339e355a7917a4fe8748886458dcb8aeaf83fabe30252b0dfaed2a578f90623b"
+    },
+    "acceptance": "test-import-security.php: 13 response/stored-log and scoped-read checks; zero database connections",
+    "remaining_security_evidence": "No completed accumulated-change semantic-review record exists: earlier report explicitly leaves accounting/payroll/driver/L3 coverage incomplete. Focused tests and inventory hashes do not establish it. No new exploitable defect claimed beyond the repaired import diagnostics.",
+    "writer_binding": "Original signed profile preserved. These two changed writer sources require exact-source re-binding under the existing approved window policy before execution; do not silently accept old source hashes.",
+    "deployment_authorized": false
   }
 }

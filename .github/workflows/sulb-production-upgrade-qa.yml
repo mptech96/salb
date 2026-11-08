@@ -7,6 +7,9 @@ on:
       - 'backend/app/Http/Middleware/EnforceReleaseWriteFence.php'
       - 'backend/app/Providers/AppServiceProvider.php'
       - 'backend/bootstrap/app.php'
+      - 'ops/sulb-rc/test-import-security.php'
+      - 'backend/app/Http/Controllers/Api/DataImportController.php'
+      - 'backend/app/Services/MigrationCenterService.php'
       - 'ops/sulb-rc/*qualification*'
       - 'ops/sulb-rc/test-production-schema-gate.php'
       - 'ops/sulb-rc/check-approval.php'
@@ -54,6 +57,7 @@ jobs:
       delegate_only: ${{ steps.scope.outputs.delegate_only }}
       window_only: ${{ steps.scope.outputs.window_only }}
       qualification_only: ${{ steps.scope.outputs.qualification_only }}
+      import_security_only: ${{ steps.scope.outputs.import_security_only }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -80,10 +84,13 @@ jobs:
           qualification_allowed={'ops/sulb-rc/release.json','ops/sulb-rc/check-approval.php','ops/sulb-rc/release-qualification.php','ops/sulb-rc/inspect-approved-history.php','ops/sulb-rc/test-release-qualification.php','ops/sulb-rc/test-production-schema-gate.php','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
           qualification_only=result.returncode==0 and bool(files) and files<=qualification_allowed and not (only or delegate_only or window_only)
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('qualification_only='+str(qualification_only).lower()+'\n')
+          security_allowed={'backend/app/Http/Controllers/Api/DataImportController.php','backend/app/Services/MigrationCenterService.php','ops/sulb-rc/test-import-security.php','ops/sulb-rc/full-release-scope.json','ops/sulb-rc/release.json','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
+          security_only=result.returncode==0 and bool(files) and files<=security_allowed and not (only or delegate_only or window_only or qualification_only)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('import_security_only='+str(security_only).lower()+'\n')
           PY
   upgrade:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -163,7 +170,7 @@ jobs:
 
   deployment-runtime85:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -284,3 +291,23 @@ jobs:
           result=$?
           set -e
           test "$result" -eq 78
+
+  import-security:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.import_security_only == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        php: ['8.4', '8.5']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, xml, dom, bcmath
+          tools: composer:v2
+          coverage: none
+      - run: composer install --working-dir=backend --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins
+      - run: php ops/sulb-rc/test-import-security.php

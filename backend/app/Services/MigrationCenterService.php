@@ -276,7 +276,7 @@ class MigrationCenterService
         $stats=['imported'=>0,'updated'=>0,'skipped'=>0,'failed'=>0];
         try{
             if(in_array($entity,['sales_invoices','purchase_invoices'],true))$this->importInvoices($companyId,$fallbackBranchId,$userId,$entity,$parsed['rows'],$mapping,$options,$batchId,$source,$stats);
-            else foreach($parsed['rows']as$rr){$row=$this->mapped($rr['data'],$mapping);$errors=$this->validateBasic($entity,$row);if($errors){$stats['failed']++;$this->log($companyId,$batchId,$rr['row_number'],$this->externalKey($entity,$row),'ERROR',implode(' | ',$errors),$row);continue;}try{$status=$this->importMasterRow($companyId,$userId,$entity,$row,$batchId,$source,$options);$stats[strtolower($status)]++;$this->log($companyId,$batchId,$rr['row_number'],$this->externalKey($entity,$row),$status,null,$row);}catch(\Throwable $e){$stats['failed']++;$this->log($companyId,$batchId,$rr['row_number'],$this->externalKey($entity,$row),'ERROR',$e->getMessage(),$row);}}
+            else foreach($parsed['rows']as$rr){$row=$this->mapped($rr['data'],$mapping);$errors=$this->validateBasic($entity,$row);if($errors){$stats['failed']++;$this->log($companyId,$batchId,$rr['row_number'],$this->externalKey($entity,$row),'ERROR',implode(' | ',$errors),$row);continue;}try{$status=$this->importMasterRow($companyId,$userId,$entity,$row,$batchId,$source,$options);$stats[strtolower($status)]++;$this->log($companyId,$batchId,$rr['row_number'],$this->externalKey($entity,$row),$status,null,$row);}catch(\Throwable $e){$stats['failed']++;$this->log($companyId,$batchId,$rr['row_number'],$this->externalKey($entity,$row),'ERROR',\App\Support\ApiExceptionMessage::for($e),$row);}}
         }finally{
             DB::table('data_migration_batches')->where('id',$batchId)->update(['status'=>$stats['failed']>0?'COMPLETED_WITH_ERRORS':'COMPLETED','valid_rows'=>$stats['imported']+$stats['updated']+$stats['skipped'],'imported_rows'=>$stats['imported']+$stats['updated'],'skipped_rows'=>$stats['skipped'],'failed_rows'=>$stats['failed'],'finished_at'=>now(),'updated_at'=>now()]);
         }
@@ -405,7 +405,7 @@ class MigrationCenterService
             }
             $payload=['branch_id'=>$bid,($mode==='SALE'?'customer_id':'supplier_id')=>$partyId,'car_id'=>$carId,'invoice_number'=>$invoiceNo,'invoice_date'=>$first['invoice_date'],'currency_code'=>($first['currency_code']??'')?:null,'exchange_rate'=>($first['exchange_rate']??'')!==''?(float)$first['exchange_rate']:null,'discount_amount'=>(float)(($first['header_discount']??'')?:0),'transport_cost'=>(float)(($first['transport_cost']??'')?:0),'extra_cost'=>(float)(($first['extra_cost']??'')?:0),'notes'=>$first['notes']??null,'items'=>$items];
             $id=$this->invoices->saveDraft($mode,$payload,$cid,$bid,$uid,null);if(Schema::hasColumn($table,'external_source_system'))DB::table($table)->where('id',$id)->update(['external_source_system'=>$source,'external_reference'=>$invoiceNo,'migration_batch_id'=>$batch,'updated_at'=>now()]);$status='IMPORTED';$stats['imported']++;$this->log($cid,$batch,$group[0]['row_number'],$invoiceNo,$status,'تم إنشاء مسودة تحتوي '.count($items).' سطر. راجعها ثم رحّلها من شاشة الفاتورة.',$first);
-        }catch(\Throwable $e){$stats['failed']++;$this->log($cid,$batch,$group[0]['row_number'],$invoiceNo,'ERROR',$e->getMessage(),$first);}}
+        }catch(\Throwable $e){$stats['failed']++;$this->log($cid,$batch,$group[0]['row_number'],$invoiceNo,'ERROR',\App\Support\ApiExceptionMessage::for($e),$first);}}
     }
 
     private function validateInvoiceReferences(int $cid,string $entity,array $row,?int $fallbackBranch): array
@@ -418,7 +418,7 @@ class MigrationCenterService
         $partyCode=trim((string)($row[$partyType==='CUSTOMER'?'customer_code':'supplier_code']??''));
         $partyName=trim((string)($row[$partyType==='CUSTOMER'?'customer_name':'supplier_name']??''));
         if(($partyCode!==''||$partyName!=='')&&!$this->party($cid,$partyType,$row))$errors[]=$partyType==='CUSTOMER'?'العميل غير موجود.':'المورد غير موجود.';
-        try{$this->taxCode($cid,$row['tax_code']??null);}catch(\Throwable $e){$errors[]=$e->getMessage();}
+        try{$this->taxCode($cid,$row['tax_code']??null);}catch(\Throwable $e){$errors[]=\App\Support\ApiExceptionMessage::for($e);}
         $date=trim((string)($row['invoice_date']??''));
         if($date!==''&&$this->validDate($date)&&Schema::hasTable('financial_years')){
             $year=DB::table('financial_years')->where('company_id',$cid)->whereDate('start_date','<=',$date)->whereDate('end_date','>=',$date)->first();
@@ -653,7 +653,7 @@ class MigrationCenterService
     }
 
     public function history(int $cid): array{return DB::table('data_migration_batches')->where('company_id',$cid)->orderByDesc('id')->limit(100)->get()->map(fn($x)=>(array)$x)->all();}
-    public function batch(int $cid,int $id): array{$b=DB::table('data_migration_batches')->where('company_id',$cid)->where('id',$id)->first();if(!$b)throw new \RuntimeException('دفعة الاستيراد غير موجودة.');$logs=DB::table('data_migration_row_logs')->where('company_id',$cid)->where('batch_id',$id)->orderBy('id')->limit(1000)->get();return ['batch'=>$b,'logs'=>$logs];}
+    public function batch(int $cid,int $id): array{$b=DB::table('data_migration_batches')->where('company_id',$cid)->where('id',$id)->first();if(!$b)throw new \RuntimeException('دفعة الاستيراد غير موجودة.');$logs=DB::table('data_migration_row_logs')->where('company_id',$cid)->where('batch_id',$id)->orderBy('id')->limit(1000)->get()->map(function($log){if(is_string($log->message??null))$log->message=\App\Support\ApiExceptionMessage::for(new \RuntimeException($log->message));return $log;});return ['batch'=>$b,'logs'=>$logs];}
 
     private function mapped(array $row,array $mapping): array{$out=[];foreach($mapping as$canonical=>$source)$out[$canonical]=trim((string)($row[$source]??''));return $out;}
     private function validateBasic(string $entity,array $r): array
