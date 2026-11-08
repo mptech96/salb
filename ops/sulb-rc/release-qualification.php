@@ -21,7 +21,59 @@ function releaseQualificationHash(string $root, string $relative): string {
     return hash('sha256',str_replace("\r\n","\n",file_get_contents($file)));
 }
 
+function releaseSecurityRequiredPaths(): array {
+    return [
+        'accounting'=>['backend/app/Http/Controllers/Api/JournalEntryController.php','backend/app/Domain/Accounting/Services/JournalService.php','backend/app/Domain/Accounting/Repositories/JournalRepository.php','backend/app/Domain/Accounting/Services/FinancialYearService.php','backend/app/Http/Controllers/Api/FinancialYearController.php','backend/app/Http/Controllers/Api/AccountingReportController.php'],
+        'payroll'=>['backend/app/Http/Controllers/Api/PayrollController.php','backend/app/Http/Controllers/Api/WorkerController.php','backend/app/Services/Payroll/WorkerAccountingSupport.php','backend/app/Services/Payroll/PayrollApprover.php','backend/app/Services/Payroll/PayrollPayment.php','backend/app/Services/Payroll/PayrollService.php'],
+        'drivers'=>['backend/app/Http/Controllers/Api/DriverController.php','backend/app/Services/DriverShipmentStatement.php','backend/app/Services/DriverSettlementIsolation.php'],
+        'l3'=>['backend/app/Http/Controllers/Api/ShipmentCostController.php','backend/app/Services/ShipmentCostService.php','backend/app/Services/ShipmentAllocationLedger.php','backend/app/Services/ShipmentInventoryLockScope.php','backend/app/Services/Uom/BaseLotCapitalization.php','backend/app/Services/Uom/BaseShipmentDistribution.php'],
+    ];
+}
+
+function verifyReleaseSecurityBindings(array $release,string $root): void {
+    if (($release['complete_security_review']??false)!==true) return;
+    $review=$release['security_semantic_review']??[];
+    if (($review['status']??null)!=='TECHNICAL_REVIEW_COMPLETE' || ($review['unresolved_findings']??null)!==[]
+        || !preg_match('/^[a-f0-9]{40}$/D',$review['review_basis_commit']??'')
+        || empty($review['review_reference']) || empty($review['accepted_evidence_references'])) {
+        throw new RuntimeException('RELEASE_SECURITY_REVIEW_RECORD_REQUIRED');
+    }
+    $hashes=$review['source_sha256']??[];
+    foreach(['backend/routes/api.php','backend/app/Http/Middleware/EnsureRoutePermission.php','backend/app/Http/Middleware/EnsureSupportAccess.php','backend/app/Http/Middleware/EnforceTenantScope.php','backend/app/Http/Middleware/ResolveAuthenticatedContext.php','backend/app/Support/TenantScope.php','backend/app/Services/Tenant/TenantResourceScopeService.php','backend/app/Support/ReleaseWriteFence.php','backend/app/Providers/AppServiceProvider.php']as$path){
+        if(!isset($hashes[$path]))throw new RuntimeException('RELEASE_SECURITY_CONTEXT_HASH_REQUIRED');
+    }
+    foreach(releaseSecurityRequiredPaths()as$domain=>$required){
+        $scope=$review['domains'][$domain]??[];
+        if(($scope['status']??null)!=='PASS' || !is_array($scope['paths']??null)
+            || array_diff($required,$scope['paths']))throw new RuntimeException('RELEASE_SECURITY_SCOPE_INCOMPLETE');
+        foreach($scope['paths']as$path)if(!isset($hashes[$path]))throw new RuntimeException('RELEASE_SECURITY_SCOPE_HASH_REQUIRED');
+    }
+    foreach($hashes as$path=>$hash){
+        if(!preg_match('#^backend/(app|routes)/[A-Za-z0-9_./-]+\.php$#D',$path)||str_contains($path,'..')
+            || is_link($root.'/'.$path)||!is_file($root.'/'.$path)
+            || !hash_equals($hash,hash('sha256',str_replace("\r\n","\n",file_get_contents($root.'/'.$path))))) {
+            throw new RuntimeException('RELEASE_SECURITY_REVIEW_SOURCE_CHANGED');
+        }
+    }
+    if(($review['writer_source_inventory_sha256']??null)!==releaseQualificationHash($root,'source-writer-scope.json')) {
+        throw new RuntimeException('RELEASE_WRITER_SOURCE_INVENTORY_CHANGED');
+    }
+    $inventory=json_decode(file_get_contents($root.'/ops/sulb-rc/source-writer-scope.json'),true,512,JSON_THROW_ON_ERROR);
+    $seen=[];
+    foreach($inventory['writers']??[]as$row){
+        $path=$row['path']??'';
+        if(!preg_match('#^backend/app/[A-Za-z0-9_./-]+\.php$#D',$path)||str_contains($path,'..')||isset($seen[$path])
+            ||is_link($root.'/'.$path)||!is_file($root.'/'.$path)
+            ||($row['sha256']??null)!==hash('sha256',str_replace("\r\n","\n",file_get_contents($root.'/'.$path)))) {
+            throw new RuntimeException('RELEASE_WRITER_SOURCE_CHANGED');
+        }
+        $seen[$path]=true;
+    }
+    if(count($seen)!==115||($inventory['application_writer_files']??null)!==115)throw new RuntimeException('RELEASE_WRITER_SOURCE_SET_CHANGED');
+}
+
 function verifyReleaseQualificationBindings(array $release, string $root): void {
+    verifyReleaseSecurityBindings($release,$root);
     $bindings=$release['integrated_qualification']['gate_evidence']??[];
     foreach (releaseQualificationSources() as $gate=>$files) {
         if (($release[$gate]??false)!==true) continue;

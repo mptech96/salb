@@ -454,7 +454,7 @@
     },
     {
       "path": "backend/app/Http/Controllers/Api/DriverController.php",
-      "sha256": "a160b3ce1c2d1d4d81f1db73d41d229d8cc0db89cf0f29bac9c846296981263f",
+      "sha256": "655775309cef886b4c4c52838974534ec2f8b40cd4eaaa819318f2cb360cbf2c",
       "classification": "SOURCE_WRITE_CALLS_REQUIRE_CENTRAL_FENCE",
       "calls": [
         {
@@ -632,7 +632,7 @@
     },
     {
       "path": "backend/app/Http/Controllers/Api/FinancialYearController.php",
-      "sha256": "e9daaff54f86c06b9e2975197182bfdfef29ea4f6d3b1fa407157df38e80507b",
+      "sha256": "3b5cdf3971c49b73e672639e610b80558b28bec26393bae4e0d334c245539318",
       "classification": "SOURCE_WRITE_CALLS_REQUIRE_CENTRAL_FENCE",
       "calls": [
         {
@@ -2605,7 +2605,7 @@
     },
     {
       "path": "backend/app/Services/MigrationCenterService.php",
-      "sha256": "d6fc5212a96058364cfe9c9483db1603c07dd2503364b9606a70b723424dd12f",
+      "sha256": "339e355a7917a4fe8748886458dcb8aeaf83fabe30252b0dfaed2a578f90623b",
       "classification": "SOURCE_WRITE_CALLS_REQUIRE_CENTRAL_FENCE",
       "calls": [
         {
@@ -4052,5 +4052,11 @@
   ],
   "framework_guard": "backend/app/Support/ReleaseWriteFence.php",
   "live_writers_qualified": false,
-  "external_cli_imports_database_accounts_old_processes_require_actual_profile": true
+  "external_cli_imports_database_accounts_old_processes_require_actual_profile": true,
+  "latest_source_review": {
+    "reference": "SULB-RC-SECURITY-20261108-01",
+    "basis_commit": "42332e1033187643a372663cc0b372ab317fbd7d",
+    "hash_normalization": "LF",
+    "live_writer_profile_or_signed_evidence_modified": false
+  }
 }

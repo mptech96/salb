@@ -6,7 +6,7 @@
   "vps_schema_verified": true,
   "approved_history_verified": true,
   "staging_passed": true,
-  "complete_security_review": false,
+  "complete_security_review": true,
   "production_backup_restore_rehearsed": true,
   "backward_compatible_schema_proven": false,
   "expected_production_schema_sha256": "550ce437236b4b8f10df2d438eb179ae9335ee298147b84a5a185bf5f796ee9b",
@@ -52,7 +52,6 @@
   },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
   "staging_blocked_inputs": [
-    "final consolidated security-review approval record",
     "independent final deployment-window authorization; live fence and fresh backup/restore receipts remain execution-time requirements"
   ],
   "minimum_php": "8.3.0",
@@ -555,7 +554,7 @@
   "deployment_backup_restore_qualified": true,
   "final_closure": {
     "scope_manifest": "ops/sulb-rc/full-release-scope.json",
-    "scope_sha256": "7fb40c1264b56ce53af76374c8c4812fc4c802f69d9cf03c49d2c38061763205",
+    "scope_sha256": "8c9b913e399eac9c277a12900671b8ffb2ca8f78da9ca5d5fb59616bcef318cf",
     "full_release_only": true,
     "tenant_account180_scope": {
       "company_id": 3,
@@ -1093,7 +1092,6 @@
     ],
     "runtime_window_evidence_created": false,
     "remaining_approval_records": {
-      "complete_security_review": "Final consolidated security review approval has not been recorded. Existing tests and window signoff do not assert this approval.",
       "deployment_authorized": "Independent final production execution authorization has not been issued."
     },
     "window_authorization_fields_pending": [
@@ -1114,6 +1112,187 @@
     "acceptance": "test-import-security.php: 13 response/stored-log and scoped-read checks; zero database connections",
     "remaining_security_evidence": "No completed accumulated-change semantic-review record exists: earlier report explicitly leaves accounting/payroll/driver/L3 coverage incomplete. Focused tests and inventory hashes do not establish it. No new exploitable defect claimed beyond the repaired import diagnostics.",
     "writer_binding": "Original signed profile preserved. These two changed writer sources require exact-source re-binding under the existing approved window policy before execution; do not silently accept old source hashes.",
+    "deployment_authorized": false
+  },
+  "security_semantic_review": {
+    "status": "TECHNICAL_REVIEW_COMPLETE",
+    "review_reference": "SULB-RC-SECURITY-20261108-01",
+    "review_date": "2026-11-08",
+    "timezone": "Asia/Riyadh",
+    "review_basis_commit": "42332e1033187643a372663cc0b372ab317fbd7d",
+    "review_kind": "CODEX_TECHNICAL_SEMANTIC_REVIEW_NOT_HUMAN_SIGNATURE",
+    "scope": "Remaining accumulated accounting, payroll, drivers and L3 security semantics plus shared authorization boundaries; combines prior accepted evidence with current source review and focused fixes. Not a claim of universal vulnerability absence.",
+    "domains": {
+      "accounting": {
+        "status": "PASS",
+        "paths": [
+          "backend/app/Http/Controllers/Api/JournalEntryController.php",
+          "backend/app/Http/Controllers/Api/AccountController.php",
+          "backend/app/Http/Controllers/Api/AccountingReportController.php",
+          "backend/app/Http/Controllers/Api/FinancialYearController.php",
+          "backend/app/Domain/Accounting/Services/JournalService.php",
+          "backend/app/Domain/Accounting/Services/AccountService.php",
+          "backend/app/Domain/Accounting/Services/FinancialYearService.php",
+          "backend/app/Domain/Accounting/Services/AccountingReportService.php",
+          "backend/app/Domain/Accounting/Services/LedgerService.php",
+          "backend/app/Domain/Accounting/Repositories/JournalRepository.php",
+          "backend/app/Services/Accounting/AccountingContext.php",
+          "backend/app/Services/Accounting/PostingSupport.php",
+          "backend/app/Services/Accounting/ItemAccountingResolver.php",
+          "backend/app/Services/Accounting/InvoiceAllocationService.php",
+          "backend/app/Services/Accounting/InventoryPosting.php"
+        ],
+        "disposition": "HTTP manual post/reverse have separate action permissions and trusted company/branch context. Journal source rows and financial year are locked within transactions; scoped postable accounts/cost centres and balanced positive lines enforced. Source-owned automatic reversals remain outside manual API. Existing financial/concurrency results reused. Fixed raw SQL diagnostics in year operations and ledger response."
+      },
+      "payroll": {
+        "status": "PASS",
+        "paths": [
+          "backend/app/Http/Controllers/Api/PayrollController.php",
+          "backend/app/Http/Controllers/Api/WorkerController.php",
+          "backend/app/Services/Payroll/WorkerAccountingSupport.php",
+          "backend/app/Services/Payroll/PayrollService.php",
+          "backend/app/Services/Payroll/SalaryCalculator.php",
+          "backend/app/Services/Payroll/PayrollApprover.php",
+          "backend/app/Services/Payroll/PayrollPayment.php",
+          "backend/app/Services/Payroll/IsolatedWorkerLoanSettlement.php",
+          "backend/app/Services/Payroll/IsolatedWorkerCreationRequest.php"
+        ],
+        "disposition": "Trusted auth middleware overwrites legacy headers; list/detail/slip enforce company/branch and reject mixed-branch legacy runs. Approve/pay use source row locks, state transitions and source GL proof; no second payment from PAID. Worker finance reauthorizes active user/company, permissions, subscription and rejects Support; original worker branch rechecked inside transaction. Month unique key and existing accepted financial tests retained. Experimental loan/request adapters remain owned-QA only."
+      },
+      "drivers": {
+        "status": "PASS",
+        "paths": [
+          "backend/app/Http/Controllers/Api/DriverController.php",
+          "backend/app/Http/Controllers/Api/DriverShipmentStatementController.php",
+          "backend/app/Services/DriverShipmentStatement.php",
+          "backend/app/Services/DriverCostSettlement.php",
+          "backend/app/Services/DriverSettlementIsolation.php"
+        ],
+        "disposition": "Company/branch-scoped CRUD, scoped affiliation lookup and statement source proof; report cannot settle historical liabilities or infer unpaid totals. Driver settlement remains isolated-only with no production route. Fixed check/write race: acquire scoped row lock inside transaction and retain identical branch predicate for terminal update/delete."
+      },
+      "l3": {
+        "status": "PASS",
+        "paths": [
+          "backend/app/Http/Controllers/Api/ShipmentCostController.php",
+          "backend/app/Services/ShipmentCostService.php",
+          "backend/app/Services/ShipmentCostDistributionService.php",
+          "backend/app/Services/ShipmentAllocationLedger.php",
+          "backend/app/Services/ShipmentLargestRemainder.php",
+          "backend/app/Services/ShipmentInventoryLockScope.php",
+          "backend/app/Services/ShipmentCostReadIsolation.php",
+          "backend/app/Services/ShipmentCostPayee.php",
+          "backend/app/Services/ShipmentCostVoucherGuard.php",
+          "backend/app/Services/InventoryLotService.php",
+          "backend/app/Services/InventoryLotValue.php",
+          "backend/app/Services/Uom/BaseLotCapitalization.php",
+          "backend/app/Services/Uom/BaseShipmentDistribution.php",
+          "backend/app/Services/Uom/LegacyCapitalizationEvidence.php"
+        ],
+        "disposition": "API resolves trusted company/branch; draft mutations reject posted source/GL. Parent-before-child/item locks are bound to owning PDO/root. Immutable per-cost receipt hash, journal/source identity, scoped LOT/item binding and deterministic milli allocation shared by GL and LOT. BASE requires approved independent nonweight cost policy. Mixed/legacy evidence missing or issued LOTs fail closed. Existing rollback/financial/history acceptance retained; no historical recosting or account180 fallback added."
+      }
+    },
+    "source_sha256": {
+      "backend/app/Domain/Accounting/Repositories/JournalRepository.php": "695419f54c234bfd2e53f5b860ef9ba124081e513f0676853bd60410772e572c",
+      "backend/app/Domain/Accounting/Services/AccountService.php": "4c4c90736a95e4fb4ee6f207ec1c3e4b8fd8100accff45fe0b56346ab619e855",
+      "backend/app/Domain/Accounting/Services/AccountingReportService.php": "017230c8c2821629851c7aee4c7bfa390e5d945a7f99383e9edb1750f75ec36f",
+      "backend/app/Domain/Accounting/Services/FinancialYearService.php": "54c6d9f5b79c143edb51d73989a475bdfc12234311e7cafcccdb08126d5a8ff5",
+      "backend/app/Domain/Accounting/Services/JournalService.php": "985e7945ef0c9c08749026928f7c3a9fd9e512355d7b4f131ac5942eb44b84f5",
+      "backend/app/Domain/Accounting/Services/LedgerService.php": "63b07fc2e8d2ce3a82c12a54bd5407def95b66495eedf883a5cdba53da4c1614",
+      "backend/app/Http/Controllers/Api/AccountController.php": "e72d2907b1b25ce6c4429b2855658e8cf28c1d1c978715a41402fedf412afbee",
+      "backend/app/Http/Controllers/Api/AccountingReportController.php": "0c4e5b284c545a9befda6fff66608f4b087e2fa3ca71e6ec545b27aa86ccd302",
+      "backend/app/Http/Controllers/Api/DataImportController.php": "15a25ee750f13dd94e15d13a24f6d7a8073a78543f63bc33ea1916a2888b7332",
+      "backend/app/Http/Controllers/Api/DriverController.php": "655775309cef886b4c4c52838974534ec2f8b40cd4eaaa819318f2cb360cbf2c",
+      "backend/app/Http/Controllers/Api/DriverShipmentStatementController.php": "c2a8ed07881720cab35e922977f028b22472333b24bc73b627acfa8a9af35999",
+      "backend/app/Http/Controllers/Api/FinancialYearController.php": "3b5cdf3971c49b73e672639e610b80558b28bec26393bae4e0d334c245539318",
+      "backend/app/Http/Controllers/Api/JournalEntryController.php": "2ef5b842600b45941ac3beed2df2824592b7a0c5f10ead3f2fe159d9b95b4820",
+      "backend/app/Http/Controllers/Api/PayrollController.php": "ae6101f7451b5355ea8f6f18d097099abe3899f60065f4a1439251ffcb3af910",
+      "backend/app/Http/Controllers/Api/ShipmentCostController.php": "778bc746648c7d4796a3250f132efd700b83c6f87e97977758022c2a787932bb",
+      "backend/app/Http/Controllers/Api/WorkerController.php": "f00e7ad1511f264c46cd1f07c0f8aabae9ae6beb1177821c0739e58a791c4978",
+      "backend/app/Http/Middleware/EnforceTenantScope.php": "77df9acb772cd460e0a43fd7093be8c1a2c3f7b4fa242fd7bad73559e1bdda6e",
+      "backend/app/Http/Middleware/EnsureRoutePermission.php": "7b65c4a295c5b49bbe1a8b0954cd6046b33291713263f95d2a8470a88a17910d",
+      "backend/app/Http/Middleware/EnsureSupportAccess.php": "f23f2289a9577bc97fc143316ff1cb1fefa67a992d1197d166a5fbd1fd47f941",
+      "backend/app/Http/Middleware/ResolveAuthenticatedContext.php": "48c8421df470a767ded757bea73dee4e76da8fbab555a9b2727dca8995d31092",
+      "backend/app/Providers/AppServiceProvider.php": "f1eda45ec21a1a3286edf90f9b6cde56813ea3ef000477c8fa64e57120997024",
+      "backend/app/Services/Accounting/AccountingContext.php": "669aeb30c8554bac73e7a947c19f48748078c666d20bc21305d2f033728bd55b",
+      "backend/app/Services/Accounting/InventoryPosting.php": "f0b58a2368021c92c1eaedd6acb7568857c2dfd0be081c0e0e4a5ecff70c70a5",
+      "backend/app/Services/Accounting/InvoiceAllocationService.php": "9558e02f83707b6829c62203461ee2a2ee29c1ef1ddf18ac46e6002f76bf30ef",
+      "backend/app/Services/Accounting/ItemAccountingResolver.php": "67160bb2a1b5e725cae83d9790005bd91e013ef1eb79e006af5dfc5a6987100e",
+      "backend/app/Services/Accounting/PostingSupport.php": "9aa01ba4e2e34fffc0f282ee6bf5b7b3a031c81a120cdfc47030358b83acd6bb",
+      "backend/app/Services/DriverCostSettlement.php": "565e7714d4fd79f34dcd4d42e34047b8d3d2524185e2bd66ec0abeadd33bd79b",
+      "backend/app/Services/DriverSettlementIsolation.php": "f37180e944c718a66c54beb671ef79ffcbffb12223000a9102194619b5e481ef",
+      "backend/app/Services/DriverShipmentStatement.php": "a232ba384f0bc7a4fcec33e3ecc1cc5b679c26546e3920115af2c93d527ebea1",
+      "backend/app/Services/InventoryLotService.php": "f2dcdb67ac1d0c0f037a0370e4f0503f5ee99390af7d30bc32f7b7e8c583929e",
+      "backend/app/Services/InventoryLotValue.php": "cbf7767fc44b0471237e6add4c6ba9a4bfe461434ca4905db1a85da3423773ac",
+      "backend/app/Services/MigrationCenterService.php": "339e355a7917a4fe8748886458dcb8aeaf83fabe30252b0dfaed2a578f90623b",
+      "backend/app/Services/Payroll/IsolatedWorkerCreationRequest.php": "eea09c35f0b745de9191c285c222005f361662eb1e6a058db5c39c48b729c457",
+      "backend/app/Services/Payroll/IsolatedWorkerLoanSettlement.php": "bd3633016987811343bfc9c9c76c4d56af4c57381beae9a17f190cc1dca14508",
+      "backend/app/Services/Payroll/PayrollApprover.php": "ae969a8fc5a8de0e76f95551cfdeed09f594dcfd3c0bcaf58a1093e5dc862994",
+      "backend/app/Services/Payroll/PayrollPayment.php": "002980c1343e2a95dc3fb381b9a8ababd8758a90523b2a9d3df06115cf3ca843",
+      "backend/app/Services/Payroll/PayrollService.php": "e21cabde8effb7e55cec9fba6c4b10981774668887a159c895de2357dc3251cc",
+      "backend/app/Services/Payroll/SalaryCalculator.php": "22fb988f74efdbccdf3f4d81206ec6e7ed4d444e8a69b0a92740444db49c412f",
+      "backend/app/Services/Payroll/WorkerAccountingSupport.php": "5eebe7cc4ab5391b6dcb2e4a084a5664a9ea5bc8e0a49b77ebd1202e815e03e7",
+      "backend/app/Services/ShipmentAllocationLedger.php": "644e96b010b7f23f2654409fde4686eb3e650d5f1065d3c3c9d594a32942cfdb",
+      "backend/app/Services/ShipmentCostDistributionService.php": "bf0757de1fa89518a857e2bffb3470352e4e3ef6906d05f3a0be06473c3c67fb",
+      "backend/app/Services/ShipmentCostPayee.php": "3eca71e9387aadc8c3bd26aa2b021a6eb8c2d333d50f5764baa0fc92fbe2de02",
+      "backend/app/Services/ShipmentCostReadIsolation.php": "96bb9303dae9c879ccd7cede9f2dada02483531228c1e8f36836892383d90866",
+      "backend/app/Services/ShipmentCostService.php": "460ede08a83021a3c8611dd94509eb1987ac0209e0fa666e863261093ab50690",
+      "backend/app/Services/ShipmentCostVoucherGuard.php": "932f94c30966166c7b1b2e5104e25287c83a945f0e8435e762d6e607da6ad483",
+      "backend/app/Services/ShipmentInventoryLockScope.php": "c6f8914f7b09742c8cc3a3f0b8f3ab7d7984649a32aaae0a3fadf83a29676e9f",
+      "backend/app/Services/ShipmentLargestRemainder.php": "23273396252d92e474b013b62a653926f9f4d1bf57af2ca92c8e96b164c32d01",
+      "backend/app/Services/Tenant/TenantResourceScopeService.php": "e27727bdab56fe9becd760dba737eb49b0b9610064d07215a6eddf56629c1005",
+      "backend/app/Services/Uom/BaseLotCapitalization.php": "8de625251bfa094510e7875c7099e2295e1e7fc65d4fcfa95f3cdcc0b54f7d04",
+      "backend/app/Services/Uom/BaseShipmentDistribution.php": "35e9558975926186fa357ffa01af744f1fdef861b1393a7ceda60084514e161d",
+      "backend/app/Services/Uom/LegacyCapitalizationEvidence.php": "0b7dd9a842ca28fac73e94b9cdc2efc3b9ab4d420079ca1f7d92163223b22900",
+      "backend/app/Support/ApiExceptionMessage.php": "3e5d95d919d520878f8bc23c71d5d40e31ff4ae12c1a0781820fa6f16b149124",
+      "backend/app/Support/ReleaseWriteFence.php": "b1fd91f856e6a1b8039990cbfe31ccd76da6558cdca7e839468c8a5c6ea5664f",
+      "backend/app/Support/TenantScope.php": "74048bda0c824c1f33ff940fa996e69816862c942d45b140f4a94201dc7d16e8",
+      "backend/routes/api.php": "215718e7d50e840298efa4af1a77eea83edf063770c79709c43708a99e462c03"
+    },
+    "hash_normalization": "LF",
+    "writer_source_inventory_sha256": "68548f4857fcc2923d335803274be37694e7ac699760da8d0fa036bf1ffec53b",
+    "writer_source_rebinding": {
+      "previous_inventory_sha256": "aff7d85d868a495c283f9f65c51344e49e9ed3ca34bd334eb8e76b290d995da1",
+      "changes": [
+        {
+          "path": "backend/app/Http/Controllers/Api/DriverController.php",
+          "previous_sha256": "a160b3ce1c2d1d4d81f1db73d41d229d8cc0db89cf0f29bac9c846296981263f",
+          "reviewed_sha256": "655775309cef886b4c4c52838974534ec2f8b40cd4eaaa819318f2cb360cbf2c"
+        },
+        {
+          "path": "backend/app/Http/Controllers/Api/FinancialYearController.php",
+          "previous_sha256": "e9daaff54f86c06b9e2975197182bfdfef29ea4f6d3b1fa407157df38e80507b",
+          "reviewed_sha256": "3b5cdf3971c49b73e672639e610b80558b28bec26393bae4e0d334c245539318"
+        },
+        {
+          "path": "backend/app/Services/MigrationCenterService.php",
+          "previous_sha256": "d6fc5212a96058364cfe9c9483db1603c07dd2503364b9606a70b723424dd12f",
+          "reviewed_sha256": "339e355a7917a4fe8748886458dcb8aeaf83fabe30252b0dfaed2a578f90623b"
+        }
+      ],
+      "delegating_import_controller_sha256": "15a25ee750f13dd94e15d13a24f6d7a8073a78543f63bc33ea1916a2888b7332",
+      "signed_profile_scope": "Runtime accounts/configuration/surface files remain signed and unchanged. Application writer inventory is separately versioned candidate code, not an amendment to signed runtime facts.",
+      "private_evidence_modified": false
+    },
+    "accepted_evidence_references": [
+      "local_security_closure: 9 HTTP tests / 76 assertions",
+      "https://github.com/mptech96/salb/actions/runs/40889911787",
+      "https://github.com/mptech96/salb/actions/runs/42463458767",
+      "production_upgrade.derived_artifact_owner_approval",
+      "write_fence_plan: accepted ACCOUNT_FENCE_WINDOW_V1"
+    ],
+    "new_acceptance": {
+      "test": "ops/sulb-rc/test-semantic-security.php",
+      "checks": 31,
+      "financial_postings": 0,
+      "database": "owned SQLite :memory: for driver predicates only; mocked financial service failures",
+      "not_claimed": "SQLite is not an InnoDB concurrency rehearsal; previous Percona locking tests retained."
+    },
+    "unresolved_findings": [],
+    "operational_constraints": [
+      "A05 remains a signed administrative trust exception, not technically prevented future root access",
+      "Permanent MySQL capability audit remains OPEN_NOT_CERTIFIED per accepted policy",
+      "Live account exclusion/session and worker drain, fresh encrypted backup/exact restore and source/schema drift checks remain mandatory inside independently authorized window"
+    ],
     "deployment_authorized": false
   }
 }

@@ -51,29 +51,34 @@ class DriverController extends Controller
 
     public function store(Request $request, AccountingContext $context)
     {
-        return $this->save($request, $context, null);
+        return DB::transaction(fn () => $this->save($request, $context, null));
     }
 
     public function update(Request $request, int $id, AccountingContext $context)
     {
-        return $this->save($request, $context, $id);
+        return DB::transaction(fn () => $this->save($request, $context, $id));
     }
 
     public function destroy(Request $request, int $id, AccountingContext $context)
+    {
+        return DB::transaction(fn () => $this->destroyLocked($request, $id, $context));
+    }
+
+    private function destroyLocked(Request $request, int $id, AccountingContext $context)
     {
         $companyId = $context->companyId($request);
         $branchId = $context->branchFilter($request);
         $query = DB::table('drivers')->where('company_id', $companyId)->where('id', $id);
         if ($branchId !== null) $query->where('branch_id', $branchId);
-        if (! $query->exists()) return response()->json(['status' => false, 'message' => 'السائق غير موجود ضمن نطاق فرعك.'], 404);
+        if (! $query->lockForUpdate()->first()) return response()->json(['status' => false, 'message' => 'السائق غير موجود ضمن نطاق فرعك.'], 404);
 
         $used = DB::table('weighbridge_cards')->where('company_id', $companyId)->where('driver_id', $id)->exists()
             || DB::table('shipments')->where('company_id', $companyId)->where('driver_id', $id)->exists();
         if ($used) {
-            DB::table('drivers')->where('company_id', $companyId)->where('id', $id)->update(['is_active' => 0, 'updated_at' => now()]);
+            (clone $query)->update(['is_active' => 0, 'updated_at' => now()]);
             return response()->json(['status' => true, 'message' => 'للسائق سجل تاريخي؛ تم تعطيله بدل حذفه.']);
         }
-        DB::table('drivers')->where('company_id', $companyId)->where('id', $id)->delete();
+        (clone $query)->delete();
         return response()->json(['status' => true, 'message' => 'تم حذف السائق.']);
     }
 
@@ -99,7 +104,7 @@ class DriverController extends Controller
         if ($id !== null) {
             $target = DB::table('drivers')->where('company_id', $companyId)->where('id', $id);
             if ($scopedBranch !== null) $target->where('branch_id', $scopedBranch);
-            if (! $target->exists()) return response()->json(['status' => false, 'message' => 'السائق غير موجود ضمن نطاق فرعك.'], 404);
+            if (! $target->lockForUpdate()->first()) return response()->json(['status' => false, 'message' => 'السائق غير موجود ضمن نطاق فرعك.'], 404);
         }
 
         $type = strtoupper($data['affiliation_type']);
@@ -119,7 +124,7 @@ class DriverController extends Controller
             'is_active' => (int) ($data['is_active'] ?? 1), 'updated_at' => now(),
         ];
         if ($id !== null) {
-            DB::table('drivers')->where('company_id', $companyId)->where('id', $id)->update($values);
+            $target->update($values);
             return response()->json(['status' => true, 'message' => 'تم تحديث السائق.']);
         }
         $newId = DB::table('drivers')->insertGetId(['company_id' => $companyId, ...$values, 'created_at' => now()]);

@@ -11,7 +11,7 @@ $reject=function(callable $mutate,string $expected)use($release,$root,$assert){
     $assert(false);
 };
 verifyReleaseQualificationBindings($release,$root);$assert(true);
-$assert(releasePendingGates($release)===['deployment_authorized','complete_security_review']);
+$assert(releasePendingGates($release)===['deployment_authorized']);
 $assert($release['release_decision']==='NO-GO');
 $assert($release['production_backup']['creation_authorized']===false);
 $assert($release['write_fence_plan']['temporary_account_lock_authorized']===false);
@@ -31,5 +31,19 @@ $reject(function(&$r){$r['production_upgrade']['derived_artifact_sha256']=null;$
 $reject(function(&$r){$r['production_upgrade']['derived_artifact_owner_approval']['generator_sha256']=str_repeat('0',64);},'RELEASE_ACCEPTED_HISTORY_BINDING_REQUIRED');
 $reject(function(&$r){$r['operator_schema_execution']['schema_only_rehearsal']='BLOCKED';},'RELEASE_ACCEPTED_SCHEMA_REHEARSAL_REQUIRED');
 $reject(function(&$r){$r['expected_production_schema_sha256']=str_repeat('0',64);},'RELEASE_ACCEPTED_SCHEMA_REHEARSAL_REQUIRED');
+
+$reject(function(&$r){unset($r['security_semantic_review']);},'RELEASE_SECURITY_REVIEW_RECORD_REQUIRED');
+$reject(function(&$r){$r['security_semantic_review']['unresolved_findings']=['UNRESOLVED'];},'RELEASE_SECURITY_REVIEW_RECORD_REQUIRED');
+foreach(array_keys(releaseSecurityRequiredPaths())as$domain){
+    $reject(function(&$r)use($domain){$r['security_semantic_review']['domains'][$domain]['status']='PENDING';},'RELEASE_SECURITY_SCOPE_INCOMPLETE');
+    $reject(function(&$r)use($domain){$r['security_semantic_review']['domains'][$domain]['paths']=[];},'RELEASE_SECURITY_SCOPE_INCOMPLETE');
+}
+$reject(function(&$r){unset($r['security_semantic_review']['source_sha256']['backend/routes/api.php']);},'RELEASE_SECURITY_CONTEXT_HASH_REQUIRED');
+$reject(function(&$r){$r['security_semantic_review']['source_sha256']['backend/app/Http/Controllers/Api/DriverController.php']=str_repeat('0',64);},'RELEASE_SECURITY_REVIEW_SOURCE_CHANGED');
+$reject(function(&$r){$r['security_semantic_review']['writer_source_inventory_sha256']=str_repeat('0',64);},'RELEASE_WRITER_SOURCE_INVENTORY_CHANGED');
+$assert($release['write_fence_plan']['profile_sha256']==='b587599b9d365a0ed0ae04ac4774f48f772ce96d1d1d039cc0d1b6f7bfd29b88');
+$assert($release['production_upgrade']['derived_artifact_sha256']==='e3dc16febf4886f204ada921954ed3838a490d900025ac97421bbce95d73f252');
+$notReviewed=$release;$notReviewed['complete_security_review']=false;
+$assert(in_array('complete_security_review',releasePendingGates($notReviewed),true));
 $before=serialize($release);verifyReleaseQualificationBindings($release,$root);$assert(serialize($release)===$before);
 echo 'PASS '.$checks.' qualification evidence, source/hash drift, ordered migrations and pending final approvals; production_connections=0'.PHP_EOL;
