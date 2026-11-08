@@ -7,10 +7,10 @@ function releaseQualificationSources(): array {
     return [
         'staging_passed'=>['approved-history-rehearsal.php','production-upgrade/catalog.json'],
         'production_executor_qualified'=>['production-upgrade-runtime.php','production-upgrade.php','production-schema-gate.php','production-upgrade/catalog.json'],
-        'write_fence_qualified'=>['release-fence.php','release-fence-evidence.php','release-process-fence.php','writer-signoff-policy.php','writer-window-policy.php'],
+        'write_fence_qualified'=>['release-fence.php','release-fence-evidence.php','release-process-fence.php','writer-signoff-policy.php','writer-window-policy.php','release-site-runtime.php'],
         'deployment_backup_restore_qualified'=>['release-backup.php','backup-receipt.php','asset-backup.php','history-stage.py','run-private-backup-check.php'],
         'production_derived_balance_executor_qualified'=>['production-derived.php','approved-history-rehearsal.php'],
-        'deployment_pipeline_qualified'=>['deploy-reviewed-release.sh','release-app-control.php','release-postcheck.php','release-activate.php'],
+        'deployment_pipeline_qualified'=>['deploy-reviewed-release.sh','release-app-control.php','release-postcheck.php','release-activate.php','release-site-runtime.php'],
         'rollback_strategy_qualified'=>['rollback-policy.php'],
     ];
 }
@@ -74,6 +74,9 @@ function verifyReleaseSecurityBindings(array $release,string $root): void {
 
 function verifyReleaseQualificationBindings(array $release, string $root): void {
     verifyReleaseSecurityBindings($release,$root);
+    if((($release['write_fence_qualified']??false)===true||($release['deployment_pipeline_qualified']??false)===true)
+        &&($release['runtime_execution_corrections']['effective_site_runtime_verified']??false)!==true)throw new RuntimeException('RELEASE_EFFECTIVE_SITE_RUNTIME_EVIDENCE_REQUIRED');
+    if(($release['write_fence_qualified']??false)===true||($release['deployment_pipeline_qualified']??false)===true){require_once __DIR__.'/release-site-runtime.php';requireReleaseSiteRuntimeEvidenceMetadata($release['runtime_execution_corrections']['accepted_evidence']??[],releaseQualificationHash($root,'release-site-runtime.php'),$release['write_fence_plan']['profile_sha256']??'');}
     $bindings=$release['integrated_qualification']['gate_evidence']??[];
     foreach (releaseQualificationSources() as $gate=>$files) {
         if (($release[$gate]??false)!==true) continue;
@@ -174,6 +177,9 @@ function inspectReleaseReadiness(array $release, string $root): array {
             || realpath($file)!==$file) throw new RuntimeException('RELEASE_PRIVATE_WRITER_PROFILE_REQUIRED');
         accountPrivate($file);
         if (hash_file('sha256',$file)!==$writer['profile_sha256']) throw new RuntimeException('RELEASE_WRITER_PROFILE_CHANGED');
+    });
+    if(($release['runtime_execution_corrections']['effective_site_runtime_verified']??false)===true)$check('effective_site_runtime_evidence',function()use($release){
+        $e=$release['runtime_execution_corrections']['accepted_evidence'];$file=$e['file'];accountPrivate($file);if(realpath($file)!==$file||filesize($file)>32768||hash_file('sha256',$file)!==$e['sha256'])throw new RuntimeException('RELEASE_SITE_RUNTIME_EVIDENCE_CHANGED');$actual=json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);foreach(['site_runtime','facts','policy_source_sha256','approved_profile_sha256','shared_service_operations']as$key)if(($actual[$key]??null)!==($e[$key]??null))throw new RuntimeException('RELEASE_SITE_RUNTIME_EVIDENCE_CHANGED');
     });
     $check('current_schema_fingerprint',function()use($release,&$connections){
         $db=releaseAdminConnection();$connections++;

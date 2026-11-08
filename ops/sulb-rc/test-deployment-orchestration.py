@@ -23,8 +23,9 @@ if cmd=='php':
  name=pathlib.Path(args[0]).name;mode=args[1]if len(args)>1 else''
  if name=='check-approval.php':event('gate')
  elif name=='release-app-control.php':event('manifest'if mode=='--prepare-candidate'else'cache')
+ elif name=='release-process-fence.php':event('site_runtime')
  elif name=='release-fence.php':
-  key={'--acquire':'fence','--refresh-workers':'refresh','--release':'release','--resume-workers':'resume'}[mode];event(key)
+  key={'--acquire':'fence','--refresh-workers':'refresh','--release':'release','--resume-workers':'resume','--verify-readiness':'http_ready'}[mode];event(key)
   if mode=='--acquire':(root/'fence').mkdir();(root/'fence/permit.json').write_text('SYNTHETIC ONLY')
   if mode=='--release':(root/'fence/permit.json').unlink();(root/'fence').rmdir()
  elif name=='release-backup.php':event('capture'if mode=='--capture'else'receipt')
@@ -90,7 +91,7 @@ class DeploymentOrdering(unittest.TestCase):
    events=[json.loads(line)for line in (root/'events.jsonl').read_text().splitlines()];return r.returncode,events,(root/'fence').exists()
  def test_complete_order_only_with_successful_restore(self):
   code,e,fence=self.run_case();self.assertEqual(code,0);self.assertFalse(fence)
-  order=['gate','scope','composer','npm_ci','npm_run','manifest','fence','capture','restore','receipt','migration','copy','cache','postcheck','activation','release','resume','frontend_restart','smoke']
+  order=['gate','site_runtime','scope','composer','npm_ci','npm_run','manifest','fence','capture','restore','receipt','migration','copy','cache','postcheck','activation','frontend_restart','http_ready','release']
   positions=[e.index(x)for x in order];self.assertEqual(positions,sorted(positions))
  def test_gate_rejects_before_build_or_maintenance(self):
   code,e,fence=self.run_case('gate');self.assertNotEqual(code,0);self.assertEqual(e,['gate']);self.assertFalse(fence)
@@ -106,4 +107,16 @@ class DeploymentOrdering(unittest.TestCase):
   code,e,fence=self.run_case('migration');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertNotIn('copy',e);self.assertNotIn('activation',e);self.assertNotIn('release',e)
  def test_postcheck_failure_never_releases(self):
   code,e,fence=self.run_case('postcheck');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertNotIn('release',e)
+ def test_runtime_cache_policy_failure_prevents_downtime(self):
+  code,e,fence=self.run_case('site_runtime');self.assertNotEqual(code,0);self.assertFalse(fence);self.assertNotIn('fence',e)
+ def test_frontend_start_failure_keeps_fence(self):
+  code,e,fence=self.run_case('frontend_restart');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertNotIn('release',e)
+ def test_http_readiness_failure_keeps_fence_after_ddl(self):
+  code,e,fence=self.run_case('http_ready');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertIn('migration',e);self.assertNotIn('release',e)
+ def test_unfence_is_the_last_operational_event(self):
+  code,e,fence=self.run_case();self.assertEqual(code,0);self.assertEqual(e[-1],'release');self.assertNotIn('resume',e);self.assertNotIn('smoke',e)
+ def test_refresh_failure_after_copy_retains_fence(self):
+  code,e,fence=self.run_case('refresh');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertIn('migration',e);self.assertNotIn('release',e)
+ def test_release_failure_does_not_run_later_operations(self):
+  code,e,fence=self.run_case('release');self.assertNotEqual(code,0);self.assertTrue(fence);self.assertEqual(e[-1],'release')
 if __name__=='__main__':unittest.main()

@@ -2,6 +2,10 @@
 require __DIR__.'/release-qualification.php';
 $root=dirname(__DIR__,2);
 $release=json_decode(file_get_contents(__DIR__.'/release.json'),true,512,JSON_THROW_ON_ERROR);
+// Pure fixture qualifications for existing binding contracts; never persisted or VPS evidence.
+$release['write_fence_qualified']=true;$release['deployment_pipeline_qualified']=true;
+$release['runtime_execution_corrections']['effective_site_runtime_verified']=true;
+$release['runtime_execution_corrections']['accepted_evidence']=['file'=>'/home/mgye-api-sulb/sulb-writer-signoff-330e13362e20f1e0/site-runtime-'.str_repeat('a',16).'.json','sha256'=>str_repeat('b',64),'site_runtime'=>'PASS','shared_service_operations'=>false,'policy_source_sha256'=>releaseQualificationHash($root,'release-site-runtime.php'),'approved_profile_sha256'=>$release['write_fence_plan']['profile_sha256'],'facts'=>['sapi'=>'fpm-fcgi','php_major'=>8,'php_minor'=>5,'opcache_enabled'=>false,'preload_configured'=>false,'file_cache_configured'=>false]];
 $checks=0;
 $assert=function(bool $value)use(&$checks){if(!$value)throw new LogicException('QUALIFICATION_TEST_'.($checks+1));$checks++;};
 $reject=function(callable $mutate,string $expected)use($release,$root,$assert){

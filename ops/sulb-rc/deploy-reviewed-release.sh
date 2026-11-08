@@ -130,6 +130,8 @@ test -f "$composer_file"
 php -r '$s=file_get_contents($argv[1],false,null,0,4096);if(!is_string($s)||!str_contains($s,"<?php"))exit(78);' "$composer_file"
 php -r 'require "ops/sulb-rc/release-process-fence.php";$r=json_decode(file_get_contents("ops/sulb-rc/release.json"),true,512,JSON_THROW_ON_ERROR);$r=releaseWithReviewedFencePlan($r);if(($r["write_fence_plan"]["php_fpm_unit"]??null)!=="php".PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION."-fpm.service")exit(78);'
 
+php "$tools/release-process-fence.php" --inspect-site-runtime >/dev/null
+
 # Hashes cover the entire application; binary assets are never newline-normalized.
 php <<'SULB_SCOPE_PHP'
 <?php
@@ -195,9 +197,9 @@ php "$tools/release-fence.php" --refresh-workers "$backup" > "$backup/refresh-su
 php "$tools/release-postcheck.php" > "$backup/postcheck-summary.json"
 php "$tools/release-activate.php" > "$backup/activation-summary.json"
 php "$tools/release-fence.php" --refresh-workers "$backup" > "$backup/activated-workers-summary.json"
-php "$tools/release-fence.php" --release "$backup" > "$backup/release-summary.json"
-php "$tools/release-fence.php" --resume-workers "$backup" > "$backup/resume-workers-summary.json"
+# Start only SULB Frontend while database/app writers remain fenced.
 systemctl restart sulb-frontend.service
-curl --fail --silent --show-error https://api.sulb.mgye.tech/up >/dev/null
-curl --fail --silent --show-error https://sulb.mgye.tech/ >/dev/null
+php "$tools/release-fence.php" --verify-readiness "$backup" > "$backup/operational-readiness-summary.json"
+# Last state-changing action: no service starts, curls or worker resumes after unlock.
+php "$tools/release-fence.php" --release "$backup" > "$backup/release-summary.json"
 printf '%s\n' "Full Backend+Frontend+18 migrations completed. Private backup/evidence: $backup"

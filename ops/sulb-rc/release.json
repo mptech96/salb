@@ -52,6 +52,7 @@
   },
   "legacy_capitalization_qa_scope": "Immutable L3 receipt plus original GL; untouched or wholly purchase-reversed LOTs only. Partial issues and missing proof remain exceptions.",
   "staging_blocked_inputs": [
+    "effective VPS Pool/cache policy proof for new natural-drain mechanism",
     "independent final deployment-window authorization; live fence and fresh backup/restore receipts remain execution-time requirements"
   ],
   "minimum_php": "8.3.0",
@@ -550,7 +551,7 @@
     "private_recording_on_vps_completed": false
   },
   "production_executor_qualified": true,
-  "write_fence_qualified": true,
+  "write_fence_qualified": false,
   "deployment_backup_restore_qualified": true,
   "final_closure": {
     "scope_manifest": "ops/sulb-rc/full-release-scope.json",
@@ -712,7 +713,7 @@
     "affected_history_orchestration_ci_run": "https://github.com/mptech96/salb/actions/runs/40780227555"
   },
   "production_derived_balance_executor_qualified": true,
-  "deployment_pipeline_qualified": true,
+  "deployment_pipeline_qualified": false,
   "technical_closure_20261029": {
     "reference_commit": "ab741beaac1623a757a336de725312ed45315394",
     "approval_policy_new_checks": 22,
@@ -1019,14 +1020,16 @@
         "scope": "IMPLEMENTATION_AND_ACCEPTED_EVIDENCE",
         "references": [
           "accepted ACCOUNT_FENCE_WINDOW_V1 profile b587599b9d365a0ed0ae04ac4774f48f772ce96d1d1d039cc0d1b6f7bfd29b88",
-          "https://github.com/mptech96/salb/actions/runs/41939050898"
+          "https://github.com/mptech96/salb/actions/runs/41939050898",
+          "runtime_execution_corrections: current isolated runtime contract tests; actual VPS proof pending"
         ],
         "source_sha256": {
-          "release-fence.php": "f22fef6d1d5f2c12a5c97c43bd9c7685357bde4c45c8a89f43d129625e0c62f6",
+          "release-fence.php": "2c92bf358b0f82fee493382aebcd71a5528f20c953283ee3abd60e0aab44e482",
           "release-fence-evidence.php": "692232ad0d64bd970c478b8a5e128e50a892cf51880f6562d0ceffea070b7e13",
-          "release-process-fence.php": "de7ed8963afbc2213b025758a3f0c2451af8ce60897a18f379a0eb68094ce374",
+          "release-process-fence.php": "2761456408c3346c06d8c8fab3c58962448974f1ef3d9ca5b394427aa75e4f27",
           "writer-signoff-policy.php": "c2af30895dc5ac0d1f25746f0bad7fbb77bd66cc71adbd3b771b92289b562ab3",
-          "writer-window-policy.php": "2b51a57d87464ae0c97cf7ad6259f828e0c874a610b7d397d3fd5af8c4adadea"
+          "writer-window-policy.php": "2b51a57d87464ae0c97cf7ad6259f828e0c874a610b7d397d3fd5af8c4adadea",
+          "release-site-runtime.php": "d0309e4198e501d64d6f68e83ba7052cbdd9f84779e55d6d1a4ee8c2034a53af"
         }
       },
       "deployment_backup_restore_qualified": {
@@ -1060,13 +1063,15 @@
         "references": [
           "deployment_runtime_compatibility.ci_run",
           "technical_pipeline_closure.new_ci_run",
-          "new schema gate focused PDO tests"
+          "new schema gate focused PDO tests",
+          "runtime_execution_corrections: current isolated runtime contract tests; actual VPS proof pending"
         ],
         "source_sha256": {
-          "deploy-reviewed-release.sh": "d4bc62f44dae03de808c408dc04f929edca26f9cf991e27d840b44afc136442c",
-          "release-app-control.php": "d0a63ddd36d44223791ef683184e7ec6b2f6794649986d99002fec044ae1ba82",
+          "deploy-reviewed-release.sh": "37385c8a0333cff81abf07dbcdfc857eefa5814ccc3a73ffb192a60db39a1ea5",
+          "release-app-control.php": "4c02a3aee8c869b7debf4ebdd47b4418cd10b0a6be3d46aa15effb54f71d53d5",
           "release-postcheck.php": "4ec77bf25ce1d00d8b23a9f61295a371f877fe4e340cddf0fa03a37f3a441681",
-          "release-activate.php": "9156542d053d51d2845d9746082d0002ae8f40d3cde210764a5c54eae251c9f0"
+          "release-activate.php": "9156542d053d51d2845d9746082d0002ae8f40d3cde210764a5c54eae251c9f0",
+          "release-site-runtime.php": "d0309e4198e501d64d6f68e83ba7052cbdd9f84779e55d6d1a4ee8c2034a53af"
         }
       },
       "rollback_strategy_qualified": {
@@ -1294,5 +1299,27 @@
       "Live account exclusion/session and worker drain, fresh encrypted backup/exact restore and source/schema drift checks remain mandatory inside independently authorized window"
     ],
     "deployment_authorized": false
+  },
+  "runtime_execution_corrections": {
+    "mode": "ONDEMAND_NATURAL_DRAIN_AND_TIMESTAMP_CACHE_V1",
+    "status": "PENDING_EFFECTIVE_VPS_POOL_RUNTIME_PROOF",
+    "effective_site_runtime_verified": false,
+    "basis_commit": "46bb976765188ca23f24e7042854b292e011320d",
+    "no_pool_reload_assumed": true,
+    "shared_master_signals_or_service_reload": false,
+    "runtime_requirements": [
+      "accepted root-private Pool binding plus actual FPM 8.5 site UID",
+      "ondemand natural drain within timeout; no signal or service reload",
+      "OPcache disabled OR timestamp validation enabled with bounded cache delays",
+      "no preload/file cache/unreviewed per-directory INI",
+      "only SULB PHP file timestamps published; no global cache reset",
+      "Frontend active plus fenced Backend HTTP proof before last account unlock"
+    ],
+    "inspection": "php8.5 ops/sulb-rc/release-process-fence.php --inspect-site-runtime",
+    "inspection_scope": "Existing profile/configuration read plus a disposable root-owned group-readable PHP probe under sticky /tmp, executed only on the proven site listener; no app/.env bootstrap, database access, signal, service change or persistent configuration write. Per-request prepend/append disabled for the probe only.",
+    "signed_writer_evidence_changed": false,
+    "financial_history_or_migrations_changed": false,
+    "runtime_window_executed": false,
+    "accepted_evidence": null
   }
 }

@@ -7,6 +7,8 @@ on:
       - 'backend/app/Http/Middleware/EnforceReleaseWriteFence.php'
       - 'backend/app/Providers/AppServiceProvider.php'
       - 'backend/bootstrap/app.php'
+      - 'ops/sulb-rc/release-site-runtime.php'
+      - 'ops/sulb-rc/test-site-*'
       - 'ops/sulb-rc/test-semantic-security.php'
       - 'ops/sulb-rc/source-writer-scope.json'
       - 'backend/app/Http/Controllers/Api/DriverController.php'
@@ -64,6 +66,7 @@ jobs:
       qualification_only: ${{ steps.scope.outputs.qualification_only }}
       import_security_only: ${{ steps.scope.outputs.import_security_only }}
       semantic_only: ${{ steps.scope.outputs.semantic_only }}
+      runtime_fix_only: ${{ steps.scope.outputs.runtime_fix_only }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -96,10 +99,13 @@ jobs:
           semantic_allowed={'backend/app/Http/Controllers/Api/DriverController.php','backend/app/Http/Controllers/Api/FinancialYearController.php','backend/app/Http/Controllers/Api/AccountingReportController.php','ops/sulb-rc/release-qualification.php','ops/sulb-rc/test-release-qualification.php','ops/sulb-rc/test-semantic-security.php','ops/sulb-rc/source-writer-scope.json','ops/sulb-rc/full-release-scope.json','ops/sulb-rc/release.json','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
           semantic_only=result.returncode==0 and bool(files) and files<=semantic_allowed and not (only or delegate_only or window_only or qualification_only or security_only)
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('semantic_only='+str(semantic_only).lower()+'\n')
+          runtime_allowed={'ops/sulb-rc/deploy-reviewed-release.sh','ops/sulb-rc/release-fence.php','ops/sulb-rc/release-process-fence.php','ops/sulb-rc/release-site-runtime.php','ops/sulb-rc/release-app-control.php','ops/sulb-rc/release-qualification.php','ops/sulb-rc/release.json','ops/sulb-rc/test-release-qualification.php','ops/sulb-rc/test-site-runtime.php','ops/sulb-rc/test-site-fcgi.py','ops/sulb-rc/test-deployment-orchestration.py','docs/erp-baseline/release-readiness-20261024.md','.github/workflows/sulb-production-upgrade-qa.yml'}
+          runtime_only=result.returncode==0 and bool(files) and files<=runtime_allowed and not (only or delegate_only or window_only or qualification_only or security_only or semantic_only)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('runtime_fix_only='+str(runtime_only).lower()+'\n')
           PY
   upgrade:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true' && needs.changed-scope.outputs.semantic_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true' && needs.changed-scope.outputs.semantic_only != 'true' && needs.changed-scope.outputs.runtime_fix_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -179,7 +185,7 @@ jobs:
 
   deployment-runtime85:
     needs: changed-scope
-    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true' && needs.changed-scope.outputs.semantic_only != 'true'
+    if: needs.changed-scope.outputs.pool_only != 'true' && needs.changed-scope.outputs.delegate_only != 'true' && needs.changed-scope.outputs.window_only != 'true' && needs.changed-scope.outputs.qualification_only != 'true' && needs.changed-scope.outputs.import_security_only != 'true' && needs.changed-scope.outputs.semantic_only != 'true' && needs.changed-scope.outputs.runtime_fix_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -344,6 +350,43 @@ jobs:
           php ops/sulb-rc/test-semantic-security.php
           php ops/sulb-rc/test-release-qualification.php
           php ops/sulb-rc/test-writer-review-context.php
+          set +e
+          php ops/sulb-rc/check-approval.php --status
+          result=$?
+          set -e
+          test "$result" -eq 78
+
+  runtime-fixes:
+    needs: changed-scope
+    if: needs.changed-scope.outputs.runtime_fix_only == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        php: ['8.4', '8.5']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Changed native-runtime and final-unlock contracts only
+        run: |
+          bash -n ops/sulb-rc/deploy-reviewed-release.sh
+          php -l ops/sulb-rc/release-site-runtime.php
+          php -l ops/sulb-rc/release-fence.php
+          php -l ops/sulb-rc/release-process-fence.php
+          php ops/sulb-rc/test-site-runtime.php
+          python3 ops/sulb-rc/test-site-fcgi.py
+          python3 - <<'PY'
+          import importlib.util,unittest
+          spec=importlib.util.spec_from_file_location('owned_order','ops/sulb-rc/test-deployment-orchestration.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          names=['test_complete_order_only_with_successful_restore','test_runtime_cache_policy_failure_prevents_downtime','test_frontend_start_failure_keeps_fence','test_http_readiness_failure_keeps_fence_after_ddl','test_unfence_is_the_last_operational_event','test_refresh_failure_after_copy_retains_fence','test_release_failure_does_not_run_later_operations']
+          suite=unittest.TestSuite(m.DeploymentOrdering(n)for n in names)
+          result=unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful()or result.skipped:raise SystemExit(1)
+          PY
           set +e
           php ops/sulb-rc/check-approval.php --status
           result=$?
