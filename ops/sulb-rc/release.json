@@ -1081,7 +1081,7 @@
           "runtime_execution_corrections.accepted_evidence: actual owner-reported VPS PASS with private SHA/inspection commit pinned"
         ],
         "source_sha256": {
-          "deploy-reviewed-release.sh": "a26513826f49097d6f462618259de074a43e22091d5f14fb7241ba6d0c249fcf",
+          "deploy-reviewed-release.sh": "f3596fbf07c695fcfa0a38478b0adbedd1678d9c346b12721fb13172d69eb5e5",
           "release-app-control.php": "4c02a3aee8c869b7debf4ebdd47b4418cd10b0a6be3d46aa15effb54f71d53d5",
           "release-postcheck.php": "4ec77bf25ce1d00d8b23a9f61295a371f877fe4e340cddf0fa03a37f3a441681",
           "release-activate.php": "9156542d053d51d2845d9746082d0002ae8f40d3cde210764a5c54eae251c9f0",

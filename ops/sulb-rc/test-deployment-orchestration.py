@@ -39,11 +39,8 @@ elif cmd=='python3':
 elif cmd=='runuser':
  args=args[args.index('--')+1:]
  if args[:2]==['test','-x']:inside(args[2]);raise SystemExit(0)
- if args[:2]==['env','-i'] and '/bin/sh'in args:
-  tool=args[-1].split()[-1]
-  path=root/'site-bin'/tool
-  if not path.exists():raise SystemExit(127)
-  print(path);raise SystemExit(0)
+ if args[:2]==['env','-i'] and '/usr/bin/test'in args:
+  raise SystemExit(0 if os.access(inside(args[-1]),os.X_OK) else 1)
  raise SystemExit(subprocess.run(args).returncode)
 elif cmd=='env':
  clean={}if args and args[0]=='-i'else dict(os.environ)
@@ -71,7 +68,7 @@ elif cmd=='command':raise RuntimeError('UNEXPECTED_COMMAND')
 elif cmd=='git':
  if 'rev-parse'in args:print('b'*40)
 elif cmd=='dirname':print(str(pathlib.Path(args[-1]).parent))
-elif cmd=='realpath':print(str(root/'site-bin/node' if args[-1].endswith('/123/exe') else inside(args[-1])))
+elif cmd=='realpath':print(str(root/'site-bin'/('other-node' if case['fail']=='node_mismatch' else 'node') if args[-1].endswith('/123/exe') else inside(args[-1])))
 elif cmd=='flock':event('execution_lock')
 elif cmd=='sha256sum':print('c'*64+'  SYNTHETIC')
 elif cmd=='cut':sys.stdin.read();print('c'*64)
@@ -95,7 +92,7 @@ class DeploymentOrdering(unittest.TestCase):
    if preexisting=='partial':
     prior=root/'api/sulb-release-backup.incomplete';prior.mkdir();(prior/'ordered-upgrade-events.jsonl').touch()
    text=pathlib.Path(__file__).with_name('deploy-reviewed-release.sh').read_text();
-   for old,new in [('/home/sulb-release',str(checkout)),('/home/mgye-api-sulb',str(root/'api')),('/home/mgye-sulb',str(root/'front')),('/run/sulb-release.fence',str(root/'fence')),('/run/sulb-release.execution.lock',str(root/'lock')),('/proc/$pid',str(root/'proc')+'/$pid')]:text=text.replace(old,new)
+   for old,new in [('/home/mgye-sulb/.nvm/versions/node/v22.23.2/bin',str(root/'site-bin')),('/home/sulb-release',str(checkout)),('/home/mgye-api-sulb',str(root/'api')),('/home/mgye-sulb',str(root/'front')),('/run/sulb-release.fence',str(root/'fence')),('/run/sulb-release.execution.lock',str(root/'lock')),('/proc/$pid',str(root/'proc')+'/$pid')]:text=text.replace(old,new)
    script=checkout/'ops/sulb-rc/deploy.sh';script.write_text(text)
    env={'PATH':str(root/'bin'),'SULB_PHP_BIN':str(root/'bin/php'),'SULB_APPROVED_COMMIT':'b'*40,'SULB_APPROVED_DERIVED_ARTIFACT':str(root/'SYNTHETIC_ONLY')}
    r=subprocess.run(['/bin/bash',str(script),'--execute'],cwd=checkout,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=45)
@@ -107,6 +104,8 @@ class DeploymentOrdering(unittest.TestCase):
   positions=[e.index(x)for x in order];self.assertEqual(positions,sorted(positions))
  def test_frontend_tools_do_not_require_root_path(self):
   code,e,fence=self.run_case();self.assertEqual(code,0);self.assertLess(e.index('node_version'),e.index('composer'));self.assertIn('npm_version',e)
+ def test_service_node_mismatch_blocks_before_fencing(self):
+  code,e,fence=self.run_case('node_mismatch');self.assertNotEqual(code,0);self.assertFalse(fence);self.assertNotIn('composer',e);self.assertIn('FRONTEND_NODE_SERVICE_MISMATCH',self.last_stderr)
  def test_missing_site_npm_reports_reason_before_fencing(self):
   code,e,fence=self.run_case(preexisting='missing-npm');self.assertNotEqual(code,0);self.assertFalse(fence);self.assertNotIn('composer',e);self.assertIn('FRONTEND_NPM_MISSING',self.last_stderr)
  def test_existing_fence_blocks_another_deployment(self):

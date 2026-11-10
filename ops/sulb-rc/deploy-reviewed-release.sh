@@ -19,24 +19,18 @@ check_previous_release() {
 }
 
 inspect_frontend_toolchain() {
-  local pid service_node entry service_path=
+  local pid service_node frontend_bin=/home/mgye-sulb/.nvm/versions/node/v22.23.2/bin
   [[ "$(systemctl show sulb-frontend.service --property=User --value)" == mgye-sulb ]] || blocked FRONTEND_SERVICE_USER_MISMATCH
   pid=$(systemctl show sulb-frontend.service --property=MainPID --value)
   [[ "$pid" =~ ^[1-9][0-9]*$ ]] || blocked FRONTEND_SERVICE_NOT_RUNNING
   [[ "$(stat -c %u "/proc/$pid")" == "$(id -u mgye-sulb)" ]] || blocked FRONTEND_PROCESS_UID_MISMATCH
   service_node=$(realpath -e "/proc/$pid/exe") || blocked FRONTEND_SERVICE_EXECUTABLE_UNREADABLE
-  [[ "${service_node##*/}" == node ]] || blocked FRONTEND_SERVICE_NODE_UNPROVEN
-  [[ -r "/proc/$pid/environ" ]] || blocked FRONTEND_SERVICE_PATH_UNREADABLE
-  while IFS= read -r -d '' entry; do
-    case "$entry" in PATH=*) service_path=${entry#PATH=}; break ;; esac
-  done < "/proc/$pid/environ"
-  # Only absolute, unambiguous PATH entries from the running service. Never use them for root commands.
-  [[ "$service_path" =~ ^/[a-zA-Z0-9_./+-]+(:/[a-zA-Z0-9_./+-]+)*$ ]] || blocked FRONTEND_SERVICE_PATH_INVALID
-  frontend_path=$service_path
-  frontend_node=$(frontend_run /bin/sh -c 'command -v node') || blocked FRONTEND_NODE_MISSING
-  frontend_npm=$(frontend_run /bin/sh -c 'command -v npm') || blocked FRONTEND_NPM_MISSING
-  [[ "$frontend_node" == /* && "$frontend_npm" == /* ]] || blocked FRONTEND_TOOLS_NOT_ABSOLUTE
+  frontend_node="$frontend_bin/node"
+  frontend_npm="$frontend_bin/npm"
+  frontend_path="$frontend_bin:/usr/bin:/bin"
   [[ "$(realpath -e "$frontend_node")" == "$service_node" ]] || blocked FRONTEND_NODE_SERVICE_MISMATCH
+  frontend_run /usr/bin/test -x "$frontend_node" || blocked FRONTEND_NODE_MISSING
+  frontend_run /usr/bin/test -x "$frontend_npm" || blocked FRONTEND_NPM_MISSING
   frontend_run "$frontend_node" -e 'const [a,b]=process.versions.node.split(".").map(Number);if(a<20||(a===20&&b<9))process.exit(78)' || blocked FRONTEND_NODE_VERSION_UNSUPPORTED
   frontend_run "$frontend_npm" --version >/dev/null || blocked FRONTEND_NPM_UNUSABLE
   [[ "$(systemctl show sulb-frontend.service --property=MainPID --value)" == "$pid" ]] || blocked FRONTEND_SERVICE_PID_CHANGED
