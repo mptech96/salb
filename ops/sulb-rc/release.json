@@ -1,8 +1,14 @@
 {
   "release_id": "sulb-complete-rc-20261027",
   "source_base": "db2b9d63ccda67aadaa0f49e087cc9e0137b42e7",
-  "release_decision": "NO-GO",
-  "deployment_authorized": false,
+  "release_decision": "GO",
+  "deployment_authorized": true,
+  "production_deployment_owner_authorization": {
+    "authority": "System owner, explicit deployment instruction in release conversation",
+    "decision_date": "2026-11-10",
+    "qualified_commit": "96d5f1d57e900d8837a93143427b4e6eb2b74166",
+    "scope": "Full SULB production release via guarded executor, including temporary site writer exclusion, fresh encrypted backup and isolated restore, 18 ordered migrations, and Backend and Frontend publication"
+  },
   "vps_schema_verified": true,
   "approved_history_verified": true,
   "staging_passed": true,
@@ -30,7 +36,13 @@
     "backend/database/uom-migrations/2026_10_26_000013_manual_journal_permissions.php",
     "backend/database/uom-migrations/2026_10_26_000014_resource_write_permissions.php"
   ],
-  "feature_flags_to_enable": [],
+  "feature_flags_to_enable": [
+    "uom.operational_enabled",
+    "inventory_value.enabled",
+    "inventory_transfer.root_protocol_enabled",
+    "shipment_allocation.enabled",
+    "shipment_cost_read.enabled"
+  ],
   "local_security_closure": {
     "new_http_tests_passed": 9,
     "new_http_assertions": 76,
@@ -684,7 +696,7 @@
     "profile_authorized": true,
     "profile_file": "/home/mgye-api-sulb/sulb-writer-signoff-330e13362e20f1e0/profile-window-private.json",
     "profile_sha256": "b587599b9d365a0ed0ae04ac4774f48f772ce96d1d1d039cc0d1b6f7bfd29b88",
-    "temporary_account_lock_authorized": false
+    "temporary_account_lock_authorized": true
   },
   "one_shot_closure_20261029": {
     "reference_commit": "e5416f46d75348ab8bbc8c60e002b773d7d34607",
@@ -741,7 +753,7 @@
     "code_rollback_authorized": false
   },
   "production_backup": {
-    "creation_authorized": false
+    "creation_authorized": true
   },
   "technical_pipeline_closure": {
     "code_implemented": true,
@@ -1097,13 +1109,8 @@
       "current schema fingerprint and financial source drift validation before DDL"
     ],
     "runtime_window_evidence_created": false,
-    "remaining_approval_records": {
-      "deployment_authorized": "Independent final production execution authorization has not been issued."
-    },
-    "window_authorization_fields_pending": [
-      "write_fence_plan.temporary_account_lock_authorized",
-      "production_backup.creation_authorized"
-    ]
+    "remaining_approval_records": {},
+    "window_authorization_fields_pending": []
   },
   "security_review_closure_20261108": {
     "status": "BLOCKED_SCOPE_EVIDENCE_INCOMPLETE",
