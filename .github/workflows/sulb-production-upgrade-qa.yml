@@ -386,7 +386,7 @@ jobs:
           python3 - <<'PY'
           import importlib.util,unittest
           spec=importlib.util.spec_from_file_location('owned_order','ops/sulb-rc/test-deployment-orchestration.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
-          names=['test_complete_order_only_with_successful_restore','test_runtime_cache_policy_failure_prevents_downtime','test_frontend_start_failure_keeps_fence','test_http_readiness_failure_keeps_fence_after_ddl','test_unfence_is_the_last_operational_event','test_refresh_failure_after_copy_retains_fence','test_release_failure_does_not_run_later_operations']
+          names=['test_frontend_tools_do_not_require_root_path','test_missing_site_npm_reports_reason_before_fencing','test_existing_fence_blocks_another_deployment','test_partial_upgrade_journal_blocks_retry','test_complete_order_only_with_successful_restore','test_runtime_cache_policy_failure_prevents_downtime','test_frontend_start_failure_keeps_fence','test_http_readiness_failure_keeps_fence_after_ddl','test_unfence_is_the_last_operational_event','test_refresh_failure_after_copy_retains_fence','test_release_failure_does_not_run_later_operations']
           suite=unittest.TestSuite(m.DeploymentOrdering(n)for n in names)
           result=unittest.TextTestRunner(verbosity=2).run(suite)
           if not result.wasSuccessful()or result.skipped:raise SystemExit(1)
