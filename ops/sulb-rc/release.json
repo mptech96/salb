@@ -1,8 +1,14 @@
 {
   "release_id": "sulb-complete-rc-20261027",
   "source_base": "db2b9d63ccda67aadaa0f49e087cc9e0137b42e7",
-  "release_decision": "NO-GO",
-  "deployment_authorized": false,
+  "release_decision": "GO",
+  "deployment_authorized": true,
+  "production_deployment_owner_authorization": {
+    "authority": "Explicit system-owner approval for the exact modified release in the release conversation",
+    "decision_date": "2026-11-10",
+    "qualified_commit": "156311df197f7978284c107d3487d6597edcf221",
+    "scope": "Guarded production deployment of the 18 ordered migrations on sulbprod, Backend and Frontend, including temporary writer exclusion, fresh encrypted backup, isolated restore and readiness before unlocking"
+  },
   "prior_production_deployment_owner_authorization": {
     "applies_to_commit": "9345398847db2b2ab0298a47327ce16aad2fd72b",
     "authority": "System owner, explicit deployment instruction in release conversation",
@@ -697,7 +703,7 @@
     "profile_authorized": true,
     "profile_file": "/home/mgye-api-sulb/sulb-writer-signoff-330e13362e20f1e0/profile-window-private.json",
     "profile_sha256": "b587599b9d365a0ed0ae04ac4774f48f772ce96d1d1d039cc0d1b6f7bfd29b88",
-    "temporary_account_lock_authorized": false
+    "temporary_account_lock_authorized": true
   },
   "one_shot_closure_20261029": {
     "reference_commit": "e5416f46d75348ab8bbc8c60e002b773d7d34607",
@@ -754,7 +760,7 @@
     "code_rollback_authorized": false
   },
   "production_backup": {
-    "creation_authorized": false
+    "creation_authorized": true
   },
   "technical_pipeline_closure": {
     "code_implemented": true,
@@ -1110,13 +1116,8 @@
       "current schema fingerprint and financial source drift validation before DDL"
     ],
     "runtime_window_evidence_created": false,
-    "remaining_approval_records": {
-      "deployment_authorized": "Renewed explicit owner authorization required for the modified executor after production toolchain verification."
-    },
-    "window_authorization_fields_pending": [
-      "write_fence_plan.temporary_account_lock_authorized",
-      "production_backup.creation_authorized"
-    ]
+    "remaining_approval_records": {},
+    "window_authorization_fields_pending": []
   },
   "security_review_closure_20261108": {
     "status": "BLOCKED_SCOPE_EVIDENCE_INCOMPLETE",
