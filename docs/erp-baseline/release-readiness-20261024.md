@@ -2700,3 +2700,31 @@ Manifest selects that existing artifact and restores implementation qualificatio
 New `check-approval.php --verify-site-runtime` reads only the selected root-private artifact, verifies raw SHA256, inspection commit, unchanged probe-policy SHA, accepted writer-profile SHA, the reported UID/cache facts, full cache-policy checks including the original cached timestamp and wait, and no master/shared-service/database effects. It does not rerun FastCGI, connect to a database or create evidence. Every executable GO approval check also requires this actual byte validation before production side effects; it cannot rely solely on reported metadata or a true qualification flag. `--status` remains an offline metadata/source summary. The full readiness path reuses the same strict validator. Exit78 with site_runtime_evidence=PASS and pending_gates=[deployment_authorized] is the expected non-authorized result.
 
 New local focused acceptance:35 contracts PASS for exact selection, missing facts, digest tampering, wrong Git/policy/profile provenance, UID drift, future/missing original cache timestamp and pre-execution wiring. Synthetic in-memory bytes are explicitly unrelated to the production artifact. CI is limited to these new binding contracts on PHP8.4/8.5. Existing natural-drain/no-shared-reload and final HTTP-before-unlock implementation, its prior accepted CI, all18 migrations, accounting/history and signed profile are unchanged. Runtime isolation/drain/fresh backup/exact restore/source drift and final operational HTTP receipt remain mandatory inside a separately authorized deployment window, not completed now.
+
+
+### Pre-backup recovery of the fenced November deployment
+
+The operator reports that attempt sulb-release-backup.a744a4784d95555a stopped on
+RELEASE_PROCESS_RECEIPT_EXPIRED at commit 90058f64b48452577dfa89f2afb19b8555e8178d.
+No snapshot, DDL, or application publication is claimed. The recovery path verifies
+these facts against private files, current account/grant/session/process state, exact
+production schema and the 18 migration repository names. This records the operator's
+report, not an independently executed production recovery.
+
+The unified deploy-reviewed-release.sh --recover-prebackup accepts only this attempt.
+The old permit must match the original Git entrypoint bytes. The new tree can change only
+the enumerated deployment/recovery policy, tests, workflow, report and Manifest.
+Fresh profile/configuration checks, current DB-account exclusion, session drain, worker
+identity checks, stopped Frontend, and absence of snapshot/key/DDL/copy evidence are mandatory.
+Original permit/process bytes and earlier failure logs are retained privately. Original
+timestamps are never edited. Expired receipts are not accepted as current process evidence.
+
+The serialized executor rebuilds candidates while fenced, rechecks immediately before renewal,
+then enters the existing encrypted backup, isolated restore, fresh receipt, financial/schema
+drift gate, ordered 18 upgrade, application copy, readiness and final unlock sequence.
+Refresh is called only after actual application copy. Recovery failure retains isolation.
+Any partial backup or DDL evidence rejects this narrow recovery path.
+
+The modified executor remains NO-GO until the owner approves its exact recovery commit.
+The November 10 decision is preserved as historical evidence. Real renewal and restore remain
+VPS runtime requirements. Local tests use synthetic receipts and fake executable tools only.

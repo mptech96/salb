@@ -10,7 +10,7 @@ function releaseQualificationSources(): array {
         'write_fence_qualified'=>['release-fence.php','release-fence-evidence.php','release-process-fence.php','writer-signoff-policy.php','writer-window-policy.php','release-site-runtime.php'],
         'deployment_backup_restore_qualified'=>['release-backup.php','backup-receipt.php','asset-backup.php','history-stage.py','run-private-backup-check.php'],
         'production_derived_balance_executor_qualified'=>['production-derived.php','approved-history-rehearsal.php'],
-        'deployment_pipeline_qualified'=>['deploy-reviewed-release.sh','release-app-control.php','release-postcheck.php','release-activate.php','release-site-runtime.php'],
+        'deployment_pipeline_qualified'=>['deploy-reviewed-release.sh','release-app-control.php','release-postcheck.php','release-activate.php','release-site-runtime.php','release-prebackup-recovery.php'],
         'rollback_strategy_qualified'=>['rollback-policy.php'],
     ];
 }

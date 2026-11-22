@@ -24,6 +24,7 @@ if cmd=='php':
  if name=='check-approval.php':event('gate')
  elif name=='release-app-control.php':event('manifest'if mode=='--prepare-candidate'else'cache')
  elif name=='release-process-fence.php':event('site_runtime')
+ elif name=='release-prebackup-recovery.php':event('recovery_check' if mode=='--check' else 'recovery_renew')
  elif name=='release-fence.php':
   key={'--acquire':'fence','--refresh-workers':'refresh','--release':'release','--resume-workers':'resume','--verify-readiness':'http_ready'}[mode];event(key)
   if mode=='--acquire':(root/'fence').mkdir();(root/'fence/permit.json').write_text('SYNTHETIC ONLY')
@@ -57,13 +58,14 @@ elif cmd=='npm':
 elif cmd=='node':event('node_version')
 elif cmd=='rsync':inside(args[-1]);event('copy')
 elif cmd=='systemctl':
- if 'show'in args:print('123' if '--property=MainPID'in args else 'mgye-sulb')
+ if 'show'in args:print(('0' if case.get('recovery') else '123') if '--property=MainPID'in args else ('inactive' if '--property=ActiveState'in args else 'mgye-sulb'))
  else:event('frontend_restart')
 elif cmd=='curl':event('smoke')
 elif cmd=='mkdir':inside(args[-1]).mkdir(mode=0o700)
 elif cmd=='id':print('0'if'-u'in args else'synthetic_group')
 elif cmd=='uname':print('Linux')
-elif cmd=='stat':print('0')
+elif cmd=='stat':print('700' if '%a'in args else '0')
+elif cmd=='cmp':event('php_shim_checked')
 elif cmd=='command':raise RuntimeError('UNEXPECTED_COMMAND')
 elif cmd=='git':
  if 'rev-parse'in args:print('b'*40)
@@ -81,23 +83,43 @@ else:raise RuntimeError('UNMODELED_COMMAND:'+cmd)
 '''
 @unittest.skipUnless(sys.platform=='linux','Relocated fake-toolchain integration requires Linux Bash')
 class DeploymentOrdering(unittest.TestCase):
- def run_case(self,failure='',preexisting=''):
+ def run_case(self,failure='',preexisting='',recovery=False):
   with tempfile.TemporaryDirectory()as temporary:
-   root=pathlib.Path(temporary);(root/'bin').mkdir();(root/'site-bin').mkdir();(root/'proc/123').mkdir(parents=True);(root/'proc/123/environ').write_bytes(b'OTHER=private\0PATH='+os.fsencode(root/'site-bin')+b'\0');(root/'case.json').write_text(json.dumps({'fail':failure}))
-   for name in ['php','python3','runuser','env','composer','npm','node','rsync','systemctl','curl','mkdir','id','uname','stat','git','dirname','realpath','sha256sum','cut','awk','df','chown','chmod','find','tar','flock']:
+   root=pathlib.Path(temporary);(root/'bin').mkdir();(root/'site-bin').mkdir();(root/'proc/123').mkdir(parents=True);(root/'proc/123/environ').write_bytes(b'OTHER=private\0PATH='+os.fsencode(root/'site-bin')+b'\0');(root/'case.json').write_text(json.dumps({'fail':failure,'recovery':recovery}))
+   for name in ['php','python3','runuser','env','composer','npm','node','rsync','systemctl','curl','mkdir','id','uname','stat','git','dirname','realpath','sha256sum','cut','awk','df','chown','chmod','find','tar','flock','cmp']:
     file=root/('site-bin' if name in ('node','npm') else 'bin')/name;file.write_text(SHIM.replace('__PYTHON__',sys.executable));file.chmod(0o700)
    if preexisting=='missing-npm':(root/'site-bin/npm').unlink()
    if preexisting=='fence':(root/'fence').mkdir()
    checkout=root/'checkout';(checkout/'ops/sulb-rc').mkdir(parents=True);(checkout/'backend/bootstrap/cache').mkdir(parents=True);(checkout/'frontend').mkdir();(checkout/'.git').mkdir();(root/'api').mkdir();(root/'front').mkdir()
+   if recovery:
+    (root/'fence').mkdir();(root/'fence/permit.json').write_text('OLD SYNTHETIC PERMIT')
+    prior=root/'api/sulb-release-backup.a744a4784d95555a';(prior/'runtime-bin').mkdir(parents=True)
+    (prior/'runtime-bin/php').write_text('SYNTHETIC PHP SHIM')
    if preexisting=='partial':
     prior=root/'api/sulb-release-backup.incomplete';prior.mkdir();(prior/'ordered-upgrade-events.jsonl').touch()
    text=pathlib.Path(__file__).with_name('deploy-reviewed-release.sh').read_text();
    for old,new in [('/home/mgye-sulb/.nvm/versions/node/v22.23.2/bin',str(root/'site-bin')),('/home/sulb-release',str(checkout)),('/home/mgye-api-sulb',str(root/'api')),('/home/mgye-sulb',str(root/'front')),('/run/sulb-release.fence',str(root/'fence')),('/run/sulb-release.execution.lock',str(root/'lock')),('/proc/$pid',str(root/'proc')+'/$pid')]:text=text.replace(old,new)
    script=checkout/'ops/sulb-rc/deploy.sh';script.write_text(text)
    env={'PATH':str(root/'bin'),'SULB_PHP_BIN':str(root/'bin/php'),'SULB_APPROVED_COMMIT':'b'*40,'SULB_APPROVED_DERIVED_ARTIFACT':str(root/'SYNTHETIC_ONLY')}
-   r=subprocess.run(['/bin/bash',str(script),'--execute'],cwd=checkout,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=45)
+   arguments=['--recover-prebackup',str(root/'api/sulb-release-backup.a744a4784d95555a')] if recovery else ['--execute']
+   r=subprocess.run(['/bin/bash',str(script)]+arguments,cwd=checkout,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=45)
    self.last_stderr=r.stderr.decode()
    events=[json.loads(line)for line in (root/'events.jsonl').read_text().splitlines()];return r.returncode,events,(root/'fence').exists()
+ def test_recovery_renews_before_capture_without_acquire_or_early_refresh(self):
+  code,e,fence=self.run_case(recovery=True);self.assertEqual(code,0,self.last_stderr);self.assertFalse(fence)
+  self.assertNotIn('fence',e);self.assertLess(e.index('recovery_check'),e.index('composer'))
+  self.assertLess(e.index('recovery_renew'),e.index('capture'));self.assertLess(e.index('copy'),e.index('refresh'))
+  order=['recovery_renew','capture','restore','receipt','migration','copy','postcheck','http_ready','release']
+  self.assertEqual([e.index(v)for v in order],sorted(e.index(v)for v in order));self.assertEqual(e[-1],'release')
+ def test_recovery_live_failure_never_builds_or_captures(self):
+  code,e,fence=self.run_case('recovery_check',recovery=True);self.assertNotEqual(code,0);self.assertTrue(fence)
+  self.assertNotIn('composer',e);self.assertNotIn('capture',e);self.assertNotIn('release',e)
+ def test_recovery_renew_failure_preserves_fence_without_backup(self):
+  code,e,fence=self.run_case('recovery_renew',recovery=True);self.assertNotEqual(code,0);self.assertTrue(fence)
+  self.assertNotIn('capture',e);self.assertNotIn('migration',e);self.assertNotIn('release',e)
+ def test_recovery_restore_failure_preserves_fence_without_ddl(self):
+  code,e,fence=self.run_case('restore',recovery=True);self.assertNotEqual(code,0);self.assertTrue(fence)
+  self.assertNotIn('migration',e);self.assertNotIn('copy',e);self.assertNotIn('release',e)
  def test_complete_order_only_with_successful_restore(self):
   code,e,fence=self.run_case();self.assertEqual(code,0);self.assertFalse(fence)
   order=['gate','site_runtime','scope','composer','npm_ci','npm_run','manifest','fence','capture','restore','receipt','migration','copy','cache','postcheck','activation','frontend_restart','http_ready','release']

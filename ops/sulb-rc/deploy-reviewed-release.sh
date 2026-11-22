@@ -148,7 +148,14 @@ if [ "${1:---plan}" = --plan ]; then
     'No automatic database restore or migration rollback.'
   exit 78
 fi
-[ "${1:-}" = --execute ] || exit 2
+recovery_backup=
+case "${1:-}" in
+  --execute) [[ $# == 1 ]] || blocked RELEASE_ARGUMENTS_INVALID ;;
+  --recover-prebackup)
+    [[ $# == 2 && "$2" == /home/mgye-api-sulb/sulb-release-backup.a744a4784d95555a ]] || blocked RECOVERY_EXACT_ATTEMPT_REQUIRED
+    recovery_backup=$2 ;;
+  *) exit 2 ;;
+esac
 stage=PHP_EXECUTABLE
 trap 'rc=$?; printf "BLOCKED: stage=%s exit=%s\\n" "$stage" "$rc" >&2; if [[ -e /run/sulb-release.fence || -L /run/sulb-release.fence ]]; then printf "%s\\n" "Write fence retained. Preserve private evidence; use reviewed forward repair." >&2; fi' ERR
 # An explicit runtime is mandatory; never silently inherit the default PHP CLI.
@@ -186,9 +193,25 @@ done
 stage=RELEASE_EXECUTION_LOCK
 exec 9>/run/sulb-release.execution.lock
 flock -n 9
-check_previous_release
+if [[ -n "$recovery_backup" ]]; then
+  stage=RECOVERY_LIVE_CHECK
+  php "$tools/release-prebackup-recovery.php" --check "$recovery_backup"
+else
+  check_previous_release
+fi
 stage=FRONTEND_SERVICE_TOOLCHAIN
-inspect_frontend_toolchain
+if [[ -n "$recovery_backup" ]]; then
+  [[ "$(systemctl show sulb-frontend.service --property=User --value)" == mgye-sulb ]] || blocked FRONTEND_SERVICE_USER_MISMATCH
+  [[ "$(systemctl show sulb-frontend.service --property=ActiveState --value)" == inactive ]] || blocked RECOVERY_FRONTEND_NOT_STOPPED
+  [[ "$(systemctl show sulb-frontend.service --property=MainPID --value)" == 0 ]] || blocked RECOVERY_FRONTEND_NOT_STOPPED
+  frontend_node=/home/mgye-sulb/.nvm/versions/node/v22.23.2/bin/node
+  frontend_npm=/home/mgye-sulb/.nvm/versions/node/v22.23.2/bin/npm
+  frontend_path=/home/mgye-sulb/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin
+  frontend_run "$frontend_node" -e 'if(process.versions.node!=="22.23.2")process.exit(78)'
+  frontend_run "$frontend_npm" --version >/dev/null
+else
+  inspect_frontend_toolchain
+fi
 stage=PHP_COMPOSER_AND_POOL_BINDING
 # Check the PHP used by FPM, Composer and release entrypoints before maintenance.
 php -r 'if(PHP_MAJOR_VERSION!==8||PHP_MINOR_VERSION!==5||PHP_SAPI!=="cli")exit(78);'
@@ -207,12 +230,26 @@ php <<'SULB_SCOPE_PHP'
 $r=json_decode(file_get_contents('ops/sulb-rc/release.json'),true,512,JSON_THROW_ON_ERROR);$f='ops/sulb-rc/full-release-scope.json';if(($r['final_closure']['scope_sha256']??null)!==hash_file('sha256',$f))exit(78);$scope=json_decode(file_get_contents($f),true,512,JSON_THROW_ON_ERROR);foreach($scope['application_files']as$row)if(!is_file($row['path'])||is_link($row['path'])||!hash_equals($row['sha256_git_blob'],hash_file('sha256',$row['path'])))exit(78);
 SULB_SCOPE_PHP
 stage=PRIVATE_BUILD_DIRECTORY
-backup=/home/mgye-api-sulb/sulb-release-backup.$(php -r 'echo bin2hex(random_bytes(8));')
-mkdir -m 700 "$backup"
+if [[ -n "$recovery_backup" ]]; then
+  backup=$recovery_backup
+else
+  backup=/home/mgye-api-sulb/sulb-release-backup.$(php -r 'echo bin2hex(random_bytes(8));')
+  mkdir -m 700 "$backup"
+fi
 printf 'Private build and execution evidence: %s\n' "$backup"
 # Root-private PATH shim also pins Python-launched PHP subprocesses.
-mkdir -m 700 "$backup/runtime-bin"
-printf '#!/bin/bash\nexec %q "$@"\n' "$runtime_php" > "$backup/runtime-bin/php"
+if [[ -n "$recovery_backup" ]]; then
+  test ! -L "$backup/runtime-bin"
+  test "$(stat -c %u "$backup/runtime-bin")" = 0
+  test "$(stat -c %a "$backup/runtime-bin")" = 700
+  test ! -L "$backup/runtime-bin/php"
+  cmp -s "$backup/runtime-bin/php" <(printf '#!/bin/bash\nexec %q "$@"\n' "$runtime_php")
+else
+  mkdir -m 700 "$backup/runtime-bin"
+fi
+if [[ -z "$recovery_backup" ]]; then
+  printf '#!/bin/bash\nexec %q "$@"\n' "$runtime_php" > "$backup/runtime-bin/php"
+fi
 chmod 700 "$backup/runtime-bin/php"
 export PATH="$backup/runtime-bin:$PATH"
 export SULB_CURRENT_BACKUP_DIR="$backup"
@@ -230,18 +267,29 @@ runuser -u mgye-sulb -- test -x /home/sulb-release/frontend
 unset COMPOSER_VENDOR_DIR COMPOSER
 # Composer never executes plugins/scripts; frontend tooling runs as the frontend site user.
 # No live .env/storage is copied or modified by these candidate builds.
+if [[ -n "$recovery_backup" ]]; then
+  recovery_build="$backup/recovery-build-$(php -r 'echo bin2hex(random_bytes(8));')"
+  mkdir -m 700 "$recovery_build"
+else
+  recovery_build=$backup
+fi
 stage=CANDIDATE_BACKEND_BUILD
-(cd backend && "$runtime_php" "$composer_file" check-platform-reqs --lock --no-dev && "$runtime_php" "$composer_file" install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-plugins) > "$backup/candidate-backend-build-private.log" 2>&1
+(cd backend && "$runtime_php" "$composer_file" check-platform-reqs --lock --no-dev && "$runtime_php" "$composer_file" install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-plugins) > "$recovery_build/candidate-backend-build-private.log" 2>&1
 stage=CANDIDATE_FRONTEND_BUILD
-(cd frontend; frontend_run "$frontend_npm" ci --include=dev --no-audit --no-fund; frontend_run "$frontend_npm" run build) > "$backup/candidate-frontend-build-private.log" 2>&1
+(cd frontend; frontend_run "$frontend_npm" ci --include=dev --no-audit --no-fund; frontend_run "$frontend_npm" run build) > "$recovery_build/candidate-frontend-build-private.log" 2>&1
 stage=CANDIDATE_INTEGRITY
 test -z "$(git status --porcelain)"
 # Dependency platform checks use the actual installed vendor, not config.platform.
-(cd backend && "$runtime_php" "$composer_file" check-platform-reqs --no-dev) > "$backup/candidate-platform-private.log" 2>&1
-php "$tools/release-app-control.php" --prepare-candidate > "$backup/candidate-manifest-private.json"
-check_previous_release
-stage=ACQUIRE_WRITE_FENCE
-php "$tools/release-fence.php" --acquire "$backup" > "$backup/fence-summary.json"
+(cd backend && "$runtime_php" "$composer_file" check-platform-reqs --no-dev) > "$recovery_build/candidate-platform-private.log" 2>&1
+php "$tools/release-app-control.php" --prepare-candidate > "$recovery_build/candidate-manifest-private.json"
+if [[ -n "$recovery_backup" ]]; then
+  stage=RECOVERY_LIVE_RENEWAL
+  php "$tools/release-prebackup-recovery.php" --renew "$backup" > "$recovery_build/recovery-summary.json"
+else
+  check_previous_release
+  stage=ACQUIRE_WRITE_FENCE
+  php "$tools/release-fence.php" --acquire "$backup" > "$backup/fence-summary.json"
+fi
 export SULB_RELEASE_PERMIT_SHA256=$(sha256sum /run/sulb-release.fence/permit.json | cut -d ' ' -f1)
 # Password comes only from /dev/tty. Source reader is SELECT-only sulbmetadata.
 stage=ENCRYPTED_BACKUP
